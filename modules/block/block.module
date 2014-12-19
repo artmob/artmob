@@ -280,6 +280,10 @@ function _block_compare($a, $b) {
  */
 function block_admin_display_submit($form_id, $form_values) {
   foreach ($form_values as $block) {
+    $block['region'] = isset($block['region']) ? $block['region'] : BLOCK_REGION_NONE;
+    $block['weight'] = isset($block['weight']) ? $block['weight'] : 0;
+    $block['delta'] = isset($block['delta']) ? $block['delta'] : 0;
+    
     $block['status'] = $block['region'] != BLOCK_REGION_NONE;
     $block['region'] = $block['status'] ? $block['region'] : '';
     db_query("UPDATE {blocks} SET status = %d, weight = %d, region = '%s', throttle = %d WHERE module = '%s' AND delta = '%s' AND theme = '%s'", $block['status'], $block['weight'], $block['region'], isset($block['throttle']) ? $block['throttle'] : 0, $block['module'], $block['delta'], $block['theme']);

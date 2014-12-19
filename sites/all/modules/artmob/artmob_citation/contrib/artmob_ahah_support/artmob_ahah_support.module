@@ -69,29 +69,29 @@ function artmob_ahah_support_nodeapi( &$node, $op ) {
         $fload = array();
         $gload = array();
 
-        $aload = artmob_date_widget_nodeapi( &$node, $op );
-        $bload = artmob_identifier_nodeapi( &$node, $op );
+        $aload = artmob_date_widget_nodeapi( $node, $op );
+        $bload = artmob_identifier_nodeapi( $node, $op );
         $aload = array_merge( $aload, $bload );
-        $cload = artmob_dc_description_nodeapi( &$node, $op );
+        $cload = artmob_dc_description_nodeapi( $node, $op );
         $aload = array_merge( $aload, $cload );
-        $dload = artmob_measurement_nodeapi( &$node, $op );
+        $dload = artmob_measurement_nodeapi( $node, $op );
         $aload = array_merge( $aload, $dload );
-        $eload = artmob_annotation_nodeapi( &$node, $op );
+        $eload = artmob_annotation_nodeapi( $node, $op );
         $aload = array_merge( $aload, $eload );
-        $fload = artmob_series_contributor_nodeapi( &$node, $op );
+        $fload = artmob_series_contributor_nodeapi( $node, $op );
         $aload = array_merge( $aload, $fload );
-        $gload = artmob_contributor_widget_nodeapi( &$node, $op );
+        $gload = artmob_contributor_widget_nodeapi( $node, $op );
         $aload = array_merge( $aload, $gload );
         return $aload;
         break;
       default:
-        artmob_date_widget_nodeapi( &$node, $op );
-        artmob_identifier_nodeapi( &$node, $op );
-        artmob_dc_description_nodeapi( &$node, $op );
-        artmob_measurement_nodeapi( &$node, $op );
-        artmob_annotation_nodeapi( &$node, $op );
-        artmob_series_contributor_nodeapi( &$node, $op );
-        artmob_contributor_widget_nodeapi( &$node, $op );
+        artmob_date_widget_nodeapi( $node, $op );
+        artmob_identifier_nodeapi( $node, $op );
+        artmob_dc_description_nodeapi( $node, $op );
+        artmob_measurement_nodeapi( $node, $op );
+        artmob_annotation_nodeapi( $node, $op );
+        artmob_series_contributor_nodeapi( $node, $op );
+        artmob_contributor_widget_nodeapi( $node, $op );
     }
   } else {
     switch ($op) {

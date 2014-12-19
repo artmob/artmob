@@ -487,7 +487,7 @@ function artmob_contributor_widget_nodeapi( &$node, $op ) {
     switch ($op) {
       // info flow db -> node -> form -> node -> db
       case load: // Load Widgets in from db
-        return artmob_contributor_widget_load_widgets( $node, &$widget_name );
+        return artmob_contributor_widget_load_widgets( $node, $widget_name );
         break;
       case view:
          /* handled by theme */

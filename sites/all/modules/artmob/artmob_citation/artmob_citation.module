@@ -873,7 +873,7 @@ function artmob_citation_form(&$node) {
   $form['citation']['format'] = filter_form($node->format);
 
 
-  $form = artmob_citation_get_citation_form( &$form, $node );
+  $form = artmob_citation_get_citation_form( $form, $node );
   return $form;
 }
 

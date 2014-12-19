@@ -876,7 +876,7 @@ function artmob_main_load_illustration(&$arg,$size=NULL,$lightbox=FALSE) {
     
 */
 
-function theme_artmob_main_artmob_summary(&$node,$additional_classes='') {
+function theme_artmob_main_artmob_summary($node,$additional_classes='') {
 
 /* DEVELOPMENT NOTE: This function may be overriden in individual themes. 
    When we revisit the citation architecture, we'll need to refactor this to reduce the programmatic content,
