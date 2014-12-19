@@ -1,5 +1,5 @@
 name = Artmob Discuss
-description = Display comments on a seperate discussion page. Can be used to augment the Artmob Respond module.
+description = "Display comments on a seperate discussion page. Can be used to augment the Artmob Respond module."
 dependencies = comment
 version = 3.1
 package = Artmob Respond

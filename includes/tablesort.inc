@@ -107,7 +107,7 @@ function tablesort_header($cell, $header, $ts) {
  *   A properly formatted cell, ready for _theme_table_cell().
  */
 function tablesort_cell($cell, $header, $ts, $i) {
-  if (isset($header[$i]) && $header[$i]['data'] == $ts['name'] && $header[$i]['field']) {
+  if (isset($header[$i]) && isset($header[$i]['data']) && $header[$i]['data'] == $ts['name'] && isset($header[$i]['field']) && $header[$i]['field']) { 
     if (is_array($cell)) {
       if (isset($cell['class'])) {
         $cell['class'] .= ' active';

@@ -1,0 +1,7 @@
+diff a/modules/contact/contact.info b/modules/contact/contact.info	(rejected hunks)
+@@ -1,4 +1,4 @@
+ name = Contact
+-description = Enables the use of both personal and site-wide contact forms.
++description = "Enables the use of both personal and site-wide contact forms."
+ package = Core - optional
+ version = VERSION

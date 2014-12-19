@@ -1,5 +1,5 @@
 name = Taxonomy Block
-description = Makes blocks based on taxonomy vocabularies and terms.
+description = "Makes blocks based on taxonomy vocabularies and terms."
 dependencies = taxonomy
 
 ; Information added by drupal.org packaging script on 2007-06-19
