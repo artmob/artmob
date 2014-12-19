@@ -1,8 +1,8 @@
 <?php
-// $Id: artmob_citation_ticket.module,v 1.0 2008/03/01 08:31:22 drumm Exp $
+// $Id: artmob_citation_ticket.module,v 1.0 2008/03/01 08:31:22 stop14 Exp $
 
 /* @file
- * ADDDOCUMENTATION
+ * Allows users to provide feedback on attribution information in the archive.
  **/
 
 

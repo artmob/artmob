@@ -1,9 +1,14 @@
 <?php
-// $Id: citation.info,v 1.0 2008/03/13 20:55:33 dries Exp $
+// $Id: artmob_citation.module,v 1.0 2008/03/13 20:55:33 stop14 Exp $
 
 /**
  * @file
- * ADDDOCUMENTATION
+ * Citations are a specialized node type that collect attribution information for media in the archive.
+ * They are designed to be linked to the media node itself, but be separate from that it.
+ * A media node can contain any number of citations, each representing a single artistic work fixed
+ * in the media file.
+ * 
+ * Requires the Fair Dealing module for full functionality.
  */
 
 
@@ -16,13 +21,6 @@ define('ARTMOB_SEQUENCE_TYPE_TIMECODE', 'T');
  */
 function artmob_citation_elements() {
   $type = array();
-  //$type['artmob_date_widget'] = array( '#input' => TRUE, );
-  //$type['artmob_identifier'] = array( '#input' => TRUE, );
-  //$type['artmob_dc_description'] = array( '#input' => TRUE, );
-  //$type['artmob_measurement'] = array( '#input' => TRUE, );
-  //$type['artmob_annotation'] = array( '#input' => TRUE, );
-  //$type['artmob_series_contributor'] = array( '#input' => TRUE, );
-  //$type['artmob_contributor_widget'] = array( '#input' => TRUE, );
   return $type;
 }
 
@@ -77,8 +75,6 @@ function artmob_citation_init() {
 
    $fd_scripts = array('jquery-min-14.js', 'artmob_compat.js', 'fairdealing_var.js', 'fairdealing_ui.js');
    $citation_scripts = array('artmob_citation.js');
-   //$citation_base_scripts = array( 'datewidget.js', 'annotationwidget.js','identifierwidget.js', 'contributorwidget.js', 'descriptionwidget.js', 'measurewidget.js', 'serieswidget.js', 'form.js','highlightFade.js' ); //'datewidget.js',
-   //$citation_scripts = array('artmob_citation.js', 'datewidget.js', 'descriptionwidget.js', 'widget.js', 'form.js');
 
    $arg0 = arg(0);
    $arg1 = arg(1);
@@ -231,27 +227,6 @@ function artmob_citation_menu($may_cache) {
         'callback' => '_artmob_citation_series_contributor_update_js',
         'access' => TRUE,
         'type' => MENU_CALLBACK,
-    );
-
-    $items[] = array(
-      'path'              => 'admin/artmob/citation',
-      'title'             => t('Convert citation entries'),
-      'description'       => t('Convert citation records'),
-      'weight'            => -7,
-      'callback'          => 'drupal_get_form',
-      'callback arguments' => array( 'artmob_citation_admin_convert'),
-      'access'            => user_access('administer site configuration')
-    );
-
-
-    $items[] = array(
-      'path'              => 'admin/artmob/citation_works',
-      'title'             => t('Add Encapsulated Works'),
-      'description'       => t('Add base encapsulated work for a citation'),
-      'weight'            => -7,
-      'callback'          => 'drupal_get_form',
-      'callback arguments' => array( 'artmob_citation_admin_convert_works'),
-      'access'            => user_access('administer site configuration')
     );
 
     $items[] = array(
@@ -478,61 +453,11 @@ function artmob_citation_admin_settings() {
   return system_settings_form($form);
 }
 
-function artmob_citation_admin_convert() {
-  $form['citation_convert'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Citation Settings'),
-    '#weight' => -2
-    );
-
-  $form['citation_convert']['Convert'] = array(
-    '#type'     => 'submit',
-    '#value'    => t('convert all citation information'),
-    '#submit'   => True,
-    '#weight'   => 2
-  );
-
-  return system_settings_form($form);
-}
-
-function artmob_citation_admin_convert_submit($form_id, $form_values) {
-  global $user;
-  if ( $form_values['op'] == 'convert all citation information' ) {
-    convert_citations();
-    drupal_set_message( t('The information has been converted'));
-  }
-}
-
-function artmob_citation_admin_convert_works() {
-  $form['citation_convert'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Citation Works'),
-    '#weight' => -2
-    );
-
-  $form['citation_convert']['Convert'] = array(
-    '#type'     => 'submit',
-    '#value'    => t('Add works for all citations'),
-    '#submit'   => True,
-    '#weight'   => 2
-  );
-
-  return system_settings_form($form);
-}
-
-function artmob_citation_admin_convert_works_submit($form_id, $form_values) {
-  global $user;
-  if ( $form_values['op'] == 'Add works for all citations' ) {
-    convert_citations_add_encapsulated_work();
-    drupal_set_message( t('Works have been added for all citations'));
-  }
-}
 
 
 function artmob_citation_insert($node) {
   $node->title = $node->citation_title;
   $node->archival_date = time();
-  watchdog( 'joe citation', 'insert citation title = '.$node->citation_title );
   db_query("INSERT INTO {am_citation} (nid, copyright_date,
             citation_title,
             title_without_prefix,subtitle,series_title,series_number,
@@ -794,17 +719,6 @@ function artmob_citation_submit(&$node) {
 function artmob_citation_load($node) {
   $t = db_fetch_object(db_query('SELECT * FROM {am_citation} WHERE nid = %d', $node->nid));
 
-  /*
-  for ( $counter = 1; $counter <= 5; $counter += 1) {
-    $oResult = db_query("SELECT ToNode, LinkBlob FROM {PC_NodeLink} WHERE FromNode=%d AND ToType='%s' AND LinkIndex = %d",$node->nid,'Contributor', $counter);
-    while ($oRow = db_fetch_object($oResult)) {
-      $temp = 'Contributor'.$counter;
-      $t->$temp = $oRow->ToNode;
-      $temp = 'ContributorRole'.$counter;
-      $t->$temp = unserialize( $oRow->LinkBlob );
-    }
-  }
-  */
   $citation_dates = artmob_citation_load_citation_dates( $node->citation_id );
   $t->citation_dates = $citation_dates;
 
@@ -824,28 +738,13 @@ function artmob_citation_load_citation_dates( $citation_id ) {
 }
 
 function artmob_citation_delete($node) {
-  //First delete from the am_citation table
-  //then delete from the PC_NodeLink table
   db_query("DELETE FROM {am_citation}
              where nid = %d",
              $node->nid);
-  /*
-  db_query("DELETE FROM {PC_NodeLink}
-             where FromNode = %d",
-             $node->nid);
-  */
 }
 
+/* DEPRECATED */
 function artmob_citation_save_contributor_links( $node ) {
-  /*
-  db_query('DELETE FROM {PC_NodeLink} WHERE FromNode=%d AND ToType="%s"', $node->nid, "Contributor");
-
-  db_query("INSERT INTO {PC_NodeLink} (FromNode, ToNode, FromType, ToType, LinkIndex, LinkBlob ) VALUES (%d,%d,'%s','%s',%d,'%s')", $node->nid, $node->Contributor1, 'artmob_citation', 'artmob_contributor', 1, serialize( $node->ContributorRole1 ) );
-  db_query("INSERT INTO {PC_NodeLink} (FromNode, ToNode, FromType, ToType, LinkIndex, LinkBlob ) VALUES (%d,%d,'%s','%s',%d,'%s')", $node->nid, $node->Contributor2, 'artmob_citation', 'artmob_contributor', 2, serialize( $node->ContributorRole2 ) );
-  db_query("INSERT INTO {PC_NodeLink} (FromNode, ToNode, FromType, ToType, LinkIndex, LinkBlob ) VALUES (%d,%d,'%s','%s',%d,'%s')", $node->nid, $node->Contributor3, 'artmob_citation', 'artmob_contributor', 3, serialize( $node->ContributorRole3 ) );
-  db_query("INSERT INTO {PC_NodeLink} (FromNode, ToNode, FromType, ToType, LinkIndex, LinkBlob ) VALUES (%d,%d,'%s','%s',%d,'%s')", $node->nid, $node->Contributor4, 'artmob_citation', 'artmob_contributor', 4, serialize( $node->ContributorRole4 ) );
-  db_query("INSERT INTO {PC_NodeLink} (FromNode, ToNode, FromType, ToType, LinkIndex, LinkBlob ) VALUES (%d,%d,'%s','%s',%d,'%s')", $node->nid, $node->Contributor5, 'artmob_citation', 'artmob_contributor', 5, serialize( $node->ContributorRole5 ) );
-  */
 }
 
 //* Implementation of hook_form().
@@ -1441,301 +1340,6 @@ function artmob_citation_get_citation_form( &$form, &$node, $is_hide = False ) {
 
 //* Implementation of hook_nodeapi().
 function artmob_citation_nodeapi(&$node, $op, $teaser=NULL, $page=NULL) {
-  /*
-  $aload = array();
-  $bload = array();
-  $cload = array();
-  $dload = array();
-  $eload = array();
-  $fload = array();
-  $gload = array();
-  if ( variable_get( 'artmob_date_widget_'. $node->type, FALSE ) ) {
-    switch ($op) {
-      // info flow db -> node -> form -> node -> db
-      case load: // Load Widgets in from db
-        $aload = artmob_date_widget_load_widgets( $node, &$widget_name );
-        break;
-      case view:
-        break;
-      case update:
-        $citation_id = artmob_citation_get_citation_id( $node->nid );
-        db_query("DELETE FROM {am_citation_dates} WHERE citation_id = '%d'", $citation_id );
-      case insert:
-        if ( count( $node->date_widget_names ) ) {
-          foreach ( $node->date_widget_names as $widget_name ) {
-            $widget = $node->$widget_name;
-            if (count( $widget['subwidgets'] ) != 0 ) {
-              foreach ( $widget['subwidgets'] as $subwidget_id => $subwidget ) {
-                if ( $citation_id <> 0 ) {
-                  $date_order = artmob_date_widget_build_date_order( $subwidget['date_day'], $subwidget['date_month'], $subwidget['date_year'] );
-                  $date_timestamp = $subwidget['date_day'] .'/'. $subwidget['date_month'] .'/'. $subwidget['date_year'];
-                  db_query("INSERT INTO {am_citation_dates} ".
-                      "(citation_id, date_type_id, date_day, date_month,
-                        date_year, date_order, widget_name, sequence, date_timestamp) ".
-                      " VALUES (%d, %d, %d, %d, '%s', %d, '%s', %d, '%s')",
-                      $citation_id, $subwidget['date_type_id'], $subwidget['date_day'],
-                      $subwidget['date_month'], $subwidget['date_year'],
-                      $date_order, $widget_name, $subwidget_id, $date_timestamp
-                  );
-                }
-              }
-            }
-          }
-        }
-        break;
-    }
-  }
-  if ( variable_get( 'artmob_identifier_'. $node->type, FALSE ) ) {
-    switch ($op) {
-      // info flow db -> node -> form -> node -> db
-      case load: // Load Widgets in from db
-        $widget_name = '';
-        $aload = artmob_identifier_load_widgets( $node, &$widget_name );
-        //$aload = array_merge( $aload, $bload );
-        break;
-      case view:
-        break;
-      case update:
-        // keep life simple and do update by just deleting and then inserting
-        db_query("DELETE FROM {am_citation_identifier} WHERE nid = %d", $node->nid );
-      case insert:
-        if ( count( $node->identifier_widget_names ) ) {
-          foreach ( $node->identifier_widget_names as $widget_name ) {
-            $widget = $node->$widget_name;
-            if (count( $widget['subwidgets'] ) != 0 ) {
-              foreach ( $widget['subwidgets'] as $subwidget_id => $subwidget ) {
-                db_query("INSERT INTO {am_citation_identifier} ".
-                    "(nid, widget_name, subwidget_id, identifier_type_code, identifier_type_name, identifier_type_value) ".
-                    " VALUES (%d, '%s', %d, '%s', '%s', '%s')",
-                    $node->nid, $widget_name, $subwidget_id,
-                    $subwidget['identifier_type_code'], $subwidget['identifier_type_name'], $subwidget['identifier_type_value']
-                );
-              }
-            }
-          }
-        }
-        break;
-    }
-  }
-
-  if ( variable_get( 'artmob_dc_description_'. $node->type, FALSE ) ) {
-    switch ($op) {
-      case prepare:
-        break;
-                        // info flow db -> node -> form -> node -> db
-      case load: // Load Widgets in from db
-        $widget_name = '';
-        $cload = artmob_dc_description_load_widgets( $node, &$widget_name );
-        $aload = array_merge( $aload, $cload );
-        break;
-      case view:
-        break;
-      case update:
-        // keep life simple and do update by just deleting and then inserting
-        db_query("DELETE FROM {am_citation_dc_description} WHERE nid = '%d'", $node->nid );
-      case insert:
-        if ( count( $node->dc_description_widget_names ) ) {
-          foreach ( $node->dc_description_widget_names as $widget_name ) {
-            $widget = $node->$widget_name;
-            if (count( $widget['subwidgets'] ) != 0 ) {
-              foreach ( $widget['subwidgets'] as $subwidget_id => $subwidget ) {
-                db_query("INSERT INTO {am_citation_dc_description} ".
-                        "(nid, widget_name, subwidget_id, citation_description_type, citation_description )".
-                        " VALUES (%d, '%s', %d, '%s', '%s')",
-                    $node->nid, $widget_name, $subwidget_id,
-                     $subwidget['citation_description_type'], $subwidget['citation_description']);
-              }
-            }
-          }
-        }
-        break;
-    }
-  }
-
-  if ( variable_get( 'artmob_measurement_'. $node->type, FALSE ) ) {
-    switch($op) {
-      // info flow db -> node -> form -> node -> db
-      case load: // Load Widgets in from db
-        $widget_name = '';
-        $dload = artmob_measurement_load_widgets( $node, &$widget_name );
-        $aload = array_merge( $aload, $dload );
-        break;
-      case view:
-        break;
-      case update:
-        // keep life simple and do update by just deleting and then inserting
-        db_query("DELETE FROM {am_citation_measurement} WHERE nid = '%d'", $node->nid );
-      case insert:
-        if ( count( $node->measure_widget_names ) ) {
-          foreach ( $node->measure_widget_names as $widget_name ) {
-            $widget = $node->$widget_name;
-            if (count( $widget['subwidgets'] ) != 0 ) {
-              foreach ( $widget['subwidgets'] as $subwidget_id => $subwidget ) {
-                db_query("INSERT INTO {am_citation_measurement} ".
-                         "(nid, widget_name, subwidget_id, measurement_type_code, measurement_unit_code, measurement_value) ".
-                         " VALUES (%d, '%s', %d, '%s', '%s', '%s')",
-                         $node->nid, $widget_name, $subwidget_id,
-                         $subwidget['measurement_type_code'], $subwidget['measurement_unit_code'], $subwidget['measurement_value']
-                );
-              }
-            }
-          }
-        }
-        break;
-    }
-  }
-
-  if ( variable_get( 'artmob_annotation_'. $node->type, FALSE ) ) {
-    switch ($op) {
-      // info flow db -> node -> form -> node -> db
-      case load: // Load Widgets in from db
-        $widget_name = '';
-        $eload = artmob_annotation_load_widgets( $node, &$widget_name );
-        $aload = array_merge( $aload, $eload );
-        break;
-      case view:
-        break;
-      case update:
-        // keep life simple and do update by just deleting and then inserting
-        db_query("DELETE FROM {am_annotation} WHERE nid = '%d'", $node->nid );
-      case insert:
-        if ( count( $node->annotation_widget_names ) ) {
-          foreach ( $node->annotation_widget_names as $widget_name ) {
-            $widget = $node->$widget_name;
-            if (count( $widget['subwidgets'] ) != 0 ) {
-              foreach ( $widget['subwidgets'] as $subwidget_id => $subwidget ) {
-                db_query("INSERT INTO {am_annotation} ".
-                         "(nid, widget_name, subwidget_id, annotator_nid, annotation, annotation_format) ".
-                         " VALUES (%d, '%s', %d, %d, '%s', %d)",
-                         $node->nid, $widget_name, $subwidget_id,
-                         $subwidget['annotator_nid'], $subwidget['annotation'], $subwidget['annotation_format']
-                );
-              }
-            }
-          }
-        }
-        break;
-    }
-  }
-
-  if ( variable_get( 'artmob_series_contributor_'. $node->type, FALSE ) ) {
-    switch ($op) {
-      // info flow db -> node -> form -> node -> db
-      case load: // Load Widgets in from db
-        $widget_name = '';
-        $fload = artmob_series_contributor_load_widgets( $node, &$widget_name );
-        $aload = array_merge( $aload, $fload );
-        break;
-      case view:
-        break;
-      case update:
-        // keep life simple and do update by just deleting and then inserting
-        db_query("DELETE FROM {am_citation_series_contributor} WHERE nid = '%d'", $node->nid );
-      case insert:
-        if ( count( $node->series_contributor_widget_names ) ) {
-          foreach ( $node->series_contributor_widget_names as $widget_name ) {
-            $widget = $node->$widget_name;
-            if (count( $widget['subwidgets'] ) != 0 ) {
-              foreach ( $widget['subwidgets'] as $subwidget_id => $subwidget ) {
-                db_query("INSERT INTO {am_citation_series_contributor} ".
-                        "(nid, widget_name, subwidget_id, series_contributor_nid, series_contributor_role) ".
-                        " VALUES (%d, '%s', %d, %d, '%s')",
-                $node->nid, $widget_name, $subwidget_id,
-                $subwidget['series_contributor_nid'], serialize( $subwidget['series_contributor_role'] )
-              );
-            }
-          }
-        }
-      }
-      break;
-    }
-  }
-
-  if ( variable_get( 'artmob_contributor_widget_'. $node->type, FALSE ) ) {
-    switch ($op) {
-      // info flow db -> node -> form -> node -> db
-      case load: // Load Widgets in from db
-        $widget_name = '';
-        $gload = artmob_contributor_widget_load_widgets( $node, &$widget_name );
-        $aload = array_merge( $aload, $gload );
-        break;
-      case view:
-        break;
-
-      case update:
-        // keep life simple and do update by just deleting and then inserting
-        //db_query("DELETE FROM {am_contributor_widget} WHERE nid = '%d'", $node->nid );
-        db_query("DELETE FROM {am_citation_roles} WHERE citation_id = '%d'", $node->citation_id );
-      case insert:
-        if ( count( $node->contributor_widget_names ) ) {
-          foreach ( $node->contributor_widget_names as $widget_name ) {
-  //          if ( $widget_name == 'widgetprice1' ) {
-            $widget = $node->$widget_name;
-            if (count( $widget['subwidgets'] ) != 0 ) {
-              foreach ( $widget['subwidgets'] as $subwidget_id => $subwidget ) {
-                if ( $subwidget['contributor_nid'] == 0 ) {
-                  $nid = 0;
-                  $result = db_query( "SELECT nid from {am_contributor} where first_name = '%s' and last_name = '%s'", $subwidget['firstname'], $subwidget['lastname'] );
-                  $query = sprintf("SELECT nid from {am_contributor} where first_name = '%s' and last_name = '%s'", $subwidget['firstname'], $subwidget['lastname'] );
-                  while ($row = db_fetch_object($result)) {
-                    $nid = $row->nid;
-                    break;
-                  }
-                  if ( $nid == 0 ) {
-                    //if it is a corporate contibutor then both names don't need to be filled
-                    if ((( $subwidget['firstname'] != '' ) && ( $subwidget['lastname'] != '' ))
-                       || (( $subwidget['contributor_type'] == CONTRIBUTOR_TYPE_CORPORATION ) &&
-                        (( $subwidget['firstname'] != '' ) || ( $subwidget['lastname'] != '' )) ) ) {
-                      //add this person as a contributor
-                      global $user;
-                      $contributor_node->nid = '';
-                      $contributor_node->uid = $user->uid;
-                      $contributor_node->type = 'Contributor';
-                      $contributor_node->status = 1;
-                      $contributor_node->first_name = $subwidget['firstname'];
-                      $contributor_node->last_name = $subwidget['lastname'];
-                      $contributor_node->title = $subwidget['firstname'] .' '. $subwidget['lastname'];
-                      $contributor_node->contributor_type = $subwidget['contributor_type'];
-                      node_save( $contributor_node);
-                      $nid = $contributor_node->nid;
-                      //$contributor_id = $contributor_node->contributor_id;
-                      $contributor_id = artmob_contributor_get_id_from_nid( $nid );
-                      //drupal_set_message( 'saved nid = '.$nid );
-                      //drupal_set_message( 'saved id = '.$contributor_id );
-                    }
-                  }
-                  else {
-                    $contributor_id = artmob_contributor_get_id_from_nid( $nid );
-                  }
-                }
-                else {
-                  $nid = $subwidget['contributor_nid'];
-                  $contributor_id = artmob_contributor_get_id_from_nid( $nid );
-                }
-                if ( $nid <> 0 ) {
-                  foreach ( $subwidget['contributor_role'] as $role_id => $role_value ) {
-                    db_query( "INSERT INTO {am_citation_roles}
-                               set contributor_id = %d,
-                               widget_name = '%s',
-                               sequence = %d,
-                               citation_id = %d,
-                               role_id = '%s'",
-                               $contributor_id,
-                               $widget_name,
-                               $subwidget_id,
-                               $node->citation_id,
-                               $role_id);
-                  }
-                }
-              }
-  //          }
-            }
-          }
-        }
-        break;
-    }
-  }
-  */
 
   switch ($op) {
     case 'update':
@@ -2500,28 +2104,6 @@ function theme_artmob_citation_summary(&$node) {
   return $output;
 }
 
-// function artmob_citation_tab_basic_view_preprocess (&$node) {
-//     $vars = array();
-//
-//     $vars['citation_fields'] = array(   // additional fields to display in citation tab
-//     'series title' => 'series_title',
-//     'series number' => 'series_number',
-//     'series year' => 'series_year',
-//     'series description' => 'series_description',
-//     'edition' => 'edition',
-//     'number of pages' => 'number_of_pages',
-//     'publication publisher name' => 'publication_publisher_name',
-//     'publication imprint name' => 'publication_imprint_name',
-//     'publication print run' => 'publication_print_run',
-//     'corporate contributor' => 'corporate_contributor',
-//     'genre' => 'genre',
-//     'features and distinctions' => 'features_and_distinctions',
-//     'publication notes' => 'publication_notes',
-//     'running time' => 'running_time'
-//   );
-//
-//   return $vars;
-// }
 
 function theme_artmob_citation_tab_node_view(&$node) {
   $content .= "<div class='citation-module'>\n";
@@ -2639,190 +2221,8 @@ function artmob_citation_build_work_types( $include_none = false, $none_text = '
   
   
   return $list;
-/*
-  $list['Aa'] = 'Literary Work';
-  $list['Ab'] = 'Literary Compilation';
-  $list['Ba'] = 'Choreagraphed Work';
-  $list['Bb'] = 'Play/Script/Screenplay';
-  $list['Bc'] = 'Film (Cinema/Animation/Documentary/Found Footage)';
-  $list['Ca'] = 'Musical Composition';
-  $list['Cb'] = 'Musical Recording';
-  $list['Cc'] = 'Muscial Broadcast';
-  $list['Da'] = "Photograph";
-  $list['Db'] = "Painting";
-  $list['Dc'] = "Drawing";
-  $list['Dd'] = "Engraving";
-  $list['De'] = "Sculpture";
-  $list['Df'] = "Architectural Work";
-  $list['Dg'] = "Map/Plan/Chart";
-  $list['Dh'] = "Artistic Compilation";
-  $list['Di'] = "Design";
-  $list ['Ea'] = "Performance";
-  return $list;
-*/
 }
 
-// function theme_artmob_citation_tab_basic_view(&$node) {
-//     /* pre processing */
-//     $vars = artmob_citation_tab_basic_view_preprocess($node);
-//
-//     foreach($vars as $var => $value) { // cast keys as variables;
-//       ${$var} = $value;
-//     }
-//
-//   $content .= "<div class='citation-module'>\n";
-//   $content .= "<p>This page is a listing of the known information about this content.  If you have additional information to share or would like to correct the information found here, please use the <a href='#respond'>form below</a>.</p>\n";
-//   $content .= "\n";
-//   $content .= "<h2 class='citation-PostNotesTitle'>{$node->title}";
-//   $content .= $node->subtitle ? "<br /><span class='PostNotesSubtitle'>{$node->subtitle}</span>": "";
-//   $content .= "</h2>\n";
-//
-//   if (is_array($node->identifiers_by_type)) {
-//     $iblocks = array();
-//     $content .= "<h3>Record Identifiers</h3>\n";
-//
-//     foreach($node->identifiers_by_type as $type => $value) {
-//       $block = '';
-//       $block .= "<table class='citationTable citation-table-ids'>\n";
-//       $block .= "<tr><th>{$value['name']}</th></tr>\n";
-//       $block .= "<tr><td class='column1'>{$value['value']}</td></tr>\n";
-//       $block .= "</table>\n";
-// 
-//       $iblocks[$role_name] = $block;
-// 
-//     }
-// 
-//     $content .= display_columnize($iblocks,2,"citationTable");
-//   }
-//
-//   if (is_array($node->contributors_by_role)) {
-//     $cblocks = array();
-//     $content .= "<h3>Known Contributors</h3>\n";
-// 
-//     foreach ($node->contributors_by_role as $role_name => $contributors) {
-// 
-//       $block = '';
-//       $block .= "<table class='citationTableInner'>\n";
-//       $block .= "<tr><th>{$role_name}</th></tr>\n";
-// 
-//       if (is_array($contributors)) {
-//         foreach ($contributors as $cnid=>$contributor) {
-//           $block .= "<tr><td class='column1'>" . l($contributor,"node/{$cnid}",array(),NULL,NULL,FALSE,TRUE) . "</td></tr>\n";
-//         }
-//       }
-// 
-//       $block .= "</table>\n";
-// 
-//       $cblocks[$role_name] = $block;
-//     }
-// 
-//     $content .= display_columnize($cblocks,2,"citationTable");
-//   }
-// 
-//   $cblocks = array();
-//   $content .= "<h3>Citations</h3>\n";
-// 
-//   $citation_list = artmob_citation_get_all_citations_for_node( $node->nid );
-//   foreach ( $citation_list as $citation_nid=>$citation_id ){
-//     $row = db_fetch_object(db_query( "select * from {am_citation} where citation_id = %d", $citation_id ));
-//     $block = '';
-//     $block .= "<table class='citationTableInner'>\n";
-//     $block .= "<tr><th>{$row->citation_title}</th></tr>\n";
-// 
-//     $block .= "<tr><td class='column1'>" . l($row->citation_title,"node/{$citation_nid}/edit", array(), 'destination=node/'.$node->nid.'/citation/') . "</td></tr>\n";
-//
-//     $block .= "</table>\n";
-// 
-//     $cblocks[$citation_id] = $block;
-//   }
-//   $content .= display_columnize($cblocks,2,"citationTable");
-// 
-//   //--------------------------------------
-// 
-// 
-//   if (is_array($node->dates)) {
-//     $dblocks = array();
-//     $content .= "<h3>Dates</h3>\n";
-// 
-//     foreach($node->dates as $label => $value) {
-//       $block = '';
-//       $block .= "<table class='citationTableInner citation-table-date'>\n";
-//       $block .= "<tr><th>{$label}</th></tr>\n";
-//       $block .= "<tr><td class='column1'>{$value}</td></tr>\n";
-//       $block .= "</table>\n";
-// 
-//       $dblocks[$label] = $block;
-// 
-//     }
-//     
-//     $content .= display_columnize($dblocks,2,"citationTable");
-//   }
-//   
-//   if ($node->citation_text) {
-//       $style = $node->citation_style = '1209' ? 'MLA' : 'Chicago Manual of Style';
-//     $content .= "<h3>{$style} Citation</h3>\n";
-//     $content .= "<div class='citation-mlaCitation'>\n";
-//     $content .= "<p>{$node->citation_text}</p>";
-//     //$content .= " <input id='' class='form-submit' type='submit' value='Copy To Clipboard' name='' />\n";
-//     $content .= "</div>\n";
-//   }
-// 
-//   if ($node->catalogue_description) {
-//     $content .= "<h3>Catalogue Description</h3>\n";
-//     $content .= "<div class='citation-mlaCitation'>\n";
-//     $content .= "<p>{$node->catalogue_description}</p>";
-//     $content .= "</div>\n";
-//   }
-//
-//   
-//   $set_mates = artmob_citation_get_others_in_set($node);
-// 
-// 
-//     if (is_array($set_mates)) {
-//     $content .= "<h3>Others from the set {$node->set_title}</h3>\n";
-//     $content .= "<p>";
-// 
-//     foreach($set_mates as $number => $info) {
-//       $content .= $number . '. '. l($info['title'],"node/" . $info['nid'],array('class'=>$info['class'])) . "<br />";
-//     }
-// 
-//       $content .= "</p>";
-//     }
-// 
-//     if (is_array($citation_fields)) {
-// 
-//     $cblocks = array();
-//
-//     foreach($citation_fields as $field) {
-// 
-//       if (empty($node->$field)) { continue; } // no value;
-// 
-//         $label = ucfirst(str_replace('_',' ',$field));
-//         $value = $node->$field;
-// 
-//         $block = '';
-//         $block .= "<table class='citationTable citation-table-{$field}'>\n";
-//         $block .= "<tr><th>{$label}</th></tr>\n";
-//         $block .= "<tr><td class='column1'>{$value}</td></tr>\n";
-//         $block .= "</table>\n";
-// 
-//         $cblocks[$label] = $block;
-// 
-//       }
-//       if (count($cblocks) > 0) {
-//         $content .= "<h3>Other Information</h3>\n";
-//         $content .= display_columnize($cblocks,2,"citationTable");
-//       }
-//     }
-// 
-//   $content .= "<a name='respond'></a>";
-//   //$content .= correct_citation_tab(  (array)$node );
-//   $content .= _artmob_citation_tab_view( $node );
-//   $content .= artmob_citation_get_discussion( $node );
-// 
-// 
-//   return $content;
-// }
 
 function _artmob_citation_tab_view( $node ) {
   $content = '';
@@ -2918,17 +2318,6 @@ function theme_artmob_citation_get_discussion( $node_array = array(), $node) {
   return $output;
 }
 
-/////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////
-//  The following code was copied over from the comment module
-/// It was changed to work with the citation tab
-/// Basically when a comment is made, it gets attached to the
-//  license it's referring to and not the actual node
-//  furthermore, when submitting the comment the page
-/// will be redirected back here instead of to the license node view.
-/////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////
-
 /**
  * This function is responsible for generating a comment reply form.
  * There are several cases that have to be handled, including:
@@ -2949,6 +2338,7 @@ function theme_artmob_citation_get_discussion( $node_array = array(), $node) {
  * @return $output
  *   The rendered parent node or comment plus the new comment form.
  */
+ 
 function artmob_citation_comment_reply($nid, $citation_nid, $pid = NULL) {
   // Load the parent node.
   $node = node_load($nid);
@@ -3517,7 +2907,6 @@ function artmob_citation_get_licensees_for_license( $citation_id, $license_id ) 
                             left  join {am_license} b on l.license_id = b.license_id
                             left join {node} n on b.nid = n.nid
                             where l.citation_id = %d and l.license_id = %d", $citation_id, $license_id );
-  watchdog( 'citation get licenses', 'qry = '. $qry );
   $license_contributor_array = array();
   while ( $license_contributor_row = db_fetch_object( $license_contributor_query )) {
     $contributor_id = $license_contributor_row->contributor_id;
@@ -3577,14 +2966,9 @@ function artmob_citation_get_contributors($citation_id, $unique = FALSE) {
 function artmob_citation_convert_date_value( $date_value, &$day, &$month, &$year, &$date_order ) {
   //we will assume that the $date_value comes in in the format dd/mm/yyyy
   $date_value_array = explode( '/', $date_value );
-  watchdog( 'citation_save', '$date_value = '. $date_value );
   $day = $date_value_array[0];
   $month = $date_value_array[1];
   $year = $date_value_array[2];
-  watchdog( 'citation_save', '$day = '. $day );
-  watchdog( 'citation_save', '$month = '. $month );
-  watchdog( 'citation_save', '$year = '. $year );
-
   $date_order = artmob_date_widget_build_date_order( $day, $month, $year );
 }
 
@@ -4123,7 +3507,6 @@ function _artmob_citation_order_submit() {
                       $my_eid );
 
     db_query ( $query );
-    //drupal_set_message( $query );
 
     //Update the levels of all of the children of the moved work
     //since it may have moved to a totally new branch
@@ -4137,21 +3520,11 @@ function _artmob_citation_order_delete() {
   $cnid = $_POST['cnid'];
   drupal_set_message( 'in delete - deleting cnid '.$cnid);
   artmob_citation_remove_my_children( $cnid );
-  //This goto didn't work so I added the redirect in the js file
-  //drupal_goto( 'node/'.$nid.'/citation' );
 }
 
+/* A function to recursively delete child works (and citations) */
+
 function artmob_citation_remove_my_children( $cnid ){
-  //This function is a recursive function that will
-  //delete all of my children works (and citations)
-  //and recursively their children and their children's children..etc
-  //and then finally delete myself
-  //  -- Psuedocode --
-  //Find all of my children
-  //loop through my children
-  //  artmob_citation_remove_my_children()
-  //end loop
-  //remove me
 
   $my_eid = artmob_citation_get_eid_from_cnid( $cnid );
   $query = db_query( "select c.nid as cnid from {am_encapsulated_works} e
@@ -4161,8 +3534,6 @@ function artmob_citation_remove_my_children( $cnid ){
     artmob_citation_remove_my_children( $row->cnid );
   }
   db_query( "delete from {am_encapsulated_works} where eid = '%s'",$my_eid );
-  watchdog( 'citation works delete', 'deleting work '.$my_eid );
-  watchdog( 'citation works delete', 'deleting citation node '.$cnid );
   node_delete( $cnid );
 }
 
@@ -4179,21 +3550,18 @@ function artmob_citation_update_child_tree_level( $my_eid, $my_level ){
 
 function artmob_citation_get_eid_from_cnid( $cnid ){
   $query = sprintf( "select link_eid from {am_citation} where nid = %d", $cnid );
-  //drupal_set_message( $query );
   $eid = db_result( db_query( $query ) );
   return $eid;
 }
 
 function artmob_citation_get_nid_from_cnid( $cnid ){
   $query = sprintf("select link_nid from {am_citation} where nid = %d", $cnid );
-  //drupal_set_message( $query );
   $eid = db_result( db_query( $query ) );
   return $eid;
 }
 
 function artmob_citation_get_tree_level_from_eid( $eid ){
   $query = sprintf( "select tree_level from {am_encapsulated_works} where eid = '%s'", $eid );
-  //drupal_set_message( $query );
   $tree_level = db_result( db_query( $query ) );
   return $tree_level;
 }

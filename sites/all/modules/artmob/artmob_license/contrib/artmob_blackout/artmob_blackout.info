@@ -2,4 +2,4 @@
 name = Artmob Blackout
 package = Artmob
 description = Allows administrators to remove disputed content from general view while still presenting its archival and supporting information.
-version = 3.1
+version = 3.1.dev

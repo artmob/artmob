@@ -1,8 +1,8 @@
-; $Id: PCMain.info,v 1.0 2007/08/07 20:55:33 dries Exp $
+; $Id: PCMain.info,v 1.0 2007/08/07 20:55:33 stop14 Exp $
 name = PC Main
-description = Main module with general functions
+description = A set of helper functions for developers
 package = PC Tools
-version = VERSION
+version = 3.1
 
 ; Information added by drupal.org packaging script on 2007-01-30
 version = "5.1"

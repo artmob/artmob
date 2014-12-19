@@ -1,9 +1,9 @@
 <?php
-// $Id: artmob_contributor.module,v 1.0 2008/03/01 08:31:22 drumm Exp $
+// $Id: artmob_contributor.module,v 3.1 2008/03/01 08:31:22 stop14 Exp $
 
 /**
  * @file
- * Allows users to enter a Link to an Article.
+ * Provides a node type and handling functions for archive contributors.
  */
 
 
@@ -398,11 +398,6 @@ function artmob_contributor_delete($node) {
 
 // Implementation of hook_load().
 function artmob_contributor_load($node) {
-
-/* joe's code
-  $t = db_fetch_object(db_query('SELECT * FROM {am_contributor} WHERE nid = %d', $node->nid));
-  return $t;
-*/
 
   $t = db_fetch_array(db_query('SELECT * FROM {am_contributor} WHERE nid = %d', $node->nid));
   return $t;
@@ -1086,14 +1081,7 @@ function artmob_contributor_get_id_from_name( $full_name ) {
 function artmob_contributor_add_contributor( ) {
   global $user;
   $contributor = $_POST['contributor'];
-  //assume
-  watchdog( 'add contributor', 'input report from jquery = '.$contributor );
   $contributor_array = json_decode($contributor, TRUE);   // TRUE forces it to convert objects associative arrays
-  watchdog( 'add contributor', 'decoded report array from jquery = '.print_r( $contributor_array, True ) );
-  //$contributor_array['first_name'];
-  //$contributor_array['last_name'];
-  //$contributor_array['is_corporate_contributor'];
-  //$contributor_array['is_unknown'];
   $first_name = $contributor_array['first_name'];
   $last_name = $contributor_array['last_name'];
 

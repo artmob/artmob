@@ -1,5 +1,4 @@
-; $Id: artmob_glossary.info,v 3.1 2011/10/31 20:55:33 stop14 Exp $
 name = Artmob Glossary
 description = Ability to add inline glossary entries as nodes or via theming.
 package = Artmob
-version = 3
+version = 3.1

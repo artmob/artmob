@@ -1,9 +1,9 @@
 <?php
-// $Id: artmob_licensing_ticket.module,v 1.0 2008/03/01 08:31:22 drumm Exp $
+// $Id: artmob_licensing_ticket.module,v 1.0 2008/03/01 08:31:22 stop14 Exp $
 
 /**
  * @file
- * Allows users to enter a Link to an Article.
+ * Allows visitors to provide information about the licensing of a work.
  */
 
 
@@ -206,11 +206,6 @@ function artmob_licensing_ticket_delete($node) {
 
 // Implementation of hook_load().
 function artmob_licensing_ticket_load($node) {
-
-/* joe's code
-  $t = db_fetch_object(db_query('SELECT * FROM {am_license} WHERE nid = %d', $node->nid));
-  return $t;
-*/
 
   $t = db_fetch_array(db_query('SELECT * FROM {am_licensing_ticket} WHERE nid = %d', $node->nid));
   return $t;

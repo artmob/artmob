@@ -1,9 +1,9 @@
 <?php
-// $Id: artmob_usage_request_ticket.module,v 1.0 2008/03/01 08:31:22 drumm Exp $
+// $Id: artmob_usage_request_ticket.module,v 1.0 2008/03/01 08:31:22 stop14 Exp $
 
 /**
  * @file
- * Allows users to enter a Link to an Article.
+ * A helper module for Artmob Respond.  Allows users to submit a request to use site content.
  */
 
 

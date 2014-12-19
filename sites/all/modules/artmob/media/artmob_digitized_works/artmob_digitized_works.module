@@ -3,7 +3,7 @@
 
 /**
  * @file
- * Allows users to enter a Link to an Article.
+ * Allows users to add a Digitized Work to their archive.
  */
 
 
@@ -92,30 +92,8 @@ function artmob_digitized_works_menu($may_cache) {
 
   if ($may_cache) {
   }
-  else {
-    $items[] = array(
-      'path' => 'admin/artmob/digitized_convert',
-      'title' => t('convert digitized documents entries'),
-      'callback' => 'drupal_get_form',
-      'callback arguments' => array('artmob_digitized_convert_form', NULL),
-      'description' => t('Allows the conversion of digitized documents entries'),
-      'access' => user_access('administer site configuration'),
-      'type' => MENU_NORMAL_ITEM,
-    );
-  }
 
   return $items;
-}
-
-function artmob_digitized_convert_form() {
-  $form = array();
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Convert the digitized documents HTML body fields'),
-    '#prefix' => t('This will convert the digitzed works HTML Body fields and merge them into the description.'),
-  );
-
-  return $form;
 }
 
 function artmob_digitized_works_form_alter($form_id, &$form) {
@@ -131,29 +109,6 @@ function artmob_digitized_works_form_alter($form_id, &$form) {
         break;
     }
   }
-
-function artmob_digitized_convert_form_submit($form_id, $form_values) {
-  if ( $form_values['op'] == 'Convert the digitized documents HTML body fields' ) {
-    $result = db_query("SELECT * FROM {am_digitizedworks} WHERE HTMLBody <> ''" );
-    while ($row = db_fetch_object($result)) {
-      //get nid of digitized work
-      $nid = $row->nid;
-      
-      //get body and vid from node_revision for $nid
-      $body= db_query( "select r.body, r.vid from {node} n
-                          left join {node_revisions} r on n.vid = r.vid
-                          where n.nid = %d", $nid );
-                          
-      $data = db_fetch_object( $body );
-      
-      //update the node_revisions by appending the HTMLBody to it
-      db_query( "UPDATE {node_revisions} set body = '%s' where vid = %d", $data->body .' '. $row->HTMLBody, $data->vid );
-      //delete the HTMLBody field so that if the data is reconverted, it won't double append
-      db_query( "UPDATE {am_digitizedworks} set HTMLBody = '' where nid = %d", $nid );
-    }
-    drupal_set_message( 'The digitized documents have been converted' );
-  }
-}
 
 function artmob_digitized_works_view($node, $teaser = FALSE, $page = FALSE) {
   if ($page) {
@@ -280,25 +235,11 @@ function artmob_digitized_works_update($node) {
 
 // Implementation of hook_delete().
 function artmob_digitized_works_delete($node) {
-/* NOT NEEDED NOW THAT WE NO LONGER SAVE HTMLBODY OR FORMAT
-  db_query("DELETE FROM {am_digitizedworks}
-              where nid = %d",
-             $node->nid);
-*/
 }
 
 // Implementation of hook_load().
 function artmob_digitized_works_load($node) {
 
-/* joe's code
-  $t = db_fetch_object(db_query('SELECT * FROM {am_digitizedworks} WHERE nid = %d', $node->nid));
-  return $t;
-*/
-
-/* NOT NEEDED NOW THAT WE NO LONGER SAVE HTMLBODY OR FORMAT
-  $t = db_fetch_array(db_query('SELECT * FROM {am_digitizedworks} WHERE nid = %d', $node->nid));
-  return $t;
-*/
 }
 
 
@@ -335,7 +276,7 @@ function artmob_digitized_works_form(&$node) {
     '#description'   => ARTMOB_MEDIA_TITLE_HELP,
     '#tree'          => 'FALSE',
     '#rows'          => 1,
-    '#required'      => True
+    '#required'      => TRUE
   );
   
   $form['DigitizedWorks']['body'] = array(
@@ -345,59 +286,13 @@ function artmob_digitized_works_form(&$node) {
     '#description'   => ARTMOB_MEDIA_DESCRIPTION_HELP,
     '#tree'          => 'FALSE',
     '#rows'          => 3,
-    '#required'      => True
+    '#required'      => TRUE
   );
   $form['DigitizedWorks']['format'] = filter_form($node->format);
 
-/* NOT NEEDED NOW THAT WE NO LONGER SAVE HTMLBODY OR FORMAT
- $form['DigitizedWorks']['a']['HTMLBody'] = array(
-    '#type'          => 'textarea',
-    '#title'         => t('HTML Body'),
-    '#default_value' => $node->HTMLBody,
-    '#description'   => 'enter the HTML body of the work',
-    '#tree'          => 'FALSE',
-    '#rows'          => 10,
-    '#required'      => False,
-    '#weight'        => -6,
-  );
-  $form['DigitizedWorks']['a']['HTMLBodyFormat'] = filter_form($node->HTMLBodyFormat, -5, array('HTMLBodyFormat'));
-*/
   return $form;
 
 }
-
-/**
- * Implementation of hook_form_alter().
- *
-function artmob_digitized_works_form_alter($form_id, &$form) {
-}
-*/
-
-/**
- * Implementation of hook_nodeapi().
- *
-function artmob_digitized_works_nodeapi(&$node, $op, $teaser, $page) {
-  switch ($op) {
-    case 'prepare':
-      break;
-    case 'load':
-      break;
-    case 'view':
-      break;
-    case 'update':
-      break;
-    case 'delete revision':
-      break;
-    case 'delete':
-      break;
-    case 'insert':
-      break;
-    case 'submit':
-      break;
-  }
-}
- */
-
 
 // Implementation of hook_help().
 function artmob_digitized_works_help($section) {

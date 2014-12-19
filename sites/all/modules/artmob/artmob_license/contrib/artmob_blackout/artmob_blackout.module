@@ -1,58 +1,22 @@
 <?php
-// $Id: artmob_blackout.module,v 1.0 2008/03/01 08:31:22 drumm Exp $
+// $Id: artmob_blackout.module,v 1.0 2008/03/01 08:31:22 stop14 Exp $
 
 /**
  * @file
- * Contains ability to Blackout node fields.
+ * Contains ability to remove nodes from public deleting them, for instance
+ * to preserve the integrity of the archive while honouring takedown
+ * requests.
+ * 
+ * Note: This module is more a proof-of-concept than production ready.
+ * Also note that any media assets attached to blacked out content
+ * will still be accessible through their direct URL.
+ *
+ * To do: move blacked out files to a private, inaccessible path.
  */
 
 define( ITEMSTATUS_REMOVED, 'Removed' );
 define( ITEMSTATUS_BLACKED_OUT, 'Blacked Out' );
 
-
-function artmob_blackout_init() {
-/*
-   $fd_path = drupal_get_path('module','artmob_fair_dealing');
-   $module_path = drupal_get_path('module','artmob_blackout');
-
-   $fd_js = $fd_path .'/js';
-   $fd_css = $fd_path .'/css';
-
-   $module_js = $module_path .'/js';
-   $module_css = $citation_path .'/css';
-
-   $fd_scripts = array('jquery-min-14.js','fairdealing_var.js','fairdealing_ui.js');
-
-   $arg0 = arg(0);
-   $arg1 = arg(1);
-   $arg2 = arg(2);
-
-   if ($arg0 == 'node' && is_numeric($arg1) && ($arg2 == 'copyright' || $arg2 == 'license')) {
-     $db_query = db_query("SELECT title, type FROM {node} WHERE nid=%d",$arg1);
-
-     $nobj = db_fetch_object($db_query);
-
-     $filetypes = array(
-       'DigitizedWorks' => '1',
-       'amDocument' => '1', // forward compatibility
-       'amVideo' => '2',
-       'amPicture' => '3',
-       'audio' => '4',
-       'amAudio' => '4', //forward compatibility
-     );
-
-     $filetype = $filetypes[$nobj->type];
-
-       drupal_add_js(array('afd' => $artmob_fair_dealing_settings), "setting");
-
-       foreach ($fd_scripts as $js) {
-         drupal_add_js($fd_js ."/". $js,'module');
-       }
-
-      drupal_set_title("Blackout: ". $nobj->title);
-   }
-   */
-}
 
 /**
  * Implementation of hook_menu().

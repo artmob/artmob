@@ -1,8 +1,8 @@
 <?php
 /**
  * @file
- * Comments are displayed in a separate 'discuss' tab, for node types you wish
- * Made for Drupal 5.x
+ * Comments are displayed in a separate 'discuss' tab, for node types you wish.
+ *
  */
 
 /**

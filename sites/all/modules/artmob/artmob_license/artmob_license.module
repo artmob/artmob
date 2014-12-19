@@ -1,9 +1,9 @@
 <?php
-// $Id: artmob_license.module,v 1.0 2008/03/01 08:31:22 drumm Exp $
+// $Id: artmob_license.module,v 1.0 2008/03/01 08:31:22 stop14 Exp $
 
 /**
  * @file
- * Allows users to enter a license to a node.
+ * Allows users to add a license to a node.
  */
 
 

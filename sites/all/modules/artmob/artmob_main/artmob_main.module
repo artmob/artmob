@@ -74,9 +74,6 @@ function artmob_main_browser_validate( $type, $view, $form ){
 
 
 function artmob_main_views_pre_view(&$view, $items){
-  //watchdog( 'joe browser debug', '_pre_view - $server = '.print_r( $_SERVER, true ) );
-  //watchdog( 'joe browser debug', '_pre_view - $view = '.print_r( $view, true ) );
-  //$_SERVER["HTTP_REFERER"]
   switch ($view->type) {
     case 'am_alphabet':
       $view_css = views_css_safe("browser-view-block-$view->name");
@@ -217,64 +214,8 @@ function artmob_main_menu($may_cache) {
       'callback' => 'artmob_main_views_view',
     );
 
-    $items[] = array(
-      'path'              => 'admin/artmob/citation_title_convert',
-      'title'             => t('Convert citation titles'),
-      'description'       => t('Convert citation titles'),
-      'weight'            => -7,
-      'callback'          => 'drupal_get_form',
-      'callback arguments' => array( 'artmob_main_admin_title_convert'),
-      'access'            => user_access('administer site configuration')
-    );
-
   }
   return $items;
-}
-
-function artmob_main_admin_title_convert() {
-  $form['citation_convert'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Citation Convert'),
-    '#weight' => -2
-    );
-
-  $form['citation_convert']['Convert'] = array(
-    '#type'     => 'submit',
-    '#value'    => t('convert citation titles'),
-    '#submit'   => True,
-    '#weight'   => 2
-  );
-
-  return system_settings_form($form);
-}
-
-function artmob_main_admin_title_convert_submit($form_id, $form_values) {
-  global $user;
-  if ( $form_values['op'] == 'convert citation titles' ) {
-    artmob_main_convert_citation_titles();
-    drupal_set_message( t('The information has been converted'));
-  }
-}
-
-function artmob_main_convert_citation_titles(){
-
-  $result = db_query( "SELECT e.citation_id, n.nid,c.nid as citation_nid, n.title, t.name
-  FROM {am_encapsulated_works} e
-  left join {am_citation} c on e.citation_id = c.citation_id
-  left join {node} n on n.nid = e.nid
-  left join {node_type} t on t.type=n.type
-  WHERE e.parent_eid = 0 and not isnull(n.nid)" );
-  $i=0;
-  while ($row = db_fetch_object($result)) {
-    $citation_title = $row->name.' Citation: '.$row->title;
-    db_query( "Update {am_citation} set citation_title = '%s', title_without_prefix = '%s' where citation_id = %d", $citation_title, $citation_title, $row->citation_id );
-    db_query( "Update {node} set title = '%s' where nid = %d", $citation_title, $row->citation_nid );
-    $i++;
-    watchdog( 'main citation title convert', 'cid = '.$row->citation_id.'  --  nid = '.$row->citation_nid );
-  }
-  watchdog( 'main citation title convert', 'count = '.$i );
-  drupal_set_message( $i.' records have been converted' );
-  return True;
 }
 
 /**
@@ -286,16 +227,11 @@ function artmob_main_views_view($arg1,$arg2,$page=0,$sort='title',$sortorder_dat
   global $current_page;
 
   $dynamic_view_updating = TRUE;
-  //$type = 'node';
   $name = 'browse_all_content_ajax';
   $name= $view_name;
-  //watchdog( 'joe browser debug', 'main_views_view - $view_name = '.$view_name );
-  //watchdog( 'joe browser debug', 'main_views_view - $page = '.$page );
-  //watchdog( 'joe browser debug', 'main_views_view - $current_view = '.$current_view );
 
   $view = views_get_view($name);
   $view_css = views_css_safe("browser-view-block-$view->name");
-  //$view = $current_view;
   $temp_args = $_GET['q'];
 
   $_GET['q'] = $view->url.'/'.$arg1.'/'.$arg2;
@@ -307,7 +243,7 @@ function artmob_main_views_view($arg1,$arg2,$page=0,$sort='title',$sortorder_dat
     $_GET['page'] = $current_page;
 
     $view->query = '';
-    $view->is_cacheable = False;
+    $view->is_cacheable = FALSE;
 
     if ( $view->page ){
       $arg_result = artmob_main_get_last_2_args( $arg2,$arg1);
@@ -335,12 +271,10 @@ function artmob_main_views_view($arg1,$arg2,$page=0,$sort='title',$sortorder_dat
       $view->sort[1]['sortorder'] = $sortorder_date;
     }
 
-    //watchdog( 'joe browser debug', '$view_by = '.$view_by );
-    $view_info = views_build_view('items', $view, $args, True, artmob_main_get_pager_count( $view_by ));
+    $view_info = views_build_view('items', $view, $args, true, artmob_main_get_pager_count( $view_by ));
     $view_items = $view_info['items'];
 
   $meta = artmob_main_build_meta( $view, $sort, $sortorder_date, $sortorder_title, $view_by );
-  //watchdog( 'joe browser debug', 'main_views_view - $meta = '.print_r( $meta, true ));
   $output = $temp . theme( 'artmob_main_results_browser',$view_items ,$meta, $view, 'views');
   print $output;
   exit;
@@ -450,46 +384,7 @@ function artmob_main_build_meta ( $view, $sort = 'title', $sortorder_date = 'DES
     $index_array['page_onclick'] = artmob_main_build_fetchpage_plus( $view_css, $browser_url, $total_pages - 1, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
     $index_array['active'] = False;
     $pagination_array[' last'] = $index_array;
-  /*
-  } else {
 
-    if ( $total_pages > 0 ){
-      //Create the first page link
-      $index_array = array();
-      $index_array['page_onclick'] = artmob_main_build_fetchpage_plus( $view_css, $browser_url, 0, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
-      $index_array['active'] = False;
-      $pagination_array['first '] = $index_array;
-
-      if ( $current_page == 0 ){
-        //We are on the first page so only create the first page and the next one
-        $index_array = artmob_main_build_index_array ($current_page, True, $total_pages, $pager_limit, $view->total_rows, $index_text, $view_css, $browser_url, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
-        $pagination_array[$index_text] = $index_array;
-        $index_array = artmob_main_build_index_array ($current_page + 1, False, $total_pages, $pager_limit, $view->total_rows, $index_text, $view_css, $browser_url, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
-        $pagination_array[$index_text] = $index_array;
-      } else if ( $current_page == ( $total_pages - 1 ) ){
-        //We are on the last page so only create the previous page and the last one
-        $index_array = artmob_main_build_index_array ($current_page - 1, False, $total_pages, $pager_limit, $view->total_rows, $index_text, $view_css, $browser_url, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
-        $pagination_array[$index_text] = $index_array;
-        $index_array = artmob_main_build_index_array ($current_page, True, $total_pages, $pager_limit, $view->total_rows, $index_text, $view_css, $browser_url, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
-        $pagination_array[$index_text] = $index_array;
-      } else {
-        //create a link for the previous page, the current page and the next page.
-        $index_array = artmob_main_build_index_array ($current_page - 1, False, $total_pages, $pager_limit, $view->total_rows, $index_text, $view_css, $browser_url, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
-        $pagination_array[$index_text] = $index_array;
-        $index_array = artmob_main_build_index_array ($current_page, True, $total_pages, $pager_limit, $view->total_rows, $index_text, $view_css, $browser_url, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
-        $pagination_array[$index_text] = $index_array;
-        $index_array = artmob_main_build_index_array ($current_page + 1, False, $total_pages, $pager_limit, $view->total_rows, $index_text, $view_css, $browser_url, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
-        $pagination_array[$index_text] = $index_array;
-      }
-      //Create last page link
-      $index_array = array();
-      $index_array['page_onclick'] = artmob_main_build_fetchpage_plus( $view_css, $browser_url, ($total_pages - 1), $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
-      $index_array['active'] = False;
-      $pagination_array[' last'] = $index_array;
-
-    }
-  }
-  */
   $meta['pagination_array'] = $pagination_array;
   //this seems stupid but we must re-run the view with pager false so that the views pager
   //does not show up at the bottom of the page.
@@ -694,9 +589,9 @@ function artmob_main_get_view_type_nodes_filter (){
 }
 //----------------------------------------------
 function artmob_main_get_view_type_nodes( $IsAddAll = true ){
-  $TypeArray = array();
+  $typearray = array();
   if ( $IsAddAll ) {
-    $TypeArray['all'] = 'Main';
+    $typearray['all'] = 'Main';
   }
   //Load up our sort array as an array of objects.
   $result = db_query( "SELECT type, name from {node_type}" );
@@ -714,10 +609,10 @@ function artmob_main_get_view_type_nodes( $IsAddAll = true ){
   if ( count( $SortArray) > 0 ){
     //Fill in our output array
     foreach ($SortArray as $value ){
-      $TypeArray[ $value->type ] = $value->name;
+      $typearray[ $value->type ] = $value->name;
     }
   }
-  return $TypeArray;
+  return $typearray;
 }
 
 function artmob_main_objectSort(&$data, $key)
@@ -1036,7 +931,9 @@ EOT;
 
 }
 
-function theme_artmob_browse_menu($links=NULL) {  // variant of theme_links
+function theme_artmob_browse_menu($links=NULL) {  
+  
+  // variant of theme_links
   // Note: Linked paths are now based on preset views
 
   if (count($links) > 0) {
@@ -1377,20 +1274,21 @@ function theme_artmob_main_alphabet_bar_tabs ( $view ){
   return $result;
 }
 
+/* Deprecated */
+
 function theme_artmob_main_nodetype_tabs( $view ){
-  //this is being deprecated //Jan 24, 2012
   $result = '';
   return $result;
 
   $holder = '';
 
   $arguments = artmob_main_get_last_2_args( $last_arg, $type );
-  $TypesArray = array();
-  $TypesArray  = artmob_main_get_view_type_nodes();
+  $typesarray = array();
+  $typesarray  = artmob_main_get_view_type_nodes();
 
 // --- Now build the tabs ---
   $result .= '<div class="tabs"><ul class="tabs primary">';
-  foreach ($TypesArray as $typename=>$typedesc){
+  foreach ($typesarray as $typename=>$typedesc){
     $href = $view->url.'/'.$typename.'/'.$last_arg;
     if ($type == $typename){
       $result .= '<li class="active">'.l( $typedesc,$href, array( 'class' => 'active' ) ).'</li>';

@@ -1,5 +1,10 @@
 <?php
-// $Id: artmob_citation_ticket.module,v 1.0 2008/03/01 08:31:22 drumm Exp $
+// $Id: artmob_citation_ticket.module,v 1.0 2008/03/01 08:31:22 stop14 Exp $
+
+/* @File
+   Provides a comment stream for visitors to make suggestions about the
+   attributions for a work.
+   */
 
 //* Implementation of hook_node_info().
 function artmob_citation_ticket_node_info() {

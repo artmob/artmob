@@ -1,6 +1,6 @@
 ; $Id: artmob_fair_dealing.info,v 3.1 2010/11/04 20:55:33 stop14 Exp $
 name = Artmob Fair Dealing
-description = The core of a comprehensive suite of tools to engage rights holders, site administrators and the public in a mutually productive dialogue about attribution and copyright.
+description = "The core of a comprehensive suite of tools to engage rights holders, site administrators and the public in a mutually productive dialogue about attribution and copyright."
 dependencies = artmob_citation artmob_license artmob_contributor jstools jquery_update
 package = Artmob
 version = 3.1

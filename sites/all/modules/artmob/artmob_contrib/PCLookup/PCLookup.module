@@ -3,7 +3,7 @@
 
 /**
  * @file
- * Allows users to enter a Lookup.
+ * Node based data table API.
  */
 
 

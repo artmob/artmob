@@ -1,4 +1,3 @@
-; $Id: artmob_usage_request_ticket.info,v 3.1 2011/04/14 20:55:33 stop14 Exp $
 name = Artmob Usage Request Ticket
 description = A helper module for Artmob Respond.  Allows users to submit a request to use site content.
 package = Artmob Respond

@@ -1,9 +1,9 @@
 <?php
-// $Id: PCMain.info,v 1.0 2007/08/07 20:55:33 dries Exp $
+// $Id: PCMain.module,v 1.0 2007/08/07 20:55:33 stop14 Exp $
 
 /**
  * @file
- * ADDDOCUMENTATION
+ * A suite of helper functions for developers.
  */
  
 //----------------------------------------------

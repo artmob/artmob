@@ -2,7 +2,7 @@
 name = PC Lookup
 description = PC Lookup
 package = PC Tools
-version = VERSION
+version = 3.1
 
 ; Information added by drupal.org packaging script on 2007-01-30
 version = "5.1"

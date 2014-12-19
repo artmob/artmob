@@ -33,6 +33,7 @@ body {
 	overflow:hidden;
 	width:970px;
 	text-align:left;
+	padding-bottom: 20px;
 }
 #header {
 	margin:0;
@@ -48,8 +49,8 @@ body {
 	/*<mil>*/
 }
 #active-area #content{
-	/*width: auto;*/
 	width: 970px;
+	min-height: 800px;	
 }
 #left-column{
 	width:166px;
@@ -631,7 +632,11 @@ ul.primary{
 	/*<mil>*/
 }
 #active-area #top-border{
-	height:23px;
+	height: 23px;
+	width: 100%;
+	background-color: white;
+  border-top-left-radius: 10px;
+
 	/*<mil>*/
 }
 #menu-area .links a:hover, #menu-area .links a:active,

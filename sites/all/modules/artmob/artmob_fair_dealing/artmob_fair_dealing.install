@@ -45,6 +45,7 @@ function artmob_fair_dealing_install() {
 
       db_query("CREATE TABLE {am_node_type_mapping} (
         id integer unsigned auto_increment primary key,
+        media_type int unsigned NOT NULL default '0',
         node_type text,
         work_type text
       );");

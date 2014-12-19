@@ -1315,9 +1315,9 @@ function artmob_exhibit_form_alter($form_id, &$form) {
     case 'node_type_form':
       $form['workflow']['is_curator_allowed'] = array(
         '#type' => 'radios',
-        '#title' => t('Allow Curators'),
+        '#title' => t('Add curator tab'),
         '#default_value' => $enabled,
-        '#options' => array(0 => t('Disabled'), 1 => t('Enabled')),
+        '#options' => array(0 => t('No'), 1 => t('Yes')),
         '#description' => t('Should this node show the curator tab?'),
       );
 

@@ -1,4 +1,3 @@
-; $Id: artmob_license.info,v 3.1 2008/03/01 20:55:33 dries Exp $
 name = Artmob License
 description = Add Licensing capabilities to your website.
 package = Artmob

@@ -2,7 +2,7 @@
 // $Id: artmob_license_contributor_widget.module,v 1.0 2011/09/15 15:27:33 ramani Exp $
 
 /* @file
- * ADDDOCUMENTATION
+ * Connects a license to particular contributors on the site.
  **/
 
 /**
@@ -24,23 +24,6 @@ function artmob_license_contributor_widget_elements() {
  * Don't know what arg2 is or why it is there
  */
 function artmob_license_contributor_widget_expand($element, $arg2, $node) {
-  //I had to do a silly work-around because
-  //when the last element was deleted
-  //(so there were no more of this element type left
-  //on the form <except for the template one>)
-  //for some reason the last deleted one gets
-  //added back when this function is called.
-  //I found out that the count($arg2) is always
-  //0 when loading and greater than 1 if there
-  //are any of this element on this form.
-  //If there never were elements on the form then
-  //it is 0.
-  //BUT!!!!
-  // if there were elements and they were deleted
-  //then the count($arg2) is 1.  So the workaround in this
-  //case is to blank out the widgets by setting
-  //$element[$name] to a blank array
-//  drupal_set_message( "count(arg2) = ". count($arg2) );
   if ( count($arg2) == 1 ) {
     $element[$name] = array();
     return $element;
@@ -95,15 +78,6 @@ function artmob_license_contributor_widget_expand($element, $arg2, $node) {
           'path' => 'artmob_license_contributor/widget_update_js',
           'params' => array( 'widget_name_js' => $name, 'count' => 0 ),
         ),
-        /*
-        array(
-          'selector' => 'select.widget_weight_'. $name,
-          'wrapper' => 'widget_wrapper_'. $name,
-          'event' => 'change',
-          'path' => 'artmob_contributor/widget_update_js',
-          'params' => array( 'widget_name_js' => $name ),
-        ),
-        */
      ),
   );
 
@@ -125,7 +99,6 @@ function _artmob_license_contributor_build_widget($name, $edit, $node=NULL) {
   $widget = _artmob_license_contributor_widget_expand_subwidgets( $name, $subwidgets );
   // add a control block for adding new subwidgets - modifies $element
   //THIS IS AN ATTEMPT TO NOT ALLOW ANY MORE THAN ONE LICENSE PER CITATION
-  //watchdog( 'build widget', 'count(subwidgets) = '.count( $subwidgets) );
   //if ( count( $subwidgets ) == 0 ) {
     $widget += _artmob_license_contributor_widget_add_new_subwidget_control( $name, $edit, count( $subwidgets ) );
   //}
@@ -242,40 +215,6 @@ function _artmob_license_contributor_widget_expand_subwidgets( $name, $subwidget
       '#required'      => FALSE,
     );
 
-    /*
-    $default = artmob_citation_get_role_default( $subwidget['contributor_role'] );
-
-    $element['subwidgets'][$subwidget_id]['contributor_role'] = array(
-      '#type'     => 'select',
-      '#options'    => $contributor_roles[$subwidget_id],
-      '#default_value' => $default,
-      '#multiple' => True,
-      '#size' => 10
-    );
-    */
-
-    /*
-    $element['subwidgets'][$subwidget_id]['firstname'] = array(
-      '#type'          => 'textfield',
-      '#size'          => 10,
-      '#default_value' => $subwidget['firstname'],
-      '#required'      => FALSE,
-    );
-    $element['subwidgets'][$subwidget_id]['middlenames'] = array(
-      '#type'          => 'textfield',
-      '#title'         => t(''),
-      '#size'          => 10,
-      '#default_value' => $subwidget['middlenames'],
-      '#required'      => FALSE,
-    );
-    $element['subwidgets'][$subwidget_id]['lastname'] = array(
-      '#type'          => 'textfield',
-      '#size'          => 10,
-      '#default_value' => $subwidget['lastname'],
-      '#required'      => FALSE,
-    );
-    */
-
     $element['subwidgets'][$subwidget_id]['remove'] = array(
         '#type' => 'checkbox',
         '#default_value' => $subwidget['remove'],
@@ -289,7 +228,6 @@ function _artmob_license_contributor_widget_expand_subwidgets( $name, $subwidget
  * control to add subwidget to widget
  */
 function _artmob_license_contributor_widget_add_new_subwidget_control($name, $edit, $count = 0) {
-//  drupal_set_message( 'inside add new subwidget control' );
   //Requirement was to only allow one license
   //per citation. To accomplish this we pass in the count
   //of how many licenses are currently attached.
@@ -361,42 +299,7 @@ function _artmob_license_contributor_widget_add_new_subwidget_control($name, $ed
       '#value' => $edit['new_subwidget']['keyname'] ? $edit['new_subwidget']['keyname'] : '',
       '#required'      => FALSE,
   );
-  /*
-  $default = artmob_citation_get_role_default( $contributor_roles[$subwidget_id] );
 
-  $element['new_subwidget']['contributor_role'] = array(
-    '#type'     => 'select',
-    '#title'    => 'Role',
-    '#options'    => $contributor_roles,
-    '#value' => $edit['new_subwidget']['contributor_role'],
-    '#multiple' => True,
-    '#size' => 10
-  );
-  */
-
-  /*
-  $element['new_subwidget']['firstname'] = array(
-      '#type'          => 'textfield',
-      '#title'         => t('First Name'),
-      '#size'          => 10,
-      '#value' => $edit['new_subwidget']['firstname'] ? $edit['new_subwidget']['firstname'] : '',
-      '#required'      => FALSE,
-  );
-  $element['new_subwidget']['middlenames'] = array(
-      '#type'          => 'textfield',
-      '#title'         => t('Middle Names'),
-      '#size'          => 10,
-      '#value' => $edit['new_subwidget']['middlenames'] ? $edit['new_subwidget']['middlenames'] : '',
-      '#required'      => FALSE,
-  );
-  $element['new_subwidget']['lastname'] = array(
-      '#type'          => 'textfield',
-      '#title'         => t('Last Name'),
-      '#size'          => 10,
-      '#value' => $edit['new_subwidget']['lastname'] ? $edit['new_subwidget']['lastname'] : '',
-      '#required'      => FALSE,
-  );
-  */
   $element['new_subwidget']['add_subwidget_button'] = array(
     '#type' => 'button',
     '#value' => t( 'Add New License' ),
@@ -441,8 +344,6 @@ function artmob_license_contributor_widget_menu($may_cache) {
 function _artmob_license_contributor_update_js() {
   $name = $_POST['widget_name_js'];
   $count = $_POST['count'];
-//  drupal_set_message( 'update js name = '.$name );
-//  watchdog( 'update js', 'update js count = '.$count );
   print _artmob_license_contributor_build_widget_js( $name, $_POST );
 }
 

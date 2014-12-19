@@ -1,4 +1,3 @@
-; $Id: artmob_citation_ticket.info,v 3.1 2010/04/26 20:55:33 stop14 Exp $
 name = Artmob Citation Ticket
 description = A helper module for Artmob Respond and Artmob Citation.  Allows visitors to provide site administrators with information about a work via a threaded discussion.
 dependencies = artmob_citation artmob_respond

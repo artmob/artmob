@@ -2,7 +2,10 @@
 // $Id: artmob_media.info,v 1.0 2010/12/10 20:55:33 stop14 Exp $
 
 /* @file
- * ADDDOCUMENTATION
+ * This module is designed to support the primary archival media types
+ * in by the accompanying modules. Artmob media type modules are
+ * intended as a quick alternative to creating your own media types.
+ *
  **/
 
 //----------------------------------------------
@@ -145,12 +148,12 @@ function artmob_media_get_content_type($type) {
 
 function artmob_media_build_asset_browser_array() {
   $asset_links = array(
-    'all' => array(
+   /* 'all' => array(
       'display' => TRUE,
       'icon' => 'btn_browse_all.gif',
       'label' => 'Browse All',
       'link' => url('browse/content/all/all')
-    ),
+    ),*/
     'audio' => array(
       'display' => ARTMOB_AUDIO_EXISTS,
       'icon' => 'btn_browse_audio.gif',

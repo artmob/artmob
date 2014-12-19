@@ -3,7 +3,7 @@
 
 /**
  * @file
- * Allows users to enter a Link to an Article.
+ * Allows users to add an article to their site.
  */
 
 
@@ -13,7 +13,7 @@ function artmob_articles_node_info() {
     'Articles' => array(
     'name' => t('Articles'),
     'module' => 'artmob_articles',
-    'description' => t("This allows a user to enter a new Article")
+    'description' => t("This allows a user to add an article to their site.")
     ),
   );
 }

@@ -114,14 +114,11 @@ function todos2_items_subform($node, $form_values=null, $pass=null) {
 
 	// get the pre-existing items - can be in either $edit or $node
 	$items = _todos2_extract_items($form_values, $node);
-//		drupal_set_message( "Extracted item Count: " . count($items) );
 	// process add and remove commands - modifies $items
 	$items = _todos2_process_commands($form_values, $items);
-//		drupal_set_message( "After commands item Count: " . count($items) );
 	// expand the $items array into form elements - modifies $element
 	$todos2 = _todos2_expand_items($items);
 	// add a control block for adding new items - modifies $element
-//	drupal_set_message( "Add controls " . print_r( $form_values, true ) .' : '. print_r( $multistep, true ));
 	$todos2 += _todos2_add_control($form_values, $pass);
 	
 	return $todos2;

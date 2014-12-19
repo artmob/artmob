@@ -2,7 +2,11 @@
 // $Id: artmob_fair_dealing.info,v 1.0 2010/11/04 20:55:33 stop14 Exp $
 
 /* @file
- * ADDDOCUMENTATION
+ * The Artmob Fair Dealing module is the core of the Artmob suite. It
+ * works with the Citation and Licensing modules to provide a comprehensive
+ * method for collecting and presenting information about the creation of
+ * a work and its licensing terms.
+ *
  **/
 
 define('ARTMOB_FD_MEDIA_TYPE_NONE', 0);
@@ -74,7 +78,7 @@ function artmob_fair_dealing_init() {
      drupal_add_css($css_path ."/jquery.fastconfirm.css");
 
      if ($filetype) {
-       $report = artmob_fair_dealing_build_report( $arg1, False ); //changed by Joe Oct 22. Added True
+       $report = artmob_fair_dealing_build_report( $arg1, false ); 
        $existing = (count($report['works']) > 0) ? json_encode($report) : NULL;
        $artmob_fair_dealing_settings = array(
          'filetype' => $filetype,
@@ -268,7 +272,7 @@ function AFD_get_child_works_by_eid_as_list( $work_eid, $include_parent = FALSE 
   $children = array();
   foreach ( $result as $row ) {
     $child_temp = array();
-    $child_temp = AFD_get_child_works_by_eid_as_list( $row->eid, False );
+    $child_temp = AFD_get_child_works_by_eid_as_list( $row->eid, false );
     $children = array_merge( $children, $child_temp );
   }
   $result = array_merge( $result, $children );
@@ -276,7 +280,7 @@ function AFD_get_child_works_by_eid_as_list( $work_eid, $include_parent = FALSE 
   return $result;
 }
 
-function AFD_get_child_works_by_nid_as_tree( $work_nid, $include_parent = False ) {
+function AFD_get_child_works_by_nid_as_tree( $work_nid, $include_parent = false ) {
 //This function will return all of the child works of $work_nid
 //in a nested array of objects that match the tree structure
 // as depicted in am_encapsulated_works.
@@ -287,7 +291,7 @@ function AFD_get_child_works_by_nid_as_tree( $work_nid, $include_parent = False 
   return AFD_get_child_works_by_eid_as_tree( $eid, $include_parent );
 }
 
-function AFD_get_child_works_by_eid_as_tree( $work_eid, $include_parent = False ) {
+function AFD_get_child_works_by_eid_as_tree( $work_eid, $include_parent = false ) {
 //This function will return all of the child works of $work_eid
 //in a nested array of objects that match the tree structure
 // as depicted in am_encapsulated_works. 
@@ -309,7 +313,7 @@ function AFD_get_child_works_by_eid_as_tree( $work_eid, $include_parent = False 
   
   //This must now recurse for each child
   foreach ( $result as $child_eid => $row ) {
-    $child_temp = AFD_get_child_works_by_eid_as_tree( $child_eid, False );
+    $child_temp = AFD_get_child_works_by_eid_as_tree( $child_eid, false );
     $row->children = $child_temp;
   }
 
@@ -481,9 +485,7 @@ function artmob_fair_dealing_save_report( ) {
   global $user;
   $report = $_POST['report'];
 
-  //watchdog( 'artmob fair dealing', 'input report from jquery = '.$report );
   $report_array = json_decode($report, TRUE);   // TRUE forces it to convert objects associative arrays
-  //watchdog( 'artmob fair dealing', 'decoded report array from jquery = '.print_r( $report_array, True ) );
 
   // --- SAVE THE DATA TO THE DATABASE --
   //1. Get all citation ids for this node
@@ -514,16 +516,15 @@ function artmob_fair_dealing_save_report( ) {
     }
 
     //1. Get all citation ids for this node
-    $citation_ids = artmob_fair_dealing_get_citation_ids( $nid, True );
+    $citation_ids = artmob_fair_dealing_get_citation_ids( $nid, true );
     //problem is that we are losing the licenses on these works because
     //the citation_id is changing
     if ( count( $citation_ids ) ) {
       //2a. loop through citation ids and delete from citation and citation_roles
       foreach ( $citation_ids as $citation_nid => $citation_id ) {
-        //watchdog( 'artmob fair dealing', 'citation_id = '.$citation_id );
         db_query( "DELETE FROM {am_citation_roles} where citation_id = %d", $citation_id );
         db_query( "DELETE FROM {am_citation_roles_unknown} where citation_id = %d", $citation_id );
-        //db_query( "DELETE FROM {am_citation} where citation_id = %d",$citation_id );
+
         //Since citations are nodes we should use node_delete to remove them
         node_delete( $citation_nid );
       }
@@ -558,9 +559,6 @@ function artmob_fair_dealing_save_report( ) {
         $weight = $work['weight'];
         $work_type = $work['worktype'];
         $work_type_label = $work['worktype label'];
-        //watchdog( 'FD Save', 'eid = '.$eid );
-        //watchdog( 'artmob fair dealing', '$parent_eid = '.$parent_eid );
-
 
         //3b generate citation
         $citation = new stdClass();
@@ -620,10 +618,8 @@ function artmob_fair_dealing_save_report( ) {
           }
           else {
             if ( $field_name ) {
-              //watchdog( 'joetest', $field_name.' = '.$value );
               //small blip from attribute tab
               if ( $field_name == 'title' ) {
-                watchdog( 'joe fair dealing', '$tree level = '.$tree_level );
                 if ( $tree_level == 0 ){
                   $value = $item_node->type.' Citation:'.$node->title;
                 } else {
@@ -637,7 +633,6 @@ function artmob_fair_dealing_save_report( ) {
                 //we have to load up the identifier widget structure and
                 //save it.
 
-                //watchdog( 'joetest', 'value = '.$value );
                 $widgetname = 'widgetidentifier1';//.$identifier_number;
                 $widget_names[$widgetname] = $widgetname;
                 $subwidget_id = db_next_id('subwidget');
@@ -670,8 +665,6 @@ function artmob_fair_dealing_save_report( ) {
         //Now look up old_citation_id and update the am_citation_license table
         $old_work = $encapsulated_works[$eid];
         $old_citation_id = $old_work->citation_id;
-        //watchdog( 'FD Save', 'old citation id = '.$old_citation_id );
-        //watchdog( 'FD Save', 'new citation id = '.$citation_id );
         db_query( "Update {am_citation_license} set citation_id = %d
        where citation_id = %d", $citation_id, $old_citation_id );
 
@@ -747,21 +740,13 @@ function artmob_fair_dealing_save_report( ) {
     }
 
     //This is a test to see if we can output what we input
-    artmob_fair_dealing_build_report( $nid, False );
+    artmob_fair_dealing_build_report( $nid, false );
   }
 
-  // --- SEND REPLY BACK TO JAVASCRIPT ---
-  //$html = devtools_dump($report_array);
- // $html = 'Joe was here';
-//      'answer' => devtools_dump(json_decode($filter1,TRUE))  // TRUE forces it to convert objects associative arrays
-  //drupal_json( array(
-   //   'answer' => $html
-    //)
-  //);
   exit();
 }
 
-function artmob_fair_dealing_build_report( $nid, $build_expanded = False ) {
+function artmob_fair_dealing_build_report( $nid, $build_expanded = false ) {
   //$build_expanded will add in some extra information
   //as needed by the license tab
 
@@ -774,15 +759,13 @@ function artmob_fair_dealing_build_report( $nid, $build_expanded = False ) {
   //for each encapsulated work build the identifiers array...
   //...the contributors array...the info array...and the nid element
 
-  //Joe!!! - get citation[0]
-  $encapsulated_works = AFD_get_child_works_by_nid_as_list( $nid, True, $build_expanded );
+  $encapsulated_works = AFD_get_child_works_by_nid_as_list( $nid, true, $build_expanded );
   $encapsulated_works_sequence = 0;
   foreach ( $encapsulated_works as $work ) {
     $encapsulated_works_sequence++;
     $citation_id = $work->citation_id;
     //get the citation as an object
     $citation = artmob_citation_get_citation_by_eid( $work->eid );
-    //watchdog( 'joe1', 'citation = '.print_r( $citation, True ) );
 
     //  INFO //
     //=======//
@@ -806,7 +789,6 @@ function artmob_fair_dealing_build_report( $nid, $build_expanded = False ) {
     artmob_fair_dealing_build_info( $citation->number_of_pages, 'number_of_pages', $info_sequence, $info );
     artmob_fair_dealing_build_info( $citation->publication_imprint_name, 'publication_imprint_name', $info_sequence, $info );
     artmob_fair_dealing_build_info( $citation->features_and_distinctions, 'features_and_distinctions', $info_sequence, $info );
-    //watchdog( 'artmob fair dealing', 'info array = '.print_r( $info, True ) );
 
     //now build back any identifier widget fields
     $query = db_query('SELECT widget_name, subwidget_id, identifier_type_code, identifier_type_name, identifier_type_value '.
@@ -814,7 +796,6 @@ function artmob_fair_dealing_build_report( $nid, $build_expanded = False ) {
                           'WHERE nid = %d '.
                 'ORDER BY subwidget_id', $citation->nid);
     while ($row = db_fetch_object($query)) {
-      //watchdog( 'joetest', $row->date_name.' = '.$row->date_timestamp );
       artmob_fair_dealing_build_info( $row->identifier_type_value, 'identifier', $info_sequence, $info );
     }
 
@@ -823,16 +804,8 @@ function artmob_fair_dealing_build_report( $nid, $build_expanded = False ) {
     $query = db_query( "select * from {am_citation_dates} d
                         left join {am_date_type} t on t.date_type_id = d.date_type_id
                         where citation_id = %d", $citation_id );
-    /*
-    $sql = sprintf( "select * from {am_citation_dates} d
-                        left join {am_date_type} t on t.date_type_id = d.date_type_id
-                        where citation_id = %d", $citation_id );
-
-    watchdog( 'joetest', $sql );
-    */
 
     while ($row = db_fetch_object($query)) {
-      //watchdog( 'joetest', $row->date_name.' = '.$row->date_timestamp );
       artmob_fair_dealing_build_info( $row->date_timestamp, $row->date_name, $info_sequence, $info, 'date' );
     }
 
@@ -971,7 +944,6 @@ function artmob_fair_dealing_build_report( $nid, $build_expanded = False ) {
     $works[$encapsulated_works_sequence][0]['nid'] = $nid;
   }
   $report['works'] = $works;
-  watchdog( 'artmob fair dealing', 'output report array = '. print_r( $report, True ) );
   return $report;
 }
 
@@ -1315,35 +1287,35 @@ function artmob_fair_dealing_test() {
   $form['fairdealing_test']['bynidaslist'] = array(
     '#type'     => 'submit',
     '#value'    => t('Get children by nid as list'),
-    '#submit'   => True,
+    '#submit'   => true,
     '#weight'   => -4
   );
 
   $form['fairdealing_test']['byeidaslist'] = array(
     '#type'     => 'submit',
     '#value'    => t('Get children by eid as list for entire tree'),
-    '#submit'   => True,
+    '#submit'   => true,
     '#weight'   => -2
   );
 
   $form['fairdealing_test']['byeidaslistchild'] = array(
     '#type'     => 'submit',
     '#value'    => t('Get children by eid as list for this eid'),
-    '#submit'   => True,
+    '#submit'   => true,
     '#weight'   => 0
   );
 
   $form['fairdealing_test']['bynidastree'] = array(
     '#type'     => 'submit',
     '#value'    => t('Get children by nid as tree array for entire tree'),
-    '#submit'   => True,
+    '#submit'   => true,
     '#weight'   => 2
   );
 
   $form['fairdealing_test']['byeeidastree'] = array(
     '#type'     => 'submit',
     '#value'    => t('Get children by eid as tree for this eid'),
-    '#submit'   => True,
+    '#submit'   => true,
     '#weight'   => 2
   );
 
@@ -1389,7 +1361,7 @@ function artmob_fair_dealing_test_submit($form_id, $form_values) {
   }
 }
 
-function artmob_fair_dealing_get_citation_ids( $nid, $exclude_nid = False ) {
+function artmob_fair_dealing_get_citation_ids( $nid, $exclude_nid = false ) {
   //$sql = sprintf( "select nid, citation_id from {am_citation} where link_nid = %d", $nid );
   if ( $exclude_nid ) {
     $query = db_query( "select nid, citation_id from {am_citation} where link_nid = %d and link_eid <> ''", $nid );

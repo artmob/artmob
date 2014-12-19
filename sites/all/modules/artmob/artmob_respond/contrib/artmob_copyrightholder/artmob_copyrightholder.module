@@ -19,23 +19,6 @@ function artmob_copyrightholder_elements() {
  * Don't know what arg2 is or why it is there
  */
 function artmob_copyrightholder_expand($element, $arg2, $node) {
-  //I had to do a silly work-around because
-  //when the last element was deleted
-  //(so there were no more of this element type left
-  //on the form <except for the template one>)
-  //for some reason the last deleted one gets
-  //added back when this function is called.
-  //I found out that the count($arg2) is always
-  //0 when loading and greater than 1 if there
-  //are any of this element on this form.
-  //If there never were elements on the form then
-  //it is 0.
-  //BUT!!!!
-  // if there were elements and they were deleted
-  //then the count($arg2) is 1.  So the workaround in this
-  //case is to blank out the widgets by setting
-  //$element[$name] to a blank array
-//  drupal_set_message( "count(arg2) = ". count($arg2) );
   if ( count($arg2) == 1 ){
   	$element[$name] = array();
 	  return $element;
@@ -43,23 +26,6 @@ function artmob_copyrightholder_expand($element, $arg2, $node) {
 
 	$name = $element['#name']; // name of this widget, set in the containing form
 	$edit = $element['#post']; // get the posted parameters
-//	drupal_set_message( 'artmob_copyrightholder_expand name = '.$name );
-//	drupal_set_message( 'am_expand edit = '.$edit );
-
-/*
-	//add in required javascript files
-	$module_path = drupal_get_path('module', 'artmob_copyrightholder');
-	drupal_add_js("$module_path/copyrightholderform.js"); // jquery plugin for easy ahah form submition
-	drupal_add_js("$module_path/copyrightholderhighlightFade.js");  // jquery plugin for highlighting dynamic changes
-	drupal_add_js("$module_path/copyrightholderwidget.js");
-	// send important info to javascript
-	// need to get basePath to javascript so it know where to callback - use array to avoid String vs Array uncertainty
-	// need to know names of all widgets to do event attaching
-	drupal_add_js( array( 'widget' => array(
-		'basePath' => array( base_path() ), 
-		'copyrightholdernames' => array( $name ),
-	), ), 'setting');
-*/
 
 	// set flag so nodeapi can find the widget
 	if($node->type){
@@ -90,15 +56,6 @@ function artmob_copyrightholder_expand($element, $arg2, $node) {
 	  			'path' => 'artmob_copyrightholder/widget_update_js',
 	  			'params' => array( 'widget_name_js' => $name ),
 	    	),
-	    	/*
-	    	array (
-	    		'selector' => 'select.widget_weight_' . $name,
-		    	'wrapper' => 'widget_wrapper_' . $name,
-	    		'event' => 'change',
-	  			'path' => 'artmob_contributor/widget_update_js',
-	  			'params' => array( 'widget_name_js' => $name ),
-	    	),
-      	*/
 	   ),
 	);
 
@@ -109,13 +66,10 @@ function artmob_copyrightholder_expand($element, $arg2, $node) {
 
 
 function _artmob_copyrightholder_build_widget($name, $edit, $node=NULL) {
-//  drupal_set_message( 'inside build widget' );
 	// get the preexisting subwidgets - can be in either $edit or $node
 	$subwidgets = _artmob_copyrightholder_extract_subwidgets($name, $edit, $node);
-//	drupal_set_message( "am_ Extracted Subwidget Count: " . count($subwidgets) );
 	// process add and remove commands - modifies $subwidgets
 	$subwidgets = _artmob_copyrightholder_process_subwidget_commands( $name, $edit, $subwidgets );
-//	drupal_set_message( "am_ After commands Subwidget Count: " . count($subwidgets) );
 	// expand the $subwidgets array into form elements - modifies $element
 	$widget = _artmob_copyrightholder_expand_subwidgets( $name, $subwidgets );
 	// add a control block for adding new subwidgets - modifies $element
@@ -157,8 +111,6 @@ function _artmob_copyrightholder_process_subwidget_commands( $name, &$edit, $sub
 		$new_subwidget = $edit['new_subwidget'];
 		//we need the first and last name or the contributor selected
   	if( ( $new_subwidget['firstname'] and $new_subwidget['lastname']) || $new_subwidget['contributor_nid']) {
-//			form_set_error( "widgets][$name][new_subwidget][firstname", 'Need to include a measurement value to add new dimension' );
-//		} else { // we are good to do add
 			$subwidget_id = db_next_id('subwidget'); // get distinct id for subwidget (overkill but easy)
 			$subwidgets[$subwidget_id] = $new_subwidget;
 			// remove from params, so it doesn't show up on the form (consume), but only on successful add
@@ -218,22 +170,6 @@ function _artmob_copyrightholder_expand_subwidgets( $name, $subwidgets ) {
       '#default_value' => $subwidget['lastname'],
       '#required'      => false,
 		);
-/*
-		$element['subwidgets'][$subwidget_id]['email'] = array(
-      '#type'          => 'textfield',
-      '#title'         => t(''),
-      '#size'          => 10,
-      '#default_value' => $subwidget['email'],
-      '#required'      => false,
-		);
-		$element['subwidgets'][$subwidget_id]['othercontact'] = array(
-      '#type'          => 'textarea',
-      '#title'         => t(''),
-      '#rows'          => 3,
-      '#default_value' => $subwidget['othercontact'],
-      '#required'      => false,
-		);
-*/
 		$element['subwidgets'][$subwidget_id]['remove'] = array(
 		  	'#type' => 'checkbox',
 		  	'#default_value' => $subwidget['remove'],
@@ -286,23 +222,6 @@ function _artmob_copyrightholder_add_new_subwidget_control($name, $edit) {
 	    '#value' => $edit['new_subwidget']['lastname'] ? $edit['new_subwidget']['lastname'] : '',
       '#required'      => false,
 	);
-/*
-	$element['new_subwidget']['email'] = array (
-      '#type'          => 'textfield',
-      '#title'         => t('Email'),
-      '#size'          => 10,
-	    '#value' => $edit['new_subwidget']['email'] ? $edit['new_subwidget']['email'] : '',
-      '#required'      => false,
-	);
-
-	$element['new_subwidget']['othercontact'] = array (
-      '#type'          => 'textarea',
-      '#title'         => t('Other Contact'),
-      '#rows'          => 3,
-	    '#value' => $edit['new_subwidget']['othercontact'] ? $edit['new_subwidget']['othercontact'] : '',
-      '#required'      => false,
-	);
-*/
 	$element['new_subwidget']['add_subwidget_button'] = array (
 	    '#type' => 'button',
 	    '#value' => t( 'Add New Copyright Holder' ),
@@ -365,8 +284,6 @@ function _artmob_copyrightholder_build_widget_js( $name, $edit ) {
  * hook_nodeapi
  */
 function artmob_copyrightholder_nodeapi( &$node, $op ) {
-	//drupal_set_message( 'I am in copyrightholder nodeapi - $op = '.$op );
-	//drupal_set_message( 'artmob_copyrightholder_'. $node->type. ' variable = '.variable_get( 'artmob_copyrightholder_'. $node->type, False ) );
   if( variable_get( 'artmob_copyrightholder_'. $node->type, FALSE ) ) {
 //		drupal_set_message( "artmob_copyrightholder Widget_nodeapi: $op , $node->type" );//. dprint_r($node, TRUE) );
 		switch($op) {
@@ -390,9 +307,7 @@ function artmob_copyrightholder_nodeapi( &$node, $op ) {
 				    	'lastname' => $row['lastname'],
 				    	'contributor_nid' => $row['contributor_nid'],
 					);
-//					drupal_set_message( 'copyrightholder load $widget_name = '.$widget_name );
 					$widget_names[$widget_name] = $widget_name; // rebuild widget name list
-//  				drupal_set_message( "artmob_copyrightholder db widget name = ".$widget_name );
   				$additions['copyrightholder_widget_names'][$widget_name] = $widget_name;
 				}
 				return $additions;
@@ -400,33 +315,8 @@ function artmob_copyrightholder_nodeapi( &$node, $op ) {
 			case view:
 				// just prove that the widgets are there - assume some .tpl file will actually shape output
   				//The widget_names will be null if no widget is attached
-//        drupal_set_message('copyrightholder in view' );
-        /*
-        if ($node->copyrightholder_widget_names ){
-  				foreach( $node->copyrightholder_widget_names as $widget_name ) {
-//            drupal_set_message('copyrightholder $widget_name = '.$widget_name );
-//            if ($widget_name == 'widgetam1' ){
-      				$contributor_name = artmob_contributor_BuildContributorList();
-    					$widget = $node->$widget_name;
-              foreach( $widget as $subwidgets){
-                $node->content['body']['#value'] .= '<h3>Copyright Holders</h3>';
-      					foreach ( $subwidgets  as $subwidget ){
-                  // //"widget $widget_name: " . dprint_r( $widget, TRUE );
-                  //for each dimension we output it in a sentence.  ie width = 10 cm.
-                  if ( $subwidget['contributor_nid'] ){
-                    $node->content['body']['#value'] .= $contributor_name[$subwidget['contributor_nid']];
-                  } else {
-      					    $node->content['body']['#value'] .= $subwidget['firstname'].' '.$subwidget['middlenames'].' '.$subwidget['lastname'].'<br />';
-      					  }
-      					}
-      				}
-      			}
-//  				}
-  			}
-  			*/
 				break;
 			case update:
-//				drupal_set_message( "am_ Update Widget - delete all widgets for $node->nid" );
 				// keep life simple and do update by just deleting and then inserting
 				db_query("DELETE FROM {am_copyrightholder} WHERE nid = '%d'", $node->nid );
 			case insert:
@@ -471,16 +361,6 @@ function artmob_copyrightholder_nodeapi( &$node, $op ) {
                 } else {
                   $nid = $subwidget['contributor_nid'];
                 }
-                //we no longer save firstname, middlename or lastname
-                //since every saved copyright holder becomes a contributor
-                /*
-      					db_query ("INSERT INTO {am_copyrightholder} ".
-      		  					"(nid, widget_name, subwidget_id, firstname, middlenames, lastname, contributor_nid) ".
-      		  					" VALUES (%d, '%s', %d, '%s', '%s', '%s', %d)",
-      					      $node->nid, $widget_name, $subwidget_id,
-      					      $subwidget['firstname'], $subwidget['middlenames'], $subwidget['lastname'], $nid
-      					);
-      					*/
       					if ( $nid <> 0 ){
         					db_query ("INSERT INTO {am_copyrightholder} ".
         		  					"(nid, widget_name, subwidget_id, contributor_nid) ".
@@ -519,10 +399,7 @@ function theme_artmob_copyrightholder_new_subwidget(&$form) {
 	$row = array();
 	$row[] = drupal_render($form['contributor_nid']);
 	$row[] = drupal_render($form['firstname']);
-//	$row[] = drupal_render($form['middlenames']);
 	$row[] = drupal_render($form['lastname']);
-//	$row[] = drupal_render($form['email']);
-//	$row[] = drupal_render($form['othercontact']);
 	$rows[] = $row;
 	$output = theme('table', array('class'=>''), $rows);
 	$output .= drupal_render($form);
@@ -545,10 +422,7 @@ function theme_artmob_copyrightholder_subwidgets(&$form) {
 		$row[] = drupal_render($form[$key]['remove']);
 		$row[] = drupal_render($form[$key]['contributor_nid']);
 		$row[] = drupal_render($form[$key]['firstname']);
-//		$row[] = drupal_render($form[$key]['middlenames']);
 		$row[] = drupal_render($form[$key]['lastname']);
-//		$row[] = drupal_render($form[$key]['email']);
-//		$row[] = drupal_render($form[$key]['othercontact']);
 		//sort by the key (subwidget_id)
 		$rows[] = array( 'data' => $row, 'class' => 'sortableitem', 'subwidget_id' => $key );
 	}

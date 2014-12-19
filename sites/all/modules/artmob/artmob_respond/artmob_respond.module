@@ -1,8 +1,9 @@
 <?php
-// $Id: artmob_respond.module,v 1.0 2008/03/01 08:31:22 drumm Exp $
+// $Id: artmob_respond.module,v 1.0 2008/03/01 08:31:22 stop14 Exp $
 
 /* @file
- * ADDDOCUMENTATION
+ * Provides a methodology, tools and themes to support user engagement
+ * with the copyright holders.
  **/
 
 define('ARTMOB_RESPOND_FRAGMENT_KNOW_MORE', 'know-more');
@@ -48,7 +49,7 @@ function artmob_respond_menu($may_cache) {
       $node = node_load(arg(2));
       if ($node->nid) {
         $items[] = array('path' => 'respond_comment/reply', 'title' => t('Reply to comment'),
-          'callback' => 'artmob_respond_comment_reply', 'access' => True, 'type' => MENU_CALLBACK);
+          'callback' => 'artmob_respond_comment_reply', 'access' => true, 'type' => MENU_CALLBACK);
       }
     }
 
@@ -56,7 +57,7 @@ function artmob_respond_menu($may_cache) {
       $node = node_load(arg(2));
       if ($node->nid) {
         $items[] = array('path' => 'request_comment/reply', 'title' => t('Reply to comment'),
-          'callback' => 'artmob_respond_request_comment_reply', 'access' => True, 'type' => MENU_CALLBACK);
+          'callback' => 'artmob_respond_request_comment_reply', 'access' => true, 'type' => MENU_CALLBACK);
       }
     }
 
@@ -143,23 +144,18 @@ function artmob_respond_notifications_delete() {
 }
 
 function artmob_respond_notifications_delete_submit($form_id, $form_values) {
-  // drupal_set_message( 'ticket nid = '.$form_values['ticket_nid']);
   if ( $form_values['op'] == 'Submit' ) {
    $node= node_load( $form_values['ticket_nid'] );
    $node->status = 0;
    node_save( $node );
    drupal_set_message('The ticket has been deleted');
- } 
- else {
-   //drupal_set_message('cancelled');
  }
-
+ 
   return 'admin/artmob/notifications';
 }
 
 
 function artmob_respond_notifications_resolve() {
-  //drupal_set_message( 'arg(2) = '.arg(2) ); //ticket nid
   $form = array();
   $form['#attributes'] = array('enctype' => "multipart/form-data");
   
@@ -208,7 +204,6 @@ function artmob_respond_notifications_resolve() {
 }
 
 function artmob_respond_notifications_resolve_submit($form_id, $form_values) {
- // drupal_set_message( 'ticket nid = '.$form_values['ticket_nid']);
  if ( $form_values['op'] == 'Submit' ) {
    $node= node_load( $form_values['ticket_nid'] );
    $node->ticket_status = $form_values['ticket_status'];
@@ -216,9 +211,6 @@ function artmob_respond_notifications_resolve_submit($form_id, $form_values) {
    node_save( $node );
    drupal_set_message('The ticket has been updated');
  } 
- else {
-   //drupal_set_message('cancelled');
- }
 
   return 'admin/artmob/notifications';
 }
@@ -226,15 +218,15 @@ function artmob_respond_notifications_resolve_submit($form_id, $form_values) {
 function artmob_respond_notifications( $form_values = NULL ) {
   //$form = array();
   $form['#attributes'] = array('enctype' => "multipart/form-data");
-  $form['#multistep'] = True;
-  $form['#redirect'] = False;
+  $form['#multistep'] = true;
+  $form['#redirect'] = false;
   
 
   // BUILD THE FILTERS
   $form['ticket_type'] = array(
       '#type'     => 'select',
       '#title'    => 'Ticket Type',
-      '#options'    => artmob_respond_get_ticket_type_list( True ),
+      '#options'    => artmob_respond_get_ticket_type_list( true ),
       '#weight' => -2,
       '#default_value' => $form_values['ticket_type']
   );
@@ -242,7 +234,7 @@ function artmob_respond_notifications( $form_values = NULL ) {
   $form['ticket_status'] = array(
       '#type'     => 'select',
       '#title'    => 'Ticket Status',
-      '#options'    => artmob_respond_get_ticket_status_list( True ),
+      '#options'    => artmob_respond_get_ticket_status_list( true ),
       '#weight' => 0,
       '#default_value' => $form_values['ticket_status']
   );
@@ -250,7 +242,7 @@ function artmob_respond_notifications( $form_values = NULL ) {
   $form['dispute_status'] = array(
       '#type'     => 'select',
       '#title'    => 'Dispute Status',
-      '#options'    => artmob_respond_get_dispute_status_list( True ),
+      '#options'    => artmob_respond_get_dispute_status_list( true ),
       '#weight' => 2,
       '#default_value' => $form_values['dispute_status']
   );
@@ -258,7 +250,7 @@ function artmob_respond_notifications( $form_values = NULL ) {
   $form['item_status'] = array(
       '#type'     => 'select',
       '#title'    => 'Item Status',
-      '#options'    => artmob_respond_get_item_status_list( True ),
+      '#options'    => artmob_respond_get_item_status_list( true ),
       '#weight' => 4,
       '#default_value' => $form_values['item_status']
   );
@@ -294,7 +286,6 @@ function artmob_respond_notifications( $form_values = NULL ) {
   $ticket_type = $form_values['ticket_type'];
   $item_status = $form_values['item_status'];
   $sql = artmob_respond_build_ticket_admin_query( $ticket_type, $ticket_status, $dispute_status, $item_status );
-  //drupal_set_message( 'sql  = '.$sql );
 
   $sql_table_sort = tablesort_sql( $header );
 
@@ -326,8 +317,6 @@ function artmob_respond_notifications( $form_values = NULL ) {
       $link_param = 'tabs-tabbed_content-1';
     }
 
-    //This links directly to the ticket
-    //$ticket_link = l( "{$row->ticket_number}". $ttitle, 'node/'. $row->nid , array('title' => $row->body));
     $ticket_link = l( "{$row->ticket_number}". $ttitle, 'node/'. $row->ticket_link_nid.$link_path , array('title' => $row->body),NULL ,$link_param);
     $ticket_type = artmob_respond_ticket_type_to_string( $row->type );
     $item_link = $row->ticket_link_nid ? l( $row->link_title, 'node/'. $row->ticket_link_nid ): $row->link_title;
@@ -582,14 +571,14 @@ function correct_licensing( $node ) {
     '#tree'          => 'FALSE',
     '#rows'          => 10,
     '#weight'        => 4,
-    '#required'      => False
+    '#required'      => false
   );
 
 
   $form['respond_tab']['submit'] = array(
     '#type'     => 'submit',
     '#value'    => t('Submit'),
-    '#submit'   => True,
+    '#submit'   => true,
     '#weight'   => 10
   );
 
@@ -601,7 +590,7 @@ function correct_licensing( $node ) {
   $form['respond_tab']['discussion'] = array(
     '#value' => $content,
     '#weight' => 12,
-    '#access' => True,
+    '#access' => true,
   );
 
   $form['#action'] = url('node/'. $node['nid'] .'/license');
@@ -642,7 +631,7 @@ function correct_licensing_submit($form_id, $form_values) {
 }
 
 function artmob_respond_send_email( $nid_url, $ticket, $ticket_type, $fragment = '' ) {
-  $mail_success = False;
+  $mail_success = false;
   $admin_email = variable_get('respond_to_address', '' );
   if ($admin_email) {
     $from = variable_get('respond_from_address', ini_get('sendmail_from'));
@@ -651,8 +640,8 @@ function artmob_respond_send_email( $nid_url, $ticket, $ticket_type, $fragment =
     $body .= $ticket_type .' ticket submitted'. chr(13) . chr(10);
     $body .= 'Ticket Message'. chr(13) . chr(10);
     $body .= $ticket->body . chr(13) . chr(10) . chr(13) . chr(10);
-    $body .= 'from node: '. url( $nid_url, NULL, NULL, True) . chr(13) . chr(10);
-    $body .= 'dispute page: '. url( 'admin/artmob/notifications', NULL, NULL, True ) . chr(13) . chr(10);
+    $body .= 'from node: '. url( $nid_url, NULL, NULL, true) . chr(13) . chr(10);
+    $body .= 'dispute page: '. url( 'admin/artmob/notifications', NULL, NULL, true ) . chr(13) . chr(10);
 
     $mail_success = drupal_mail($nid, $admin_email, $subject, $body, $from);
   }
@@ -752,13 +741,13 @@ function request_use( $node ) {
     '#tree'          => 'FALSE',
     '#rows'          => 10,
     '#weight'        => 4,
-    '#required'      => False
+    '#required'      => false
   );
 
   $form['request_use']['submit'] = array(
     '#type'     => 'submit',
     '#value'    => t('Submit'),
-    '#submit'   => True,
+    '#submit'   => true,
     '#weight'   => 10
   );
 
@@ -959,8 +948,6 @@ function artmob_respond_license_tab_view( $node ) {
  *
  */
 function artmob_respond_citation_tab_view( $node ) {
-  //drupal_set_message( 'in artmob_respond_citation_tab_view' );
-  //drupal_set_message( '$node->nid = '.$node->nid );
   $content = artmob_respond_correct_citation_tab(  (array)$node );
   return $content;
 }
@@ -1032,13 +1019,13 @@ function artmob_respond_correct_citation( $node ) {
     '#tree'          => 'FALSE',
     '#rows'          => 10,
     '#weight'        => 4,
-    '#required'      => False
+    '#required'      => false
   );
 
   $form['citation_tab']['submit'] = array(
     '#type'     => 'submit',
     '#value'    => t('Submit'),
-    '#submit'   => True,
+    '#submit'   => true,
     '#weight'   => 10
   );
 
@@ -1093,7 +1080,7 @@ function artmob_respond_help($section) {
   }
 }
 
-function artmob_respond_get_ticket_type_list( $add_all = False) {
+function artmob_respond_get_ticket_type_list( $add_all = false) {
   if ( $add_all ) {
     $result['All'] = 'All';
   }
@@ -1105,7 +1092,7 @@ function artmob_respond_get_ticket_type_list( $add_all = False) {
   return $result;
 }
 
-function artmob_respond_get_ticket_status_list( $add_all = False) {
+function artmob_respond_get_ticket_status_list( $add_all = false) {
   if ( $add_all ) {
     $result['All'] = 'All';
   }
@@ -1116,7 +1103,7 @@ function artmob_respond_get_ticket_status_list( $add_all = False) {
   return $result;
 }
 
-function artmob_respond_get_dispute_status_list($add_all = False) {
+function artmob_respond_get_dispute_status_list($add_all = false) {
   if ( $add_all ) {
     $result['All'] = 'All';
   }
@@ -1127,7 +1114,7 @@ function artmob_respond_get_dispute_status_list($add_all = False) {
   return $result;
 }
 
-function artmob_respond_get_item_status_list($add_all = False) {
+function artmob_respond_get_item_status_list($add_all = false) {
   if ( $add_all ) {
     $result['All'] = 'All';
   }
@@ -1207,11 +1194,11 @@ function artmob_respond_comment_reply($nid, $copyright_nid, $pid = NULL) {
   $output = '';
 
 //  if (user_access('access comments')) {
-  if (True) {
+  if (true) {
     // The user is previewing a comment prior to submitting it.
     if ($op == t('Preview comment')) {
       //if (user_access('post comments')) {
-      if (True) {
+      if (true) {
         $output .= artmob_respond_comment_form_box(array('pid' => $pid, 'nid' => $nid, 'copyright_nid' => $copyright_nid), NULL);
       }
       else {
@@ -1252,7 +1239,7 @@ function artmob_respond_comment_reply($nid, $copyright_nid, $pid = NULL) {
         drupal_goto("node/$copyright_nid/license");
       }
 //      else if (user_access('post comments')) {
-      else if (True) {
+      else if (true) {
         $output .= artmob_respond_comment_form_box(array('pid' => $pid, 'nid' => $nid, 'copyright_nid' => $copyright_nid), t('Reply'));
       }
       else {
@@ -1568,11 +1555,6 @@ function theme_artmob_respond_get_previous_requests( $node_array = array(), $nod
     //This was commented out and then asked to be put back in (April 25, 2011)
     //$node_comment->links['respond to this'] = array('title'=>'respond to this','href'=>'citation_comment/reply/'.$license_node->nid.'/'.$node->nid);
     $node_comment->links['respond to this'] = array('title' => 'respond to this', 'href' => 'request_comment/reply/'. $license_node->nid .'/'. $node->nid);
-
-    //drupal_set_message(devtools_dump($word_array));
-    //drupal_set_message(devtools_dump($truncated_array));
-    //drupal_set_message(devtools_dump($node_comment));
-
 
     $output .= theme('comment_view', $node_comment);
     $output .= theme('links', $node_comment->links);
