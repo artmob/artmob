@@ -1,4 +1,4 @@
-// $Id: upload.js,v 1.11 2006/08/31 23:31:25 unconed Exp $
+// $Id: upload.js,v 1.1.2.1 2008/05/30 21:41:14 sun Exp $
 
 /**
  * Attaches the upload behaviour to the upload form.
@@ -74,7 +74,7 @@ Drupal.jsUpload.prototype.oncomplete = function (data) {
   // Else fade in only the last table row
   else {
     // Hide form and last table row
-    $('table tr:last-of-type td', div).hide();
+    $('table tr:last-child td', div).hide();
 
     // Note: workaround because jQuery's #id selector does not work outside of 'document'
     // Should be: $(this.hide, div).hide();
@@ -87,7 +87,7 @@ Drupal.jsUpload.prototype.oncomplete = function (data) {
 
     // Replace form, fade in items and re-attach behaviour
     $(this.wrapper).append(div);
-    $('table tr:last-of-type td', div).fadeIn('slow');
+    $('table tr:last-child td', div).fadeIn('slow');
     $(this.hide, div).fadeIn('slow');
     Drupal.uploadAutoAttach();
   }

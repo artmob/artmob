@@ -1,4 +1,4 @@
-// $Id: tableselect.js,v 1.1 2006/11/21 08:16:39 unconed Exp $
+// $Id: tableselect.js,v 1.1.2.1 2008/05/02 21:05:06 stevemckenzie Exp $
 
 Drupal.tableSelect = function() {
   // Keep track of the table, which checkbox is checked and alias the settings.
@@ -70,6 +70,6 @@ Drupal.tableSelectRange = function(from, to, state) {
 // Global Killswitch
 if (Drupal.jsEnabled) {
   $(document).ready(function() {
-    $('form table[th.select-all]').each(Drupal.tableSelect);
+    $('form table th.select-all').parents('table').each(Drupal.tableSelect);
   });
 }

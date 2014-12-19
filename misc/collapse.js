@@ -1,4 +1,4 @@
-// $Id: collapse.js,v 1.10 2007/01/11 03:38:31 unconed Exp $
+// $Id: collapse.js,v 1.1.2.2 2008/05/30 21:41:14 sun Exp $
 
 /**
  * Toggle the visibility of a fieldset using smooth animations
@@ -7,7 +7,8 @@ Drupal.toggleFieldset = function(fieldset) {
   if ($(fieldset).is('.collapsed')) {
     var content = $('> div', fieldset).hide();
     $(fieldset).removeClass('collapsed');
-    content.slideDown(300, {
+    content.slideDown({
+      duration: 300,
       complete: function() {
         // Make sure we open to height auto
         $(this).css('height', 'auto');
@@ -71,6 +72,8 @@ if (Drupal.jsEnabled) {
         }
         return false;
       })).after($('<div class="fieldset-wrapper"></div>').append(fieldset.children(':not(legend)')));
+      fieldset.filter('.collapsed').children('.fieldset-wrapper')
+        .css({height: 'auto', display: 'inline'});
     });
   });
 }

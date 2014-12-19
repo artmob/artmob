@@ -1,4 +1,4 @@
-// $Id: farbtastic.js,v 1.3 2007/01/10 07:03:48 unconed Exp $
+// $Id: farbtastic.js,v 1.1.2.1 2008/07/16 01:35:01 sun Exp $
 // Farbtastic 1.2
 
 jQuery.fn.farbtastic = function (callback) {
@@ -104,48 +104,47 @@ jQuery._farbtastic = function (container, callback) {
     var x, y;
     var el = event.target || event.srcElement;
     var reference = fb.wheel;
-
-    if (typeof event.offsetX != 'undefined') {
-      // Use offset coordinates and find common offsetParent
-      var pos = { x: event.offsetX, y: event.offsetY };
-
-      // Send the coordinates upwards through the offsetParent chain.
-      var e = el;
-      while (e) {
-        e.mouseX = pos.x;
-        e.mouseY = pos.y;
-        pos.x += e.offsetLeft;
-        pos.y += e.offsetTop;
-        e = e.offsetParent;
-      }
-
-      // Look for the coordinates starting from the wheel widget.
-      var e = reference;
-      var offset = { x: 0, y: 0 }
-      while (e) {
-        if (typeof e.mouseX != 'undefined') {
-          x = e.mouseX - offset.x;
-          y = e.mouseY - offset.y;
-          break;
-        }
-        offset.x += e.offsetLeft;
-        offset.y += e.offsetTop;
-        e = e.offsetParent;
-      }
-
-      // Reset stored coordinates
-      e = el;
-      while (e) {
-        e.mouseX = undefined;
-        e.mouseY = undefined;
-        e = e.offsetParent;
-      }
+    
+    // If the offset from the relative element is undefined calculate it.
+    if ( typeof event.offsetX == 'undefined' && typeof event.offsetY == 'undefined' ) {
+      var offset = $(event.target).offset(false);
+      event.offsetX = event.pageX - offset.left;
+      event.offsetY = event.pageY - offset.top;
     }
-    else {
-      // Use absolute coordinates
-      var pos = fb.absolutePosition(reference);
-      x = (event.pageX || 0*(event.clientX + $('html').get(0).scrollLeft)) - pos.x;
-      y = (event.pageY || 0*(event.clientY + $('html').get(0).scrollTop)) - pos.y;
+    
+    // Use offset coordinates and find common offsetParent
+    var pos = { x: event.offsetX, y: event.offsetY };
+
+    // Send the coordinates upwards through the offsetParent chain.
+    var e = el;
+    while (e) {
+      e.mouseX = pos.x;
+      e.mouseY = pos.y;
+      pos.x += e.offsetLeft;
+      pos.y += e.offsetTop;
+      e = e.offsetParent;
+    }
+
+    // Look for the coordinates starting from the wheel widget.
+    var e = reference;
+    var offset = { x: 0, y: 0 }
+    while (e) {
+      if (typeof e.mouseX != 'undefined') {
+        x = e.mouseX - offset.x;
+        y = e.mouseY - offset.y;
+        break;
+      }
+      offset.x += e.offsetLeft;
+      offset.y += e.offsetTop;
+      e = e.offsetParent;
+    }
+
+    // Reset stored coordinates
+    e = el;
+    while (e) {
+      e.mouseX = undefined;
+      e.mouseY = undefined;
+      e = e.offsetParent;
     }
     // Subtract distance to middle
     return { x: x - fb.width / 2, y: y - fb.width / 2 };
