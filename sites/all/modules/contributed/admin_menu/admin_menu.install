@@ -1,0 +1,30 @@
+<?php
+// $Id: admin_menu.install,v 1.3.2.4 2008/06/15 01:24:20 sun Exp $
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function admin_menu_uninstall() {
+  // Delete variables.
+  variable_del('admin_menu_devel_modules_enabled');
+  variable_del('admin_menu_margin_top');
+  variable_del('admin_menu_tweak_menu');
+  variable_del('admin_menu_tweak_modules');
+}
+
+/**
+ * #224605: Rebuild cached menu for users.
+ */
+function admin_menu_update_5202() {
+  $ret = array();
+
+  // Clear CSS preprocessor cache.
+  drupal_clear_css_cache();
+
+  // Clear cache_menu.
+  cache_clear_all(NULL, 'cache_menu');
+
+  return $ret;
+}
+
+

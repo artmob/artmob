@@ -1,0 +1,44 @@
+<?php
+// $Id: PCMain install,v 1.0 2007/08/07 01:30:00 drumm Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function PCMain_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      db_query("CREATE TABLE {PC_MainStandin} (
+        cid integer unsigned auto_increment primary key,
+        vid int unsigned NOT NULL default '0',
+        nid int unsigned NOT NULL default '0',
+				MainUseStandin smallint,
+				MainStandinText text,
+				MainStandinFormat int unsigned default '0',
+				KEY nid (nid)) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+      db_query("CREATE TABLE {PC_MainWeight} (
+        cid		int unsigned auto_increment primary key,
+        nid		int unsigned NOT NULL default '0',
+				PCWeight	int default '0',
+				KEY nid (nid)) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+			//we need to start off with all nodes having a weight of 0
+			db_query("DELETE FROM {PC_MainWeight}");
+      $result = db_query("SELECT nid FROM {node}");
+  		while ($row = db_fetch_object($result)) {
+				db_query("INSERT INTO {PC_MainWeight} (nid)VALUES( %d )", $row->nid );
+			}
+
+      break;
+    case 'pgsql':
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function PCMain_uninstall() {
+  db_query('DROP TABLE {PC_MainStandin}');
+}

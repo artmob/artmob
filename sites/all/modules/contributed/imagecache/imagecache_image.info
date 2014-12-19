@@ -1,0 +1,11 @@
+; $Id: imagecache_image.info,v 1.1.2.1 2008/07/07 02:56:49 dopry Exp $
+name = ImageCache 4 Image
+description = Imagecache integration for Image module.
+package = ImageCache 
+dependencies = imagecache image
+
+; Information added by drupal.org packaging script on 2010-05-26
+version = "5.x-2.6"
+project = "imagecache"
+datestamp = "1274909412"
+

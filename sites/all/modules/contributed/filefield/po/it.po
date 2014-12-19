@@ -1,0 +1,121 @@
+# $Id: it.po,v 1.1.2.1 2009/01/05 22:35:32 drewish Exp $
+#
+# Italian translation of Drupal (general)
+# Copyright 2008 Tecnomeme - Marco Bauli <info@tecnomeme.it>
+# Generated from files:
+#  filefield.module,v 1.50.2.2 2007/09/25 16:06:07 jpetso
+#  filefield.info,v 1.5 2007/06/18 22:53:42 dww
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2008-01-29 16:50+0100\n"
+"PO-Revision-Date: 2008-01-29 16:50+0100\n"
+"Last-Translator: NAME <EMAIL@ADDRESS>\n"
+"Language-Team: French <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n>1);\n"
+
+#: filefield.module:140
+msgid "File upload was unsuccessful."
+msgstr "L'upload del file è andato a buon fine."
+
+#: filefield.module:267
+msgid "Permitted upload file extensions"
+msgstr "Estensioni consentite"
+
+#: filefield.module:270
+msgid "Extensions a user can upload to this field. Separate extensions with a space and do not include the leading dot."
+msgstr "I tipi di file che un utente può caricare in questo campo. Scrivi ciascuna estensione senza il punto (es: per file di tipo .pfd scrivi solo 'pdf') e separale con uno spazio."
+
+#: filefield.module:274
+msgid "File path"
+msgstr "Percorso del file"
+
+#: filefield.module:276
+msgid "Optional subdirectory within the \"%dir\" directory where files will be stored. Do not include trailing slash."
+msgstr "La sottodirectory facoltativa nella directory \"%dir\" dove desideri che vengano salvati i file. Ometti il trailing slash "/"."
+
+#: filefield.module:284
+msgid "Show \"List\" option"
+msgstr "Mostra le opzioni di \"List\""
+
+#: filefield.module:286
+msgid "If enabled, the user can choose for each file whether it should be listed or not. If disabled, the \"List\" checkbox will be hidden and files are always listed."
+msgstr "Se questa opzione è attiva, l'utente può scegliere se mostrare o meno ciascun file caricato. Se disattivata, il checkbox \"List\" sarà nascosto e tutti i file verranno sempre mostrati." 
+
+#: filefield.module:376
+msgid "Files with the extension %ext are not allowed. Please upload a file with an extension from the following list: %allowed_extensions"
+msgstr "I file con estensione %ext non sono permessi. Possono essere caricati solo file con le seguenti estensioni: %allowed_extensions"
+
+#: filefield.module:439
+msgid "Changes made to the attachments are not permanent until you save this post."
+msgstr "Le modifiche sui file saranno memorizzate al momento del salvataggio della pagina."
+
+#: filefield.module:459
+msgid "Attach new file"
+msgstr "Allega un nuovo file"
+
+#: filefield.module:490
+msgid "Maximum file size: !size."
+msgstr "Massima dimensione del file: !size."
+
+#: filefield.module:460
+msgid "Allowed extensions: %ext."
+msgstr "Estensioni consentite: %ext."
+
+#: filefield.module:467
+msgid "Upload"
+msgstr "Carica"
+
+#: filefield.module:497
+msgid "If a new file is uploaded, this file will be replaced upon submitting this form."
+msgstr "Caricando un nuovo file, il file attuale verrà rimpiazzato al momento del salvataggio della pagina."
+
+#: filefield.module:552
+msgid "URL"
+msgstr "URL"
+
+#: filefield.module:636
+msgid "Default"
+msgstr "Default"
+
+#: filefield.module:669;670
+msgid "Delete"
+msgstr "Cancella"
+
+#: filefield.module:669
+msgid "List"
+msgstr "Motra"
+
+#: filefield.module:669;670
+msgid "Description"
+msgstr "Descrizione"
+
+#: filefield.module:669;670
+msgid "Size"
+msgstr "Dimensioni"
+
+#: filefield.module:62
+msgid "view filefield uploads"
+msgstr "Mostra gli upload di filefield"
+
+#: filefield.module:0
+msgid "filefield"
+msgstr "filefield"
+
+#: filefield.info:0
+msgid "File Field"
+msgstr "File Field"
+
+#: filefield.info:0
+msgid "Defines a file field type."
+msgstr "Definisce un field ti tipo 'file'."
+
+#: filefield.info:0
+msgid "CCK"
+msgstr "CCK"
+

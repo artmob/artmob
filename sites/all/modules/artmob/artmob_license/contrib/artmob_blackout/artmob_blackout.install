@@ -1,0 +1,60 @@
+<?php
+// $Id: artmob_copyright.install,v 1.2.2.12 2008/01/06 20:00:14 quicksketch Exp $
+
+function artmob_blackout_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      db_query("CREATE TABLE {am_blackout} (
+        cid integer unsigned auto_increment primary key,
+        nid int unsigned NOT NULL default '0',
+        uid int unsigned NOT NULL default '0',
+        blackout_mode smallint
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+      //db_query("CREATE TABLE {am_blackout_list} (
+      //  cid integer unsigned auto_increment primary key,
+      //  type text,
+      //  field text,
+      //  field_description text,
+      //  blackout_mode smallint,
+      //  linepos INT NOT NULL
+      //) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+       //db_query("INSERT INTO {am_blackout_list}
+       //          (type, field, field_description, blackout_mode, linepos) VALUES
+       //          ('DigitizedWorks', 'title','title', 0, 1),
+       //          ('DigitizedWorks', 'body', 'body',0, 2),
+       //          ('DigitizedWorks', 'image', 'image',0, 3),
+       //          ('DigitizedWorks', 'attachments', 'attachments',0, 4),
+       //          ('audio', 'title','title',0, 1),
+       //          ('audio', 'body', 'body', 0, 2),
+       //          ('audio', 'audio_file', 'audio file attachments', 0, 3),
+       //          ('audio', 'audio_images', 'audio images', 0, 4),
+       //          ('audio', 'image', 'image', 0, 5),
+       //          ('amPicture', 'title', 'title', 0, 1),
+       //          ('amPicture', 'body', 'body', 0, 2),
+       //          ('amPicture', 'picture', 'picture', 0, 3),
+       //          ('amVideo', 'title', 'title', 0, 1),
+       //          ('amVideo', 'video_file', 'video file', 0, 2),
+       //          ('amVideo', 'body', 'body', 0, 3),
+       //          ('video', 'title', 'title', 0, 1),
+       //          ('video', 'video_file', 'video file', 0, 2),
+       //          ('video', 'image', 'image', 0, 3);"
+      //);
+      db_query( "UPDATE {system} set weight = 10 where name = 'artmob_blackout'" );
+      break;
+
+    case 'pgsql':
+      break;
+  }
+
+  drupal_set_message(t('artmob_blackout module installed successfully.'));
+}
+
+function artmob_blackout_uninstall() {
+  db_query('DROP TABLE {am_blackout}');
+  db_query('DROP TABLE {am_blackout_list}');
+  drupal_set_message(t('artmob_blackout has been uninstalled.'));
+}
+

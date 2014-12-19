@@ -1,0 +1,170 @@
+# $Id: fr.po,v 1.1.2.1 2008/08/13 06:43:47 smk Exp $
+#
+# LANGUAGE translation of Drupal (general)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  admin_menu.inc,v 1.1.4.14 2008/06/08 14:04:53 sun
+#  admin_menu.module,v 1.26.2.23 2008/06/08 14:16:14 sun
+#  admin_menu.info,v 1.3.6.1 2007/12/02 06:25:51 sun
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2008-06-08 16:18+0200\n"
+"PO-Revision-Date: 2008-08-12 12:07+0100\n"
+"Last-Translator: \n"
+"Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: admin_menu.inc:133
+msgid "Administer"
+msgstr "Administrer"
+
+#: admin_menu.inc:150
+msgid "Run cron"
+msgstr "Lancer la tache planifiée"
+
+#: admin_menu.inc:152
+msgid "Run updates"
+msgstr "Lancer les mises à jour"
+
+#: admin_menu.inc:160
+msgid "Enable developer modules"
+msgstr "Autoriser les modules \"developer\""
+
+#: admin_menu.inc:160
+msgid "Disable developer modules"
+msgstr "Interdire les modules \"developer\""
+
+#: admin_menu.inc:168
+msgid "Drupal.org"
+msgstr "Suivi des modules sur Drupal.org"
+
+#: admin_menu.inc:169
+msgid "Drupal issue queue"
+msgstr "drupal : suivi des demandes"
+
+#: admin_menu.inc:181
+msgid "@title issue queue"
+msgstr "@title : suivi des demandes"
+
+#: admin_menu.inc:189
+msgid "Logout @name"
+msgstr "Se deconnecter @name"
+
+#: admin_menu.inc:211
+msgid "Add !title"
+msgstr "Ajouter !title"
+
+#: admin_menu.inc:222;238;270
+msgid "Edit !name"
+msgstr "Editer !name"
+
+#: admin_menu.module:20
+msgid "Renders the administer menu tree as dropdown menu at the top of the window."
+msgstr "Afficher un menu sous forme d'arbre en haut des pages."
+
+#: admin_menu.module:22
+msgid "The Administration Menu will appear at the top of the page for users who have been given the \"access administration menu\" permission.  Customize appearance of the dropdown menu here."
+msgstr "Le menu d'administration apparaitra pour les personnes qui ont l'autorisation d'acces au menu d'administration. Modifiez l'apparence du menu ici."
+
+#: admin_menu.module:39;99
+msgid "Apply margin-top to page body"
+msgstr "Appliquez une marge en haut de la page."
+
+#: admin_menu.module:63
+#: admin_menu.info:0
+msgid "Administration Menu"
+msgstr "Menu d'administration"
+
+#: admin_menu.module:64
+msgid "Adjust settings for the dropdown Administration Menu."
+msgstr "Faire le paramétrage pour le menu d'administration."
+
+#: admin_menu.module:101
+msgid "If enabled, the output of this site will be shifted for approx. 20 pixels from the top of the viewport to make room for the Administration Menu. If this setting is disabled, some absolute or fixed positioned page elements at the top of the viewport may be covered by Administration Menu."
+msgstr "Si cette case est cochée, le site va etre décalé d'environs 20 pixels pour permettre l'affichage du menu d'administration. Si cette cas est décochées, le top de la page sera couvert par le menu d'administration."
+
+#: admin_menu.module:105
+msgid "Drupal Administration Tweaks"
+msgstr "Réglage du menu d'administration"
+
+#: admin_menu.module:109
+msgid "Collapse menus in menu administration"
+msgstr "Ajouter les menus de navigation dans le menu d'administration"
+
+#: admin_menu.module:111
+msgid "If enabled, menu containers on the <a href=\"!menu-url\">Site building &raquo; Menus</a> page will be collapsed like fieldsets."
+msgstr "Si c'est activé, le menu <a href=\"!menu-url\">Configuration du site &raquo; Menus</a> seront minimisé comme des \"fieldsets\"."
+
+#: admin_menu.module:115
+msgid "Collapse fieldsets on modules page"
+msgstr "Minimiser les groupes de champs sur les pages des modules"
+
+#: admin_menu.module:117
+msgid "If enabled, fieldsets on the <a href=\"!modules-url\">Site building &raquo; Modules</a> page will be initially collapsed."
+msgstr "Si c'est activé, les groupes de champs de la page <a href=\"!modules-url\">Modules du site</a> seront minimisé par défaut."
+
+#: admin_menu.module:120
+msgid "If you installed Utility module for this purpose, you can safely uninstall it now!"
+msgstr "Si vous installez ce module dans ce but, vous pourrez le désinstaller sans problèmes."
+
+#: admin_menu.module:355
+msgid "Current anonymous / authenticated users"
+msgstr "Utilisateurs Anonymes / authentifiés"
+
+#: admin_menu.module:379
+msgid "Administration Menu settings"
+msgstr "Paramètres du menu d'administration"
+
+#: admin_menu.module:384
+msgid "None"
+msgstr "Aucun"
+
+#: admin_menu.module:384
+msgid "Id"
+msgstr "Identifiant"
+
+#: admin_menu.module:384
+msgid "Weight"
+msgstr "Poids"
+
+#: admin_menu.module:384
+msgid "Parent id"
+msgstr "Identifiant du parent"
+
+#: admin_menu.module:387
+msgid "Display extra information for menu items in Drupal Administration Menu"
+msgstr "Affiche des informations complémentaires dans le menu d'administration"
+
+#: admin_menu.module:390
+msgid "If enabled, the chosen information will appear next to each menu item link."
+msgstr "Si c'est activé, les informations sélectionnées seront affichées a coté de chaque lien du menu."
+
+#: admin_menu.module:394
+msgid "Display all menu items"
+msgstr "Afficher tout les liens du menu"
+
+#: admin_menu.module:396
+msgid "Enable this option to disable user access checks for menu items, i.e. every menu item in the visible menu tree will be displayed to every user regardless of access permissions."
+msgstr "Si c'est acitivé, l'utilisateur "
+
+#: admin_menu.module:420
+msgid "Variable editor"
+msgstr "Editeur de variables"
+
+#: admin_menu.module:426
+msgid "Empty cache"
+msgstr "Vider le cache"
+
+#: admin_menu.info:0
+msgid "Renders a menu tree for administrative purposes as dropdown menu at the top of the window."
+msgstr "Affiche un menu au sommet de la page pour l'administration."
+
+#: admin_menu.info:0
+msgid "Administration"
+msgstr "Administration"
+

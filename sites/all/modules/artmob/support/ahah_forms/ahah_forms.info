@@ -1,0 +1,9 @@
+name = AHAH Forms
+description = Utility package for creating Ahah enabled dynamic forms
+package = AHAH
+
+; Information added by drupal.org packaging script on 2010-07-11
+version = "5.x-1.x-dev"
+project = "ahah_forms"
+datestamp = "1278833372"
+

@@ -1,0 +1,101 @@
+<?php
+// $Id: artmob_fair_dealing install,v 1.0 2010/11/04 01:30:00 drumm Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function artmob_fair_dealing_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      db_query("CREATE TABLE {am_field_type} (
+        cid integer unsigned auto_increment primary key,
+        table_name text,
+        field_name text,
+        field_type text
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+      db_query("CREATE TABLE {am_key_dates} (
+        cid integer unsigned auto_increment primary key,
+        work_type_id varchar(2) NOT NULL default '',
+        date_type_id int unsigned NOT NULL default '0'
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+      //!!!More key fields to come
+      db_query("CREATE TABLE {am_key_fields} (
+        cid integer unsigned auto_increment primary key
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+      db_query("CREATE TABLE {am_work_type} (
+        work_type_id integer unsigned auto_increment primary key,
+        work_type text,
+        work_sub_type text
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+      db_query("CREATE TABLE {am_associated_licenses} (
+        cid integer unsigned auto_increment primary key,
+        citation_id int unsigned NOT NULL default '0',
+        licensee_id int unsigned NOT NULL default '0',
+        licensee_key_name text,
+        licensee_first_name text,
+        licensee_contact text,
+        license_id int unsigned NOT NULL default '0',
+        delta int unsigned NOT NULL default '0'
+      );");
+
+      db_query("CREATE TABLE {am_node_type_mapping} (
+        id integer unsigned auto_increment primary key,
+        node_type text,
+        work_type text
+      );");
+
+      if ( module_exists( 'artmob_license' ) ){
+        drupal_set_message( 'You have the licensing module installed.  Please refer to the license admin setup page and review the licensing options' );
+      }
+
+      //variable_set('citation_compatible', 1 );
+      //The constants aren't valid yet since they are in the .module, which isn't installed yet
+      //Default them to their correct value
+      variable_get('work_type_amAudio', 4);
+      variable_get('work_type_DigitizedWorks', 1);
+      variable_get('work_type_amPicture', 3);
+      variable_get('work_type_amVideo', 2);
+      
+      db_query("INSERT INTO {am_work_type} (`work_type_id`, `work_type`, `work_sub_type`) VALUES
+				('Aa', 'Literary Work', NULL),
+				('Ab', 'Literary Compilation', NULL),
+				('Ba', 'Choreographed Work', NULL),
+				('Bb', 'Play/Script/Screenplay', NULL),
+				('Bc', 'Film (Cinema/Animation/Documentary/Found Footage)', NULL),,
+				('Bd', 'Dramatic Compilation', NULL)
+				('Ca', 'Musical Composition', NULL),
+				('Cb', 'Musical Recording', NULL),
+				('Cc', 'Musical Compilation', NULL),
+				('Da', 'Photograph', NULL),
+				('Db', 'Painting', NULL),
+				('Dc', 'Drawing', NULL),
+				('Dd', 'Engraving', NULL),
+				('De', 'Sculpture', NULL),
+				('Df', 'Architectural Work', NULL),
+				('Dg', 'Map/Plan/Chart', NULL),
+				('Dh', 'Artistic Compilation', NULL),
+				('Di', 'Design', NULL),
+				('Ea', 'Performance', NULL);");
+
+      break;
+    case 'pgsql':
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function artmob_fair_dealing_uninstall() {
+  db_query('DROP TABLE {am_field_type}');
+  db_query('DROP TABLE {am_key_dates}');
+  db_query('DROP TABLE {am_key_fields}');
+  db_query('DROP TABLE {am_work_type}');
+  db_query('DROP TABLE {am_associated_licenses}');
+  db_query('DROP TABLE {am_node_type_mapping}');
+}

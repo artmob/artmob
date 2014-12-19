@@ -1,0 +1,83 @@
+<?php
+// $Id: cck_fieldgroup_tabs.module,v 1.1 2007/08/07 04:04:47 nedjo Exp $
+
+/**
+ * @file
+ * Add tabs display option for CCK fieldgroups.
+ */
+
+/*
+ * Implementation of hook_form_alter()
+ */
+function cck_fieldgroup_tabs_form_alter($form_id, &$form) {
+  if (isset($form['type']) && $form['type']['#value'] .'_node_form' == $form_id) {
+    // Content module loads a dummy node form. If we alter that form, content_admin_field_overview_form breaks.
+    // The cck_dummy_node_form attribute has not yet made it into the stable release of CCK.
+    // if (isset($form['#node']) && isset($form['#node']->cck_dummy_node_form) && $form['#node']->cck_dummy_node_form) {
+    // For now, test arg.
+    if (arg(0) == 'admin') {
+      return;
+    }
+    $tabset = FALSE;
+    foreach (fieldgroup_groups($form['type']['#value']) as $group_name => $group) {
+      if (isset($form[$group_name]) && $group['settings']['form']['style'] == 'tabs') {
+        // Add a tabset if not already added.
+        if (!$tabset) {
+          $form['fieldgroup_tabs'] = array(
+            '#type' => 'tabset',
+          );
+          $tabset = TRUE;
+        }
+        $element = $form[$group_name];
+        $element['#type'] = 'tabpage';
+        unset($element['#collapsible'], $element['#collapsed']);
+        $form['fieldgroup_tabs'][$group_name] = $element;
+        unset($form[$group_name]);
+      }
+    }
+
+  }
+  else if ($form_id == 'content_admin_display_overview_form') {
+    $groups = fieldgroup_groups($form['type_name']['#value']);
+    foreach ($groups as $group_name => $group) {
+      foreach (_content_admin_display_contexts() as $key => $title) {
+        $form['groups'][$group_name][$key]['#options']['tabs'] = t('tabs');
+      }
+    }
+  }
+  else if ($form_id == 'fieldgroup_edit_group_form') {
+    $form['settings']['form']['style']['#options']['tabs'] = t('tabs');
+  }
+}
+
+function cck_fieldgroup_tabs_nodeapi(&$node, $op, $teaser, $page) {
+  switch ($op) {
+    case 'view':
+      $context = $teaser ? 'teaser' : 'full';
+      $tabset = FALSE;
+      foreach (fieldgroup_groups($node->type) as $group_name => $group) {
+        // $node->content[$group_name] will be set only if there was visible content.
+        if (isset($node->content[$group_name]) && $group['settings']['display'][$context] == 'tabs') {
+          // Add a tabset if not already added.
+          if (!$tabset) {
+            $node->content['fieldgroup_tabs'] = array(
+              '#type' => 'tabset',
+            );
+            $tabset = TRUE;
+          }
+          $element = $node->content[$group_name];
+          $element['#type'] = 'tabpage';
+          $element['#weight'] = $group['weight'];
+          // Title is required for tabs.
+          $element['#title'] = t(check_plain($group['label']));
+          $node->content['fieldgroup_tabs'][$group_name] = $element;
+          unset($node->content[$group_name]);
+        }
+      }
+      if ($tabset) {
+        // Explicitly build, as drupal_render won't invoke form element #process callbacks.
+        $node->content['fieldgroup_tabs'] = form_builder('tabset', $node->content['fieldgroup_tabs']);
+      }
+      break;
+  }
+}

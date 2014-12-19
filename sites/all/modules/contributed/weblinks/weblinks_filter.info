@@ -1,0 +1,10 @@
+; $Id: weblinks_filter.info,v 1.1.2.2 2008/07/28 17:29:15 nancyw Exp $
+name = Web Links Filter
+description = Allows users to include links with [link: title].
+dependencies = weblinks
+
+; Information added by drupal.org packaging script on 2009-05-10
+version = "5.x-2.5"
+project = "weblinks"
+datestamp = "1241917548"
+

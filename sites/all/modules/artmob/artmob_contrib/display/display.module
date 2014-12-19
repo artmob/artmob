@@ -1,0 +1,793 @@
+<?php
+// $Id: display.module,v 2.9 2009/07/13 20:44:53 bill Exp $
+
+/* @file
+ * ADDDOCUMENTATION
+ **/
+ 
+/**
+ * Implementation of hook_help().
+ */
+function display_help($section) {
+  switch ($section) {
+    case 'admin/help#story':
+      $output = '<p>'. t('The display module contains APIs to assist templating.') .'</p>';
+      return $output;
+    case 'admin/modules#description':
+    case 'admin/settings/display':
+      return (t('Contains useful functions to assist templating.'));
+  }
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function display_perm() {
+  return array('adminstrate display tools');
+}
+
+/**
+ * Implementation of hook_access().
+ */
+function display_access($op, $node) {
+  global $user;
+
+  if ($op == 'adminstrate display tools') {
+    return user_access('adminstrate display tools');
+  }
+
+}
+
+
+function display_menu() {
+  $items[] = array(
+    'path' => 'admin/settings/display',
+    'title' => t('Display Settings'),
+    'description' => t('Administrate display settings.'),
+    'callback' => 'drupal_get_form',
+    'callback arguments' => 'display_settings',
+    'access' => user_access('adminstrate display tools'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  return $items;
+}
+
+
+function display_init() {
+  $path = drupal_get_path('module', 'display');
+  $js_path = $path .'/display.js';
+    
+  drupal_add_js($js_path);
+
+}
+
+
+/**
+ * Implementation of hook_settings().
+ */
+function display_settings() {
+  $form['display'] = array('#type' => 'fieldset', '#title' => t('Column Settings'));
+  $form['display']['display_columns'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Number of columns in multi-column sections.'),
+    '#default_value' => variable_get('display_columns', 2),
+    '#description' => t('Determines the default number of columns in parts of the site that have multi-column content.')
+  );
+
+  $form['display']['display_cells'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Number of cells in multi-column sections.'),
+    '#default_value' => variable_get('display_cells', 2),
+    '#description' => t('Determines the default number of cells in parts of the site that have multi-column content.')
+  );
+
+  $options = array();
+  $options[0] = 'No';
+  $options[1] = 'Yes';
+
+  $form['display']['display_external_links'] = array(
+    '#type' => 'radios',
+    '#title' => t('Open external web links in a new window?'),
+    '#default_value' => variable_get('display_external_links', 0),
+    '#options' => $options,
+    '#description' => t('Add a target="_blank" attribute to external links.')
+  );
+
+  return system_settings_form($form);
+}
+
+function display_paginate_items($aitems, $pageitems=6, $columns=2, $class=NULL, $width=NULL)  {
+
+  $pages = array();
+
+  $i=1;
+  $j=1;
+
+  foreach ($aitems as $item) {
+    $pages[$j][] = $item;
+
+    if ($i == $pageitems) {
+            $i=1;
+            $j++;
+    } 
+    else {
+            $i++;
+    }
+  }
+
+  $metadata = array();
+
+  $metadata['total'] = $itemcount = count($aitems);
+  $metadata['pages'] = $pagecount = count($pages);
+
+  $output .= "<input type='hidden' id='rb-page-count' value='{$pagecount}' />\n";
+  $output .= "<input type='hidden' id='rb-item-count' value='{$itemcount}' />\n";
+
+  foreach ($pages as $page => $items) {
+    $metadata['shown'] = count($items);
+    $metadata['shown_from'] = $from = (($page - 1) * $pageitems) +1;
+    $to = $from + $pageitems - 1;
+
+    $metadata['shown_to'] = $to > $itemcount ? $itemcount : $to;
+
+    $output .= theme('display_results_page', display_columnize($items, $columns, $class, $width), $page, $metadata);
+  }
+
+  return $output;
+}
+
+
+function display_columnize_items($aitems, $columns=2, $class=NULL, $width=NULL, $as_list=TRUE) {
+
+  $count = count($aitems);
+  $target = $count / $columns;
+  $block = 1;
+  $i=1;
+
+  foreach ($aitems as $item) {
+    $item = ($as_list === TRUE) ? "<li>{$item}</li>" : $item;
+
+    $ablocks[$block] .= $item;
+
+    if (++$i > $target) {
+      if (++$block > $columns) {
+              $block=1;
+      }
+
+      $i=1;
+    }
+  }
+
+  if ($as_list === TRUE) {
+    $temp_blocks = array();
+
+    foreach ($ablocks as $element => $blockhtml) {
+      $temp_blocks[$element] = "<ul>\n{$blockhtml}\n</ul>";
+    }
+
+    $ablocks = $temp_blocks;
+
+  }
+
+  return display_columnize($ablocks, $columns, $class, $width);
+
+}
+
+
+/*
+  Takes an array of blocks as its argument.
+*/
+function display_columnize($ablocks, $columns=NULL, $class=NULL, $width=NULL, $top_link=FALSE, $id=NULL) {  
+
+  $columns = $columns ? $columns : variable_get('display_columns', 2);
+  
+  $count = count($ablocks);
+  
+  $classattr = $class ? "class='$class'" : NULL;
+  $widthattr = $width ? "style='width: $width;'" : NULL;
+  $idattr = $id ? "id='$id'" : NULL;
+  
+  $output = "<table cellspacing='0' cellpadding='0' border='0' $classattr $idattr $widthattr>\n";
+  
+  $i=0;
+  $col=1;
+
+    
+  $output .= "<tr>\n";
+  
+  foreach ($ablocks as $block) {
+  
+    $mod = ++$i % $columns;  // a $mod of 0 indicates a last column
+
+    if ($col == 1) {
+      $output .= '<tr>';
+    }
+    
+    $output .= "  <td class='col$col'>\n";
+    $output .= $block;
+    $output .= ($top_link===TRUE) ? theme('display_top_link') : '';
+    
+    $output .= "\n  </td>\n";
+        
+    if ($i == $count) {  // we're done - add empty cells if necessary;
+    
+      while ($col < $columns) {
+        $col++;
+        $output .= "<td class='col$col cell-empty'></td>";
+      }
+      
+    }
+
+    if ($mod == 0) {
+      $output .= "\n  </tr>\n";
+      $col = 1;
+    } 
+    else {
+      $col++;
+    }
+      
+  }
+  
+  $output .= "</table>";
+  
+  return $output;
+
+
+}
+
+function display_arrange_nodes($anodes, $athemes, $display_cells=NULL) {
+  $display_cells= $display_cells ? $display_cells : variable_get('display_cells', 2);
+
+  if (!is_array($anodes) || !is_array($athemes)) {
+    return;
+  }
+
+  $asections = array();
+
+  $otopnode = array_shift($anodes);
+
+  if (is_array($athemes['#top']['#args'])) {  // uses call_user_func_array if arguments are passed
+    if (strpos($athemes['#top']['#theme'], 'theme_') === FALSE && strpos($athemes['#top']['#theme'], 'phptemplate_' === FALSE) ) {
+      $theme = "theme_". $athemes['#top']['#theme'];
+    } 
+    else {
+      $theme = $athemes['#top']['#theme'];
+    }
+
+    $aparams = array_merge(array($otopnode), $athemes['#top']['#args']);
+    $asections[] = call_user_func_array($theme, $aparams);
+  } 
+  else {
+    if (function_exists('theme_'. $athemes['#top']['#theme'])) {
+      $asections[] = theme($athemes['#top']['#theme'], $otopnode);
+    } 
+    else if (function_exists($athemes['#top']['#theme'])) {
+      $aparams = array($otopnode);
+      $asections[] = call_user_func_array($athemes['#top']['#theme'], $aparams);
+    }
+  }
+
+  if (is_array($anodes)) {
+    $i=0;
+    while ($onode = array_shift($anodes)) {
+      if ($i++ < $display_cells) {
+
+        if (is_array($athemes['#highlight']['#args'])) { // uses call_user_func_array if arguments are passed
+          if (strpos($athemes['#highlight']['#theme'], 'theme_') === FALSE && strpos($athemes['#highlight']['#theme'], 'phptemplate_' === FALSE) ) {
+            $theme = "theme_". $athemes['#highlight']['#theme'];
+          } 
+          else {
+            $theme = $athemes['#highlight']['#theme'];
+          }
+
+          $aparams = array_merge(array($onode), $athemes['#highlight']['#args']);
+          $ahighlights[] = call_user_func_array($theme, $aparams);
+        } 
+        else {
+          if (function_exists('theme_'. $athemes['#highlight']['#theme'])) {
+            $asections[] = theme($athemes['#highlight']['#theme'], $onode);
+          } 
+          else if (function_exists($athemes['#highlight']['#theme'])) {
+            $aparams = array($onode);
+            $asections[] = call_user_func_array($athemes['#highlight']['#theme'], $aparams);
+          }
+        }
+      } 
+      else {
+        if (is_array($athemes['#remaining']['#args'])) { // uses call_user_func_array if arguments are passed
+          $theme = "theme_". $athemes['#remaining']['#theme'];
+          $aparams = array_merge(array($onode), $athemes['#remaining']['#args']);
+          $alist[] = call_user_func_array($theme, $aparams);
+        } 
+        else {
+          $alist[] = theme($athemes['#remaining']['#theme'], $onode);
+        }
+      }
+    }
+
+    if (count($ahighlights) > 0) {
+      $asections[] = display_columnize($ahighlights, NULL, $athemes['#highlight']['#class']);
+    }
+
+    if (count($alist) > 0) {
+      $asections = array_merge($asections, $alist);
+    }
+  }
+  return theme('display_arrange_items', $asections, $athemes, $display_cells);
+}
+
+function theme_display_arrange_items($asections, $athemes=NULL, $display_cells=NULL) {
+
+  if (!is_array($asections)) {
+    return;
+  }
+
+  $display_cells= $display_cells ? $display_cells : variable_get('display_cells', 2);
+
+  $class = $athemes['#top']['#class'];
+
+  $output = "<div class='top-section $class'>";
+  $output .= $athemes['#top']['#title'] ? "<h2>". $athemes['#top']['#title'] ."</h2>" : '';
+  $output .= array_shift($asections);
+  $output .= "</div>\n";
+
+  if ($highlight = array_shift($asections)) {
+    $output .= "<div class='multi-column-teaser'>";
+    $output .= $athemes['#highlight']['#title'] ? "<h2>". $athemes['#highlight']['#title'] ."</h2>" : '';
+    $output .= $highlight;
+    $output .= "</div>";
+  } 
+  else {
+    return $output;
+  }
+
+  while ($section = array_shift($asections)) {
+    $alist[]['data'] = $section;
+  }
+
+  if (count($alist) > 0) {
+    $class = $athemes['#remaining']['#class'];
+    $output .= "<div class='remainder-list $class'>";
+    $output .= $athemes['#remaining']['#title'] ? "<h2>". $athemes['#remaining']['#title'] ."</h2>" : '';
+    $output .= theme('item_list', $alist);
+    $output .= "</div>";
+  }
+
+  return $output;
+}
+
+function theme_display_linked_title(&$onode) {
+  $output = l($onode->title, "node/{$onode->nid}", array('class' => 'list-item'));
+  return $output;
+}
+
+function theme_display_load_image($iid, $type='thumbnail', $link=NULL) {  // TO DO: add heigh and width
+  if (!$iid) { 
+    return; 
+  }
+  $image = node_load($iid);
+
+  if (!is_object($image)) { 
+    return; 
+  }
+  $imgpath = base_path() . file_directory_path() .'/'. $image->images[$type];
+
+  if (!is_file($_SERVER['DOCUMENT_ROOT'] .'/'. $imgpath)) {  // compensates for change in image module sourcing
+    $imgpath = base_path() . $image->images[$type];
+  }
+
+  $imgtag = sprintf("<img src='%s' alt='%s' />", $imgpath, $image->title);
+
+  if ($link) {
+    $imgtag = l($imgtag, $link, array(), NULL, NULL, FALSE, TRUE);
+  }
+
+  $output = "<div class='image-thumbnail'>$imgtag</div>";
+  return $output;
+}
+
+function theme_display_site_link($link, $external=FALSE, $name=NULL, $title=NULL) {
+  if (!$link) { 
+    return; 
+  }
+
+  if (strpos($link, 'http://') === FALSE) {
+    $link = 'http://'. $link;
+  }
+
+  $attributes = array();
+
+  if ($external) {
+    $attributes['rel'] = 'external';
+
+    if (variable_get('display_external_links', 0) == 1) {
+      $attributes['target'] = '_blank';
+    }
+  }
+
+  if ($title) {
+    $attributes['title'] = $title;
+  }
+
+  $name = $name ? $name : $link;
+
+  return l($name, $link, $attributes);
+
+}
+
+function theme_display_info_listing($label, $value, $hidenull=TRUE, $paragraph=TRUE) {
+
+  if ($hidenull === FALSE && !$value) {
+    $value = "n/a";
+  }
+
+  if ($hidenull === TRUE && !$value) { 
+    return; 
+  } // supress empty values;
+
+  if ($paragraph === TRUE) {
+    $output .= sprintf("  <h3 class='label'>%s:</h3>\n  <p>%s</p>\n\n", $label, $value);
+  } 
+  else {
+    $output .= sprintf("  <h3 class='label'>%s:</h3>\n  %s\n\n", $label, $value);
+  }
+  return $output;
+}
+
+function theme_display_top_link() {
+  return "<div class='top-link'><p><a href='#top' title='Go to the top of this page'>Go to Top</p></div>\n\n";
+}
+
+function theme_display_make_link($link, $title=NULL, $external=FALSE) { // a replacement for site_link
+  if (!$link) { 
+    return; 
+  }
+
+  $attributes = array();
+
+  if (is_numeric($link)) { // assume node id
+    $node = node_load($link);
+    $attributes['title'] = strip_tags($node->teaser);
+    $link = "node/{$node->nid}";
+
+    if (!$title) {
+      $title = $node->title;
+    }
+  }
+
+  if (strpos($link, 'http://') === FALSE && $external === TRUE) {
+    $link = 'http://'. $link;
+  }
+
+  if (!$title) {
+    $title = $link;
+  }
+
+  if ($external) {
+    $attributes['rel'] = 'external';
+
+    if (variable_get('display_external_links', 0) == 1) {
+      $attributes['target'] = '_blank';
+    }
+  }
+
+  return l($title, $link, $attributes, NULL, NULL, FALSE, TRUE);
+}
+
+/* VIEWS Compatibility */
+
+
+function display_views_style_plugins() {
+  $plugins = array();
+  $plugins['display_teasercols'] = array(
+    'name' => t('display: teaser columns'),
+    'theme' => 'display_multicolumn_views_teasers',
+    'validate' => 'views_ui_plugin_validate_list',
+    'needs_fields' => FALSE,
+    'needs_table_header' => FALSE,
+  );
+
+  $plugins['display_multiformat'] = array(
+    'name' => t('display: multiformat with full lead'),
+    'theme' => 'display_arrange_items_views',
+    'validate' => 'views_ui_plugin_validate_list',
+    'needs_fields' => FALSE,
+    'needs_table_header' => FALSE,
+  );
+  
+  $plugins['display_listcols'] = array(
+    'name' => t('display: list columns'),
+    'theme' => 'display_multicolumn_views_lists',
+    'validate' => 'views_ui_plugin_validate_list',
+    'needs_fields' => FALSE,
+    'needs_table_header' => FALSE,
+  );
+  
+   $plugins['display_links'] = array(
+    'name' => t('display: web links'),
+    'theme' => 'display_views_web_links',
+    'validate' => 'views_ui_plugin_validate_list',
+    'needs_fields' => FALSE,
+    'needs_table_header' => FALSE,
+  );
+  
+  $plugins['display_multiformat2'] = array(
+    'name' => t('display: multiformat with teaser lead'),
+    'theme' => 'display_arrange_items_views_with_teaser',
+    'validate' => 'views_ui_plugin_validate_list',
+    'needs_fields' => FALSE,
+    'needs_table_header' => FALSE,
+  );
+
+
+  return $plugins;
+}
+
+function theme_display_results_page($content, $page=1, $metadata=FALSE) {
+  return $content;
+}
+
+function theme_display_views_web_links($view, $nodes, $type, $teasers = FALSE, $links = TRUE) {
+  $content = '';
+  
+  $vid = db_result( db_query( "SELECT vid FROM {vocabulary} WHERE name = '%s'", 'Web Links'));
+  
+  $categories = array();
+  foreach ($nodes as $node) {
+    switch ($view->type) {
+      case 'display_links':
+        $node = node_load($node->nid);  // sort web links by category
+        if (is_array($node->taxonomy)) {
+          foreach ($node->taxonomy as $tid => $termobj) {
+            if ($termobj->vid == $vid) {
+              $categories[$tid][] = theme('display_site_link', $node->url, TRUE, $node->title, $node->body);
+            }
+          }
+       }
+       break;
+    }
+  }
+
+  //drupal_set_message(devtools_dump($categories));
+
+  $blocks = array();
+  $internal_links = array();
+
+  foreach ($categories as $tid => $items) { // create titled blocks of links for display_columnize
+    $termobj = taxonomy_get_term($tid);
+    $anchor_name = drupal_urlencode($termobj->name);
+    $name = $termobj->name;
+    $internal_links[] = "<a href='#{$anchor_name}' title='Go to {$name} on this page.'>{$name}</a>";
+    $anchor = "<a name='{$anchor_name}'></a>";
+    $blocks[] .= theme('item_list', $items, $anchor . $termobj->name);
+  }
+
+  $content = '';
+
+  if (count($blocks) > 4) {  // add internal link list to the top if more than 4 blocks
+    $content .= "<a name='top'></a>\n";
+    $content .= "<div class='internal-link-list'>\n";
+    $content .= display_columnize_items($internal_links, 3, NULL, NULL, TRUE);
+    $content .= "</div>\n";
+
+    $top = TRUE;
+  }
+
+  $content .= display_columnize($blocks, 2, NULL, NULL, $top);
+
+  return $content;
+}
+
+
+function theme_display_multicolumn_views_teasers($view, $nodes, $type, $teasers = FALSE, $links = TRUE) {
+
+  $content = '';
+
+  $panelsection = array();
+
+  foreach ($nodes as $node) {
+    switch ($view->type) { // likely not necessary. this theme will only handle one type of view.
+      case 'display_teasercolumns':
+      case 'display_teasercols':
+        $node = node_load($node->nid);
+        $panelsection[] = node_view($node, TRUE, FALSE, $links);
+        break;
+    }
+  }
+
+
+  $content .= "<div class='panel-section teaser-columns'>\n\n";  // multi-column-teaser class given for legacy implementation
+  $content .= display_columnize($panelsection);
+  $content .= "</div>\n\n";
+
+  return $content;
+}
+
+function theme_display_multicolumn_views_lists($view, $nodes, $type, $teasers = FALSE, $links = TRUE) {
+
+  $content = '';
+
+  $items = array();
+
+  foreach ($nodes as $node) {
+    $node = node_load($node->nid);
+    $items[] = l($node->title, "node/{$node->nid}");
+  }
+
+  $content .= "<div class='panel-section list-columns'>\n\n";  // multi-column-teaser class given for legacy implementation
+  $content .= display_columnize_items($items, 2, NULL, NULL, TRUE);
+  $content .= "</div>\n\n";
+
+  return $content;
+}
+
+
+function theme_display_arrange_items_views_with_teaser($view, $nodes, $type, $teasers = FALSE, $links = TRUE, $lead_teaser = TRUE) {
+  // wrapper sets the lead_teaser variable to TRUE
+
+  return theme('display_arrange_items_views', $view, $nodes, $type, $teasers, $links, $lead_teaser);
+}
+
+function theme_display_arrange_items_views($view, $nodes, $type, $teasers = FALSE, $links = TRUE, $lead_teaser = FALSE) {
+
+  $content = '';
+
+  $counter = 1;
+
+  $topsection = '';
+  $panelsection = array();
+  $listsection = array();
+
+  $display_cells = $display_cells ? $display_cells : variable_get('display_cells', 2); // TO DO: make a view setting
+
+  foreach ($nodes as $node) {
+    switch ($view->type) { // likely not necessary. this theme will only handle one type of view.
+      case 'display_multiformat2':
+      case 'display_multiformat':
+
+        $node = node_load($node->nid);
+
+        if ($counter == 1) {
+          $topsection = node_view($node, $lead_teaser, FALSE, $links);
+          $title = check_plain($node->title);
+        } 
+        else if ($counter <  ($display_cells + 2)) {
+          $panelsection[] = node_view($node, TRUE, FALSE, $links);
+        } 
+        else {
+          $listsection[] = theme('display_linked_title', $node);
+        }
+
+        $counter++;
+
+        break;
+    }
+  }
+
+  $content .= "<div class='top-section'>\n";
+  $content .= $topsection;
+  $content .= "</div>\n\n";
+
+  $content .= "<div class='panel-section multi-column-teaser'>\n\n";  // multi-column-teaser class given for legacy implementation
+  $content .= display_columnize($panelsection);
+  $content .= "</div>\n\n";
+
+  $content .= "<div class='list-section'>\n";
+  $content .= theme('item_list', $listsection);
+  $content .= "</div>\n\n";
+
+  return $content;
+}
+
+function theme_display_serial_list_connectors($list_array, $final_connector = 'and') {
+
+  $output = join(', ', $list_array);
+
+  $final_comma_position = strrpos($output, ', ');
+
+  if ($final_comma_position        > 0) { // more than one
+    $output = substr_replace($output, " $final_connector ", $final_comma_position, 2);
+  }
+
+  return $output;
+
+}
+
+
+function display_node_teaser_resize($body, $format = NULL, $size = FALSE, $plain = FALSE) {
+
+  // used to override node_teaser size setting.
+
+  $size = $size === FALSE ? variable_get('teaser_length', 600) : $size;
+
+  // Find where the delimiter is in the body
+  $delimiter = strpos($body, '<!--break-->');
+
+  // If the size is zero, and there is no delimiter, the entire body is the teaser.
+  if ($size == 0 && $delimiter === FALSE) {
+    return $body;
+  }
+
+  // If a valid delimiter has been specified, use it to chop off the teaser.
+  if ($delimiter !== FALSE) {
+    return substr($body, 0, $delimiter);
+  }
+
+  // We check for the presence of the PHP evaluator filter in the current
+  // format. If the body contains PHP code, we do not split it up to prevent
+  // parse errors.
+  if (isset($format)) {
+    $filters = filter_list_format($format);
+    if (isset($filters['filter/1']) && strpos($body, '<?') !== FALSE) {
+      return $body;
+    }
+  }
+  
+  if ($plain === TRUE) {
+          $body = check_plain(strip_tags($body));
+  }
+
+  // If we have a short body, the entire body is the teaser.
+  if (strlen($body) <= $size) {
+    return $body;
+  }
+
+  // If the delimiter has not been specified, try to split at paragraph or
+  // sentence boundaries.
+
+  // The teaser may not be longer than maximum length specified. Initial slice.
+  $teaser = truncate_utf8($body, $size);
+
+  // Store the actual length of the UTF8 string -- which might not be the same
+  // as $size.
+  $max_rpos = strlen($teaser);
+
+  // How much to cut off the end of the teaser so that it doesn't end in the
+  // middle of a paragraph, sentence, or word.
+  // Initialize it to maximum in order to find the minimum.
+  $min_rpos = $max_rpos;
+
+  // Store the reverse of the teaser.  We use strpos on the reversed needle and
+  // haystack for speed and convenience.
+  $reversed = strrev($teaser);
+
+  // Build an array of arrays of break points grouped by preference.
+  $break_points = array();
+
+  // A paragraph near the end of sliced teaser is most preferable.
+  $break_points[] = array('</p>' => 0);
+
+  // If no complete paragraph then treat line breaks as paragraphs.
+  $line_breaks = array('<br />' => 6, '<br>' => 4);
+  // Newline only indicates a line break if line break converter
+  // filter is present.
+  if (isset($filters['filter/2'])) {
+    $line_breaks["\n"] = 1;
+  }
+  $break_points[] = $line_breaks;
+
+  // If the first paragraph is too long, split at the end of a sentence.
+  $break_points[] = array('.' => 1, '! ' => 1, '? ' => 1, '。' => 0, '؟ ' => 1);
+
+  // Iterate over the groups of break points until a break point is found.
+  foreach ($break_points as $points) {
+    // Look for each break point, starting at the end of the teaser.
+    foreach ($points as $point => $offset) {
+      // The teaser is already reversed, but the break point isn't.
+      $rpos = strpos($reversed, strrev($point));
+      if ($rpos !== FALSE) {
+        $min_rpos = min($rpos + $offset, $min_rpos);
+      }
+    }
+
+    // If a break point was found in this group, slice and return the teaser.
+    if ($min_rpos !== $max_rpos) {
+      // Don't slice with length 0.  Length must be <0 to slice from RHS.
+      return ($min_rpos === 0) ? $teaser : substr($teaser, 0, 0 - $min_rpos);
+    }
+  }
+
+  // If a break point was not found, still return a teaser.
+  return $teaser;
+}

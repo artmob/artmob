@@ -1,0 +1,385 @@
+<?php
+
+/**
+ * hook_elements - define the widget type
+ */
+function widget_elements() {
+	$type = array();
+	$type['widget'] = array( '#input' => TRUE, );
+	return $type;
+}
+
+// ***************************************************************************
+// EXPAND WIDGET FUNCTIONS
+// ***************************************************************************
+
+/**
+ * Called by #process for widget emements
+ *
+ * Don't know what arg2 is or why it is there
+ */
+function widget_expand($element, $arg2, $node) {
+
+	$name = $element['#name']; // name of this widget, set in the containing form
+	$edit = $element['#post']; // get the posted parameters
+
+/*
+	// send important info to javascript
+	// need to get basePath to javascript so it know where to callback - use array to avoid String vs Array uncertainty
+	// need to know names of all widgets to do event attaching
+	drupal_add_js( array( 'widget' => array(
+		'basePath' => array( base_path() ), 
+		'names' => array( $name ),
+	), ), 'setting');
+*/
+
+	// set flag so nodeapi can find the widget
+	if($node->type){
+		variable_set('widget_' . $node->type, TRUE );
+	}
+
+	// create a tree of the names of all widgets in the form -- needed for formapi:insert
+	$element['widget_names'] = array(
+		'#type' => 'item',
+		'#tree' => TRUE,
+	);
+	$element['widget_names'][$name] = array (
+		'#type' => 'hidden',
+		'#value' => $name,
+	);
+
+	// put in wrapper that will allow contents to be swapped out by the js update
+	// also create bindings for the dynamic elements that will be added
+	$element[$name] = array (
+		'#tree' => TRUE,
+	    '#prefix' => '<div id="widget_wrapper_' . $name .'">',
+	    '#suffix' => '</div>',
+	    '#ahah_bindings' => array( 
+	    	array (
+	    		'selector' => 'input.widget_remove_' . $name,
+		    	'wrapper' => 'widget_wrapper_' . $name,
+	    		'event' => 'click',
+	  			'path' => 'widget/widget_update_js',
+	  			'params' => array( 'widget_name_js' => $name ),	    		
+	    	),
+	    	array (
+	    		'selector' => 'select.widget_weight_' . $name,
+		    	'wrapper' => 'widget_wrapper_' . $name,
+	    		'event' => 'change',
+	  			'path' => 'widget/widget_update_js',
+	  			'params' => array( 'widget_name_js' => $name ),	    		
+	    	),
+	    ),	    	
+	);
+
+	// actually build the widget and put it in the wrapper
+	$element[$name] += _widget_build_widget( $name, $edit[$name], $node );
+	return $element;
+}
+
+
+function _widget_build_widget($name, $edit, $node=NULL) {
+	// get the preexisting subwidgets - can be in either $edit or $node
+	$subwidgets = _widget_extract_subwidgets($name, $edit, $node);
+	//	drupal_set_message( "Extracted Subwidget Count: " . count($subwidgets) );
+	// process add and remove commands - modifies $subwidgets
+	$subwidgets = _widget_process_subwidget_commands( $name, $edit, $subwidgets );
+	//	drupal_set_message( "After commands Subwidget Count: " . count($subwidgets) );
+	// expand the $subwidgets array into form elements - modifies $element
+	$widget = _widget_expand_subwidgets( $name, $subwidgets );
+	// add a control block for adding new subwidgets - modifies $element
+	$widget += _widget_add_new_subwidget_control( $name, $edit );
+
+	return $widget;
+}
+
+/**
+ * Extract the widget description from the post array
+ * If post is empty, we may be doing an edit -> load into node
+ * Or fresh add with no widgets
+ */
+function _widget_extract_subwidgets($name, $edit, $node) {
+	$subwidgets = array();
+
+	if( is_array( $edit['subwidgets'] ) ) {
+		$subwidgets = $edit['subwidgets'];
+	}
+	elseif( is_array($node->$name) ) {
+		// widgets have been loaded into node (by apinode:load)
+		$widget = $node->$name;
+		$subwidgets = $widget['subwidgets'];
+	}
+	return $subwidgets;
+}
+
+/**
+ * Modify the subwidgets array based on commands in the $edit
+ * Side effect: if subwidget is successfully added, remove entry from $edit
+ */
+function _widget_process_subwidget_commands( $name, &$edit, $subwidgets ) {
+	if( is_array($edit) && count($edit) > 0 ) {
+		// process the potention addition
+		$new_subwidget = $edit['new_subwidget'];
+		if( $new_subwidget['url'] || $new_subwidget['label'] ) { // there was something typed into new_file fields
+			// validate that we have enough info to add a subwidget - can't do this in nodeapi:validate, b/c by then the form is already built
+			if( !$new_subwidget['url'] ) {
+				form_set_error( "widgets][$name][new_subwidget][url", 'Need to include url to add new subwidget' );
+			}
+			else if( !valid_url( $new_subwidget['url'], TRUE ) ) {
+				form_set_error( "widgets][$name][new_subwidget][url", 'File URL needs to be absolute' );
+			}
+			else { // we are good to do add
+				$subwidget_id = db_next_id('subwidget'); // get distinct id for subwidget (overkill but easy)
+				$subwidgets[$subwidget_id] = $new_subwidget;
+				// remove from params, so it doesn't show up on the form (consume), but only on successful add
+				unset( $edit['new_subwidget'] );
+			}
+		}
+
+		// now process the removes
+		foreach( $subwidgets as $subwidget_id => $subwidget ) {
+			if( isset( $subwidget['remove'] ) )  {
+//				drupal_set_message( "_widget_process_subwidget_commands: deleting subwidget: $subwidget_id from widget $name" );
+				unset( $subwidgets[$subwidget_id] );
+			}
+		}
+	}
+	return $subwidgets;
+}
+
+/**
+ * Expand the subwidgets into form elements
+ */
+function _widget_expand_subwidgets( $name, $subwidgets ) {
+	$element['subwidgets'] = array (
+	  	'#tree' => TRUE,
+	    '#id' => 'widget_subwidgets_' . $name,
+	    '#theme' => 'widget_subwidgets',
+	);
+	foreach( $subwidgets as $subwidget_id => $subwidget ) {
+		$element['subwidgets'][$subwidget_id] = array(
+		  	'#tree' => TRUE,
+		);
+		$element['subwidgets'][$subwidget_id]['url'] = array(
+		  	'#type' => 'textfield',
+		  	'#default_value' => $subwidget['url'],
+		);
+		$element['subwidgets'][$subwidget_id]['label'] = array(
+		  	'#type' => 'textfield',
+		  	'#default_value' => $subwidget['label'],
+		);
+		$element['subwidgets'][$subwidget_id]['weight'] = array(
+		  	'#type' => 'weight',
+		  	'#default_value' => $subwidget['weight'],
+		    '#attributes' => array( 'class' => 'widget_weight_' . $name ),
+		);
+		$element['subwidgets'][$subwidget_id]['remove'] = array(
+		  	'#type' => 'checkbox',
+		  	'#default_value' => $subwidget['remove'],
+		    '#attributes' => array( 'class' => 'widget_remove_' . $name ),
+		);
+	}
+	return $element;
+}
+
+/**
+ * control to add subwidget to widget
+ */
+function _widget_add_new_subwidget_control($name, $edit) {
+	$element['new_subwidget'] = array (
+	    '#type' => 'fieldset',
+	    '#title' => t( 'Add Subwidget' ),
+	    '#theme' => 'widget_new_subwidget',
+	    '#tree' => TRUE,
+	);
+	$element['new_subwidget']['url'] = array (
+	    '#type' => 'textfield',
+	    '#title' => t( 'URL' ),
+	    '#size' => 40,
+	    '#maxlength' => 128,
+	    '#value' => $edit['new_subwidget']['url'],
+	);
+	$element['new_subwidget']['label'] = array (
+	    '#type' => 'textfield',
+	    '#title' => t( 'Label' ),
+	    '#size' => 40,
+	    '#maxlength' => 128,
+	    '#value' => $edit['new_subwidget']['label'],
+	);
+	$element['new_subwidget']['weight'] = array (
+	    '#type' => 'weight',
+	    '#title' => t( 'Weight' ),
+	    '#delta' => 10, 
+	    '#value' => $edit['new_subwidget']['weight'] ? $edit['new_subwidget']['weight'] : 0,
+	);
+	$element['new_subwidget']['add_subwidget_button'] = array (
+	    '#type' => 'button',
+	    '#value' => t( 'Add New Subwidget' ),
+	    '#id' => 'widget_add_subwidget_button_' . $name, 
+	    '#ahah_bindings' => array ( 
+    		array( 
+		    	'wrapper' => 'widget_wrapper_' . $name,
+	 			'event' => 'click',
+	  			'path' => 'widget/widget_update_js',
+  				'params' => array( 'widget_name_js' => $name ),
+  			),
+  		),
+	);
+	return $element;
+}
+
+// ****************************************************************
+// JAVASCRIPT FUNCTIONS
+// ****************************************************************
+
+/**
+ * hook_menu - incremental update needs its own entry point
+ */
+function widget_menu($may_cache) {
+	$items = array();
+	if ($may_cache) {
+		$items[] = array(
+	      'path' => 'widget/widget_update_js',
+	      'callback' => '_widget_update_js',
+	      'access' => TRUE,
+	      'type' => MENU_CALLBACK,
+		);
+	}
+	return $items;
+}
+/**
+ * Called by javascript to do AJAH based form updating
+ */
+function _widget_update_js() {
+	$name = $_POST['widget_name_js'];
+	print _widget_build_widget_js( $name, $_POST );
+}
+
+// Pulled out of widget_update_js for easier testing
+function _widget_build_widget_js( $name, $edit ) {
+	$widget[$name] = array ( '#tree' => TRUE, );
+	$widget[$name] += _widget_build_widget( $name, $edit[$name] );
+
+	$form = form_builder( 'ahah_widget', $widget );
+//	drupal_set_message( "Rebuilt Widget " . $name );
+	return theme('status_messages') . drupal_render($form);
+}
+
+// ********************************************************************************
+// WIDGET_NODEAPI - handle the database interactions
+// ********************************************************************************
+
+/**
+ * hook_nodeapi
+ */
+function widget_nodeapi( &$node, $op ) {
+	if( variable_get( 'widget_'. $node->type, FALSE ) ) {
+		switch($op) {
+			// info flow db -> node -> form -> node -> db
+			case load: // Load Widgets in from db
+//				drupal_set_message( "Load Widgets in from db" );
+				$additions = array();
+				$result = db_query('SELECT widget_name, subwidget_id, url, label, weight ' .
+				                      'FROM {widget} ' .
+				                      'WHERE nid = %d '.
+									  'ORDER BY weight', $node->nid);
+				while ($row = db_fetch_array($result)) {
+					$widget_name = $row['widget_name'];
+					$subwidget_id = $row['subwidget_id'];
+					if( !is_array( $additions[$widget_name] ) ) {
+						$additions[$widget_name] = array();
+						$additions[$widget_name]['subwidgets'] = array();
+					}
+					$additions[$widget_name]['subwidgets'][$subwidget_id] = array (
+				    	'url' => $row['url'],
+				    	'label' => $row['label'],
+				    	'weight' => $row['weight'],
+					);
+					$widget_names[$widget_name] = $widget_name; // rebuild widget name list
+				}
+				$additions['widget_names'] = $widget_names;
+				return $additions;
+				break;
+			case view:
+				// just prove that the widgets are there - assume some .tpl file will actually shape output
+				foreach( $node->widget_names as $widget_name ) {
+					$widget = $node->$widget_name;
+					$node->content['body']['#value'] .= "widget $widget_name"; // . dprint_r( $widget, TRUE );
+				}
+				break;
+			case update:
+				// keep life simple and do update by just deleting and then inserting
+				db_query("DELETE FROM {widget} WHERE nid = '%d'", $node->nid );
+			case insert:
+				foreach( $node->widget_names as $widget_name ) {
+					$widget = $node->$widget_name;
+					foreach( $widget['subwidgets'] as $subwidget_id => $subwidget ) {
+						drupal_set_message( "Inserting $node->nid, $widget_name, $subwidget_id");
+						db_query ("INSERT INTO {widget} ".
+		  					"(nid, widget_name, subwidget_id, url, label, weight) ".
+		  					" VALUES (%d, '%s', %d, '%s', '%s', %d)", 
+						$node->nid, $widget_name, $subwidget_id,
+						$subwidget['url'], $subwidget['label'], $subwidget['weight']
+						);
+					}
+				}
+				break;
+		}
+	}
+}
+
+// ************************************************************************************
+// THEMING FUNCTIONS
+// ************************************************************************************
+
+/**
+ * Make sure the widget acutally shows up on the form
+ */
+function theme_widget($element) {
+	$output .= theme('form_element', $element, $element['#children']);
+	return $output;
+}
+
+/**
+ * Theme the subwidgets as a table, one subwidget per row
+ */
+function theme_widget_new_subwidget(&$form) {
+	$rows = array();
+	$row = array();
+	$row[] = drupal_render($form['url']);
+	$row[] = drupal_render($form['label']);
+	$row[] = drupal_render($form['weight']);
+	$rows[] = $row;
+	$output = theme('table', array(), $rows);
+	$output .= drupal_render($form);
+	return $output;
+}
+
+function widget_sort_by_weight($a, $b) {
+	if ($a['weight'] == $b['weight']) {
+		return 0;
+	}
+	return ($a['weight'] < $b['weight']) ? -1 : 1;
+}
+
+/**
+ * Theme the add new subwidget subform as a single row.
+ */
+function theme_widget_subwidgets(&$form) {
+	foreach (element_children($form) as $key) {
+		$row = array();
+		$row[] = drupal_render($form[$key]['url']);
+		$row[] = drupal_render($form[$key]['label']);
+		$row[] = drupal_render($form[$key]['weight']);
+		$row[] = drupal_render($form[$key]['remove']);
+		$weight = $form[$key]['weight']['#value'];
+		$rows[] = array( 'data' => $row, 'class' => 'sortableitem', 'weight' => $weight );
+	}
+	if( count($rows) > 0 ) {
+		usort( $rows, widget_sort_by_weight ); // sort the subwidgets by weight
+		$header = array(t('URL'), t('Label'), t('Weight'), t('Delete'));
+		$output = theme('table', $header, $rows, array( 'class' => 'sortable', 'id' => $form['#attributes']['id'] ) );
+	}
+	$output .= drupal_render($form);
+	return $output;
+}

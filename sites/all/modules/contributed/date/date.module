@@ -1,0 +1,872 @@
+<?php
+// $Id: date.module,v 1.32.2.55 2007/12/03 16:26:21 karens Exp $
+
+/**
+ * @file
+ * Defines a date/time field type.
+ *
+ * @todo
+ *  - rework Views queries to incorporate offset for date-specific timezone handling
+ *  - add in method for handling repeat dates as multiple value fields
+ *
+ */
+/**
+ * Implementation of hook_menu().
+ */
+function date_menu($may_cache) {
+  if (!$may_cache) {
+    // Include css unconditionally exactly once.
+    drupal_add_css(drupal_get_path('module', 'date') .'/date.css');
+    if (module_exists('views')) {
+      include_once('./'. drupal_get_path('module', 'date') .'/date_views.inc');
+    }
+  }
+}
+
+/**
+ * Implementation of hook_help().
+ */
+function date_help($section) {
+  switch ($section) {
+    case 'admin/help#date':
+      return t('<p>Complete documentation for the Date and Date API modules is available at !link.</p>', array('!link' => l('http://drupal.org/node/92460', 'http://drupal.org/node/92460')));
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_form_alter().
+ * Make sure date information gets updated.
+ */
+function date_form_alter($form_id, &$form) {
+  if ($form_id == 'views_edit_view') {
+    $form['#submit'] = array_merge($form['#submit'], array('date_clear_all' => array()));
+  }
+}
+
+/**
+ * Empty or reset cached values.
+ *
+ * @param $remove
+ *   whether or not to completely remove the caches.
+ */
+function date_clear_all($remove = FALSE) {
+  // This gets called from the .install file, so make sure
+  // relevant files are always included.
+  include_once('./'. drupal_get_path('module', 'content') .'/content.module');
+  include_once('./'. drupal_get_path('module', 'content') .'/content_admin.inc');
+  if (module_exists('views')) {
+    include_once('./'. drupal_get_path('module', 'views') .'/views.module');
+    include_once('./'. drupal_get_path('module', 'date') .'/date_views.inc');
+    if ($remove) {
+      cache_clear_all('date_browser_views', 'cache_views');
+    }
+    else {
+      date_views_browser_get_views(TRUE);
+    }
+  }
+  content_clear_type_cache();
+}
+
+/**
+ * Implementation of hook_field().
+ *
+ */
+function date_field($op, &$node, $field, &$items, $teaser, $page) {
+  $field_name = $field['field_name'];
+  if ($field['todate']) {
+    $process = array('value', 'value2');
+  }
+  else {
+    $process = array('value');
+  }
+  include_once(drupal_get_path('module', 'date_api') .'/date.inc');
+  switch ($op) {
+    case 'validate':
+      $formats = date_get_formats($field);
+      foreach ($items as $delta => $item) {
+        foreach ($process as $processed) {
+          $error_field = $field['field_name'] .']['. $delta .']['. $processed;
+          $error_field .= $field['widget']['type'] == 'date_select' ? '][year' : '';
+          if ($processed == 'value' && $field['todate'] && !date_is_valid($item['value'], $field['type']) && (date_is_valid($item['value2'], $field['type']))) {
+            form_set_error($error_field, t("A 'From date' date is required for %field %delta", array('%delta' => $field['multiple'] ? intval($delta + 1) : '', '%field' => t($field['widget']['label']))));
+          }
+          if ($processed == 'value2' && $field['todate'] == 'required' && ($field['required'] && date_is_valid($item['value'], $field['type']) && !date_is_valid($item['value2'], $field['type']))) {
+            form_set_error($error_field, t("A 'To date' is required for %field %delta", array('%delta' => $field['multiple'] ? intval($delta + 1) : '', '%field' => t($field['widget']['label']))));
+          }
+
+          if ($item[$processed] || date_is_required($field, $processed, $delta, $item['value'], $item['value2'])) {
+            $date = date_make_date($item[$processed], $field['timezone'], 'db', $field['type']);
+            if (!$date->db->parts['year']) {
+              form_set_error($error_field, t('%name %delta %column is not a valid date.', array(
+                '%name' => t($field['widget']['label']),
+                '%delta' => $field['multiple'] ? $delta : '',
+                '%column' => ($processed == 'value2' ? t('To date') : (sizeof($process) == 2 ? t('From date') : '')))
+                ));
+            }
+          }
+        }
+      }
+      return $items;
+
+    case 'update':
+    case 'insert':
+      // Unset undesired date part values in ISO dates.
+      // Not sure this is the best place to do this, but form_set_value requires knowlege of the widget structure,
+      // so that won't work in the field, and doing it in the widget get much more complex, so leaving it here for now.
+      foreach ($items as $delta => $item) {
+        foreach ($process as $processed) {
+          if (!form_get_errors()) {
+            $replace = date_unset_granularity($item[$processed], date_granularity_array($field), $field['type']);
+            $items[$delta][$processed] = $replace !== 'ERROR' && $replace != $items[$delta][$processed] ? $replace : $items[$delta][$processed];
+          }
+        }
+      }
+      return $items;
+  }
+}
+
+/**
+ * Logic for telling when a field value is required.
+ */
+function date_is_required($field, $column, $delta, $value1, $value2) {
+  if ($column == 'value2' && ($field['todate'] == 'required' && ($value1 || $delta == 0))) {
+    return TRUE;
+  }
+  elseif ($column == 'value' && ($field['required'] && $delta == 0)) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+/**
+ * Implementation of hook_widget().
+ */
+function date_widget($op, &$node, $field, &$items, $delta = NULL) {
+  include_once(drupal_get_path('module', 'date_api') .'/date.inc');
+
+  if ($field['todate']) {
+    $process = array('value', 'value2');
+  }
+  else {
+    $process = array('value');
+  }
+  $max = $field['multiple'] ? 2 + sizeof($items) : 0;
+
+  switch ($op) {
+    case 'default value':
+      return date_default_value($node, $field, $items, $delta);
+
+    case 'form':
+
+      $form = array();
+
+      $form[$field['field_name']]['#tree'] = TRUE;
+      $form[$field['field_name']]['#theme'] = 'date_form_fieldgroup';
+
+      // Multiple value and from/to fields need a field title at the top of the form.
+      if ($field['multiple'] || $field['fromto']) {
+        $form[$field['field_name']]['#title'] = t($field['widget']['label']);
+      }
+
+      $tz_handling = $field['tz_handling'] ? $field['tz_handling'] : 'site';
+
+      $function = 'date_widget_'. $field['widget']['type'];
+      foreach (range(0, $max) as $delta) {
+
+        $granularity = date_granularity_array($field);
+        if ($tz_handling == 'date') array_push($granularity, 'T');
+
+        $timezone = date_get_timezone($tz_handling, $items[$delta]['timezone']);
+        $params = array(
+          'label'        => t($field['widget']['label']),
+          'value'        => $items[$delta]['value'],
+          'weight'       => $field['widget']['weight'],
+          'delta'        => $delta,
+          'granularity'  => $granularity,
+          'format'       => $field['type'],
+          'timezone_out' => ($items[$delta]['value'] ? $timezone : ''),
+          'timezone_in'  => ($items[$delta]['value'] ? 'GMT' : ''),
+          'description'  => t($field['widget']['description']),
+          'text_parts'  => (array) $field['widget']['text_parts'],
+          'year_range'   => $field['widget']['year_range'],
+          );
+        $params['required'] = ($field['required'] && $delta == 0) ? 1 : 0;
+        $params['formats'] = date_get_formats($field);
+
+        if ($field['todate'] != 'required' && $items[$delta]['value2'] == $items[$delta]['value']) {
+          unset($items[$delta]['value2']);
+        }
+
+        switch ($field['widget']['type']) {
+          case 'date_select':
+            if ($delta > 0) $params['opt_fields'] = array('year', 'month', 'day');
+            if ($delta > 0 || (!$params['required'] && $params['value'] == '')) $params['blank_default'] = 1;
+            $params['increment'] = $field['widget']['increment'];
+
+            // use the api date selector form from date.inc to create the date selector form
+            if (!$field['todate']) {
+              $form[$field['field_name']][$delta]['value'] = date_select_input($params);
+              $form[$field['field_name']][$delta]['#empty'] = empty($items[$delta]['value']['year']) ? TRUE : FALSE;
+            }
+            else {
+              $params['label'] = t('From date');
+              $form[$field['field_name']][$delta]['value'] = date_select_input($params);
+              $params['label'] = t('To date');
+              $params['value'] = $items[$delta]['value2'];
+              $params['required'] = date_is_required($field, 'value2', $delta, $items[$delta]['value'], $items[$delta]['value2']);
+              if (!$params['required'] && empty($params['value'])) $params['blank_default'] = 1;
+              $form[$field['field_name']][$delta]['value2'] = date_select_input($params);
+              $form[$field['field_name']][$delta]['value2']['#weight'] += .1;
+              $form[$field['field_name']][$delta]['#empty'] = empty($items[$delta]['value']['year']) && empty($items[$delta]['value2']['year']) ? TRUE : FALSE;
+            }
+            break;
+
+          default:
+            // use the api text input form from date.inc
+            if ($delta > 0) $params['blank_default'] = 1;
+            $params['jscalendar'] = $field['widget']['type'] == 'date_js' ? 1 : 0;
+            if ($delta > 0 || (!$params['required'] && $params['value'] == '')) $params['blank_default'] = 1;
+            if (!$field['todate']) {
+              $form[$field['field_name']][$delta] = date_text_input($params);
+              $form[$field['field_name']][$delta]['#empty'] = empty($items[$delta]['value']) ? TRUE : FALSE;
+            }
+            else {
+              $params['label'] = t('From date');
+              $params['field_name'] = 'value';
+              $form[$field['field_name']][$delta] = date_text_input($params);
+              $params['label'] = t('To date');
+              $params['field_name'] = 'value2';
+              $params['value'] = $items[$delta]['value2'];
+              $params['required'] = date_is_required($field, 'value2', $delta, $items[$delta]['value'], $items[$delta]['value2']);
+              if (!$params['required'] && empty($delta['value2'])) $params['blank_default'] = 1;
+              $form[$field['field_name']][$delta] += date_text_input($params);
+              $form[$field['field_name']][$delta]['value2']['#weight'] += .1;
+              $form[$field['field_name']][$delta]['#empty'] = empty($items[$delta]['value']) && empty($items[$delta]['value2']) ? TRUE : FALSE;
+            }
+        }
+
+        // Group from/to items together.
+        if ($field['todate']) {
+          $form[$field['field_name']][$delta]['#theme'] = 'date_form_combination';
+        }
+        // Add other info to the form that the themes will need.
+        $form[$field['field_name']][$delta]['#title'] = t($field['widget']['label']);
+        $form[$field['field_name']][$delta]['#delta'] = $delta;
+
+        $params['label'] = t($field['widget']['label']);
+        $params['weight'] = $field['widget']['weight'] + .2;
+        $form[$field['field_name']] += date_timezone_input($params);
+      }
+      return $form;
+
+    case 'process form values':
+      /**
+       *  Rebuild $items with converted dates and timezones
+       *
+       *  input text field dates will hold an array like:
+       *  [0] => Array (
+       *    [value] => 2006-04-06T02:00:00
+       *  [timezone] => US/Central
+
+       *  input date selector dates will hold an array like:
+       *  [0] => Array (
+       *    [value] => Array (
+       *      [month] => 4
+       *      [day] => 05
+       *      [year] => 2006
+       *      [hour] => 1
+       *      [minute] => 12
+       *   [timezone] => US/Central
+       */
+
+      $formats = date_get_formats($field);
+      $add = array();
+
+      // Don't save empty fields.
+      if ($field['multiple']) {
+        foreach ($items as $delta => $item) {
+          switch ($field['widget']['type']) {
+            case 'date_select':
+              if (empty($item['value']['year']) && ($delta > 0 || !$field['required'])) {
+                unset($items[$delta]);
+              }
+              break;
+            default:
+              if (empty($item['value']) && ($delta > 0 || !$field['required'])) {
+                unset($items[$delta]);
+              }
+              break;
+          }
+        }
+      }
+
+      $timezone = date_get_timezone($field['tz_handling'], $items['timezone']);
+      unset($items['timezone']);
+      foreach ($items as $delta => $item) {
+        if (!empty($item)) {
+          foreach ($process as $processed) {
+            // Handle empty to date values by substituting in the from date.
+            // Otherwise, replace $items values with the converted date, timezone, and offset values
+            switch ($field['widget']['type']) {
+              case 'date_select':
+                if ($processed == 'value2' && empty($item['value2']['year'])) {
+                  $add[$delta]['value2'] = $add[$delta]['value'];
+                }
+                else {
+                  $date = date_selector_make_dbdate($item[$processed], $field['type'], $timezone, date_granularity_array($field));
+                  $add[$delta][$processed]    = date_show_value($date, 'db', $field['type']);
+                }
+                break;
+              default:
+                if ($processed == 'value2' && empty($item['value2'])) {
+                  $add[$delta]['value2'] = $add[$delta]['value'];
+                }
+                else {
+                  if ($field['widget']['type'] == 'date_js') {
+                    $function = 'date_jscalendar_make_dbdate';
+                  }
+                  else {
+                    $function = 'date_text_make_dbdate';
+                  }
+                  $date = $function(trim($item[$processed]), $field['type'], $formats['input']['text'], $timezone, date_granularity_array($field));
+                  $add[$delta][$processed]    = date_show_value($date, 'db', $field['type']);
+                }
+                break;
+            }
+            // Replace $item values with calculated values from $date object.
+            // This will also eliminate timezone and offset for dates too old
+            // for accurate timezone adjustments.
+            if ($field['tz_handling'] == 'date') {
+              $add[$delta]['timezone'] = ($add[$delta]['value'] || $field['required']) ? $date->local->timezone : NULL;
+              $add[$delta]['offset']   = ($add[$delta]['value'] || $field['required']) ? $date->local->offset : NULL;
+            }
+          }
+        }
+      }
+      if ($add) $items = $add;
+      return $items;
+  }
+}
+
+/**
+ *  Set the date default values.
+ *
+ * @todo expand on this in the future
+ */
+function date_default_value($node, $field, $items, $delta) {
+  include_once(drupal_get_path('module', 'date_api') .'/date.inc');
+  if ($field['required']) {
+    $default_date = $field['type'] == 'datestamp' ? time() : date_unix2iso(time());
+  }
+  else {
+    $default_date = NULL;
+  }
+  if ($field['todate'] == 'required') {
+    return array(0 => array('value' => $default_date, 'value2' => $default_date));
+  }
+  elseif ($field['todate'] == 'optional') {
+    return array(0 => array('value' => $default_date, 'value2' => NULL));
+  }
+  else {
+    return array(0 => array('value' => $default_date));
+  }
+}
+
+/**
+ * Implementation of hook_field_formatter_info().
+ */
+function date_field_formatter_info() {
+  return array(
+    'default' => array(
+      'label' => t('Default'),
+      'field types' => array('date', 'datestamp'),
+    ),
+    'long' => array(
+      'label' => t('Long'),
+      'field types' => array('date', 'datestamp'),
+    ),
+    'medium' => array(
+      'label' => t('Medium'),
+      'field types' => array('date', 'datestamp'),
+    ),
+    'short' => array(
+      'label' => t('Short'),
+      'field types' => array('date', 'datestamp'),
+    ),
+    'iso' => array(
+      'label' => t('ISO'),
+      'field types' => array('date', 'datestamp'),
+    ),
+    'timestamp' => array(
+      'label' => t('Timestamp'),
+      'field types' => array('date', 'datestamp'),
+    ),
+    'feed' => array(
+      'label' => t('Feed'),
+      'field types' => array('date', 'datestamp'),
+    ),
+    'ical' => array(
+      'label' => t('iCal'),
+      'field types' => array('date', 'datestamp'),
+    ),
+    'format_interval' => array(
+      'label' => t('As Time Ago'),
+      'field types' => array('date', 'datestamp'),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_field_formatter().
+ */
+function date_field_formatter($field, $item, $formatter, $node) {
+  // Get the complete date objects for the from and to dates in this field.
+  $dates = date_field_object($field, $item);
+  $dates['formatter'] = $formatter;
+  return theme('date_formatter', $dates, $field, $formatter, $node);
+}
+
+/**
+ * Use the Date API to return the formatted value for a date object.
+ *
+ * @param object $date - a date object
+ * @param string $format - the date format string
+ * @param string $format_db_type - the part of the date object to format, can be 'local' or 'db'
+ * @param string $append - a string to append to the end of the formatted date
+ * @return the formatted date value
+ */
+function date_format_item(&$date, $format, $format_db_type = 'local', $append = '') {
+  include_once(drupal_get_path('module', 'date_api') .'/date.inc');
+  return date_show_date($date, $format, $format_db_type, $format_zone) . $append;
+}
+
+/**
+ * Use the Date API to get an object representation of a date field
+ *
+ * @param array $field
+ * @param array $item - a node field item, like $node->myfield[0]
+ *
+ * @return array of From and To date objects
+ *  Each date object looks like:
+ *       date [object] => stdClass Object (
+ *         [db] => stdClass Object (  // the value stored in the database
+ *           [timestamp] => 1171569600
+ *           [iso] => 2007-02-15T20:00:00
+ *           [parts] => Array (
+ *             [seconds] => 0
+ *             [minutes] => 0
+ *             [hours] => 20
+ *             [mday] => 15
+ *             [wday] => 4
+ *             [mon] => 2
+ *             [year] => 2007
+ *             [yday] => 45
+ *             [weekday] => Thursday
+ *             [month] => February
+ *             [0] => 1171569600
+ *           )
+ *         )
+ *         [local] => stdClass Object (  // the local representation of that value
+ *           [timestamp] => 1171548000
+ *           [iso] => 2007-02-15T14:00:00
+ *           [parts] => Array (
+ *             [seconds] => 0
+ *             [minutes] => 0
+ *             [hours] => 14
+ *             [mday] => 15
+ *             [wday] => 4
+ *             [mon] => 2
+ *             [year] => 2007
+ *             [yday] => 45
+ *             [weekday] => Thursday
+ *             [month] => February
+ *             [0] => 1171548000
+ *           )
+ *           [timezone] => US/Central
+ *           [offset] => -21600
+ *         )
+ *      )
+ */
+function date_field_object($field, $item) {
+  $dates = array();
+  if (!is_array($field) || !is_array($item)) return $dates;
+
+  include_once(drupal_get_path('module', 'date_api') .'/date.inc');
+  if ($field['todate']) {
+    $process = array('value', 'value2');
+  }
+  else {
+    $process = array('value');
+  }
+  foreach ($process as $processed) {
+    if (empty($item[$processed])) {
+      $dates[$processed]['object'] = NULL;
+    }
+    else {
+      // create a date object with a gmt timezone from the database value
+      $date = date_make_date(trim($item[$processed]), 'GMT', 'db', $field['type']);
+      // For no timezone handling, set local value to the same as the db value.
+      if (date_no_conversion($date) || $field['tz_handling'] == 'none' || !in_array('H', date_granularity_array($field)) || $field['tz_handling'] == 'date' && empty($item['timezone'])) {
+        date_convert_timezone($date, 'GMT', 'none', 'GMT', 'local');
+      }
+      else {
+        date_convert_timezone($date, 'GMT', date_get_timezone($field['tz_handling'], $item['timezone']), 'local');
+      }
+      $dates[$processed]['object'] = $date;
+    }
+  }
+  return $dates;
+}
+
+/**
+ * $field['granularity'] will contain an array like ('H' => 'H', 'M' => 0)
+ * where the values turned on return their own names and the values turned off return a zero
+ * need to reconfigure this into a simple array of the turned on values
+ */
+function date_granularity_array($field) {
+  if (!is_array($field) || !is_array($field['granularity'])) {
+    $field['granularity'] = drupal_map_assoc(array('Y', 'M', 'D'));
+  }
+  return array_values(array_filter($field['granularity']));
+}
+
+function date_get_formats($field) {
+  if ($cached = cache_get('date_formats:'. $field['field_name'] .':'. $field['widget']['type'], 'cache') && $cached->data) {
+    $formats = unserialize($cached->data);
+
+    // are we up-to-date with current site-wide format ?
+    if ($field['widget']['input_format'] != 'site-wide' || $formats['input']['site-wide'] == variable_get('date_format_short', 'm/d/Y - H:i')) {
+      return $formats;
+    }
+  }
+
+  // if we get there, it means we have to (re)generate the formats
+  return date_set_formats($field);
+}
+
+function date_set_formats($field) {
+  if (!empty($field['widget']['input_format_custom'])) {
+    $format = $field['widget']['input_format_custom'];
+  }
+  else {
+    $format = ($field['widget']['input_format'] == 'site-wide') ? variable_get('date_format_short', 'm/d/Y - H:i') : $field['widget']['input_format'];
+  }
+  $granularity = date_granularity_array($field);
+
+  $formats = date_formats($format, $granularity);
+  cache_set('date_formats:'. $field['field_name'] .':'. $field['widget']['type'], 'cache', serialize($formats), CACHE_PERMANENT);
+  return $formats;
+}
+
+/**
+ * Wrapper functions for date administration forms.
+ */
+function date_widget_info() {
+  include_once(drupal_get_path('module', 'date') .'/date_admin.inc');
+  return _date_widget_info();
+}
+
+function date_widget_settings($op, $widget) {
+  include_once(drupal_get_path('module', 'date') .'/date_admin.inc');
+  return _date_widget_settings($op, $widget);
+}
+
+function date_field_info() {
+  include_once(drupal_get_path('module', 'date') .'/date_admin.inc');
+  return _date_field_info();
+}
+
+function date_field_settings($op, $field) {
+  include_once(drupal_get_path('module', 'date') .'/date_admin.inc');
+  return _date_field_settings($op, $field);
+}
+
+/**
+ * Wrapper functions for views hooks.
+ */
+function date_views_filters($field) {
+  include_once('./'. drupal_get_path('module', 'date') .'/date_views.inc');
+  return _date_views_filters($field);
+}
+function date_views_timestamp_filter_handler($op, $filter, $filterinfo, &$query) {
+  include_once('./'. drupal_get_path('module', 'date') .'/date_views.inc');
+  return _date_views_timestamp_filter_handler($op, $filter, $filterinfo, $query);
+}
+function date_views_filter_handler($op, $filter, $filterinfo, &$query, $field_type = 'iso') {
+  include_once('./'. drupal_get_path('module', 'date') .'/date_views.inc');
+  return _date_views_filter_handler($op, $filter, $filterinfo, $query, $field_type);
+}
+function date_views_handler_filter_date_value_form($field) {
+  include_once('./'. drupal_get_path('module', 'date') .'/date_views.inc');
+  return _date_views_handler_filter_date_value_form($field);
+}
+function date_views_timestamp_argument_range_handler($op, &$query, $argtype, $arg = '') {
+  include_once('./'. drupal_get_path('module', 'date') .'/date_views.inc');
+  return _date_views_timestamp_argument_range_handler($op, $query, $argtype, $arg);
+}
+function date_views_argument_range_handler($op, &$query, $argtype, $arg = '', $field_type = 'iso') {
+  include_once('./'. drupal_get_path('module', 'date') .'/date_views.inc');
+  return _date_views_argument_range_handler($op, $query, $argtype, $arg, $field_type);
+}
+function date_views_style_plugins() {
+  include_once('./'. drupal_get_path('module', 'date') .'/date_views.inc');
+  return _date_views_style_plugins();
+}
+function date_views_query_alter(&$query, &$view) {
+  include_once('./'. drupal_get_path('module', 'date') .'/date_views.inc');
+  return _date_views_query_alter($query, $view);
+}
+
+/**
+ * Include pathauto files when needed.
+ */
+function date_pathauto_node($op, $node = NULL) {
+  include_once('./'. drupal_get_path('module', 'date') .'/date_pathauto.inc');
+  return _date_pathauto_node($op, $node);
+}
+
+/**
+ *  Themes for date input and display
+ * @addtogroup themeable
+ * @{
+ */
+
+/**
+ *  Theme entire date field form.
+ *
+ *  Display the first item and any other non-empty items,
+ *  then groups others into an 'additional' theme.
+ */
+function theme_date_form_fieldgroup($form) {
+
+  foreach ($form as $delta => $item) {
+    if ((!$item['#empty'] || $item['#delta'] == 0) && is_numeric($delta)) {
+      $output .= drupal_render($form[$delta]);
+    }
+    elseif (is_numeric($delta)) {
+      $additional .= drupal_render($form[$delta]);
+      $title = $form['#title'];
+    }
+  }
+  $output .= theme('date_form_empty', $additional, $title);
+  $output .= drupal_render($form);
+  return $output;
+}
+
+/**
+ *  Theme empty date form fields.
+ *
+ *  Put them into a collapsed fieldset.
+ */
+function theme_date_form_empty($contents, $title) {
+  if (empty($contents)) return '';
+  $fieldset = array(
+    '#title' => t('More'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#weight' => 10,
+    '#value' => $contents,
+  );
+  $output = theme('fieldset', $fieldset);
+  return $output;
+}
+
+/**
+ *  Theme from/to date combination on form.
+ */
+function theme_date_form_combination($form) {
+  $fieldset = array(
+    '#title' => $form['#title'] .' '. ($form['#delta'] > 0 ? intval($form['#delta'] + 1) : ''),
+    '#value' => drupal_render($form),
+  );
+  $output = theme('fieldset', $fieldset);
+  return $output;
+}
+
+/**
+ *  Theme date formatter.
+ *
+ *  @param $dates = an array of the field From and To date objects, as created by date_field_object().
+ *  @param $field = the field settings
+ *  @param $node = node information, this is not always available and not
+ *     always the full node, it depends on what value was provided to the formatter.
+ *     Only the nid is always guaranteed to be available.
+ *
+ *  Useful values:
+ *    $field['type_name'] - the content type
+ *    $field['type'] - the field type
+ *    $node->nid - the node nid, get other node values using node_load($node->nid)
+ *    $dates['value']['object']->local->timestamp - the local timestamp for the From date
+ *    $dates['value2']['object']->local->timestamp - the local timestamp for the To date
+ *    $dates['value']['object']->db->timestamp - the timestamp of the From date database (GMT) value
+ *    $dates['value2']['object']->db->timestamp - the timestamp of the To date database (GMT) value
+ *
+ */
+function theme_date_formatter($dates, $field, $formatter, $node) {
+  include_once(drupal_get_path('module', 'date_api') .'/date.inc');
+  // Most formats will be applied to the local value of the date,
+  // but use this value to identify those that should format the db part instead.
+  $format_db_type = 'local';
+
+  switch (strtolower($formatter)) {
+    case 'format_interval':
+      // Format interval has its own theme.
+       return theme('date_format_interval', $field, $dates, $node);
+    case 'timestamp':
+      $format = '';
+      break;
+    case('long'):
+      $format = $field['output_format_custom_long'] > '' ? $field['output_format_custom_long'] : ($field['output_format_date_long'] ? $field['output_format_date_long'] : variable_get('date_format_long',  'l, F j, Y - H:i'));
+      $format = date_strip_granularity($format, date_granularity_array($field));
+      break;
+    case('medium'):
+      $format = $field['output_format_custom_medium'] > '' ? $field['output_format_custom_medium'] : ($field['output_format_date_medium'] ? $field['output_format_date_medium'] : variable_get('date_format_medium',  'D, m/d/Y - H:i'));
+      $format = date_strip_granularity($format, date_granularity_array($field));
+      break;
+    case('short'):
+      $format = $field['output_format_custom_short'] > '' ? $field['output_format_custom_short'] : ($field['output_format_date_short'] ? $field['output_format_date_short'] : variable_get('date_format_short', 'm/d/Y - H:i'));
+      $format = date_strip_granularity($format, date_granularity_array($field));
+      break;
+    case('iso'):
+      $format = DATE_STRING_ISO .'P';
+      break;
+    case('feed'):
+      $format = 'D, j M Y H:i:s O';
+      break;
+    case('ical'):
+      // for ical, send the db value with Z appended to indicate it is the gmt value
+      $format = 'Ymd\THis';
+      $append = 'Z';
+      $format_db_type = 'db';
+      $field['tz_handling'] == 'none';
+      break;
+    default:
+      $format = $field['output_format_custom'] > '' ? $field['output_format_custom'] : ($field['output_format_date'] ? $field['output_format_date'] : variable_get('date_format_short', 'm/d/Y - H:i'));
+      $format = date_strip_granularity($format, date_granularity_array($field));
+      break;
+  }
+ // Iterate through the From and To dates to format them, using the format selected above.
+  if ($field['todate']) {
+    $process = array('value', 'value2');
+  }
+  else {
+    $process = array('value');
+  }
+  foreach ($process as $processed) {
+    $date = $dates[$processed]['object'];
+    if (empty($date->$format_db_type)) {
+      $dates[$processed]['formatted'] = NULL;
+    }
+    else {
+      switch ($formatter) {
+        case 'timestamp':
+          $dates[$processed]['formatted'] = $date->local->timestamp;
+          break;
+        default:
+          $dates[$processed]['formatted'] = date_format_item($date, $format, $format_db_type, $append);
+      }
+    }
+  }
+  // Pass the date object with the formatted dates to the date_display_combination() theme.
+  return theme('date_display_combination', $field, $dates, $node);
+}
+
+/**
+ *  Theme from/to date combination in the view.
+ *
+ *  @param $field = the field settings
+ *  @param $node = node information, this is not always available and not
+ *     always the full node, it depends on what value was provided to the formatter.
+ *     Only the nid is always guaranteed to be available.
+ *  @param $dates - an array of date information, see explanation for date_field_object() for details.
+ *
+ *  Useful values:
+ *    $field['type_name'] is the content type
+ *    $field['type'] is the field type
+ *    $node->nid is the node nid, get other node values using node_load($node->nid)
+ *    $dates['value']['object']->local->timestamp - the local timestamp for the From date
+ *    $dates['value2']['object']->local->timestamp - the local timestamp for the To date
+ *    $dates['value']['object']->db->timestamp - the timestamp of the From date database (GMT) value
+ *    $dates['value2']['object']->db->timestamp - the timestamp of the To date database (GMT) alue
+ *    $dates['formatter'] = formatter name, i.e. 'default';
+ *    $dates['value']['formatted'] = formatted From date, i.e. 'February 15, 2007 2:00 pm';
+ *    $dates['value2']['formatted'] = formatted To date, i.e. 'February 15, 2007 6:00 pm';
+ *
+ */
+function theme_date_display_combination($field, $dates, $node = NULL) {
+  $date1 = $dates['value']['formatted'];
+  $date2 = $dates['value2']['formatted'];
+  if (empty($date1) && empty($date2)) {
+    return '';
+  }
+  elseif ($date1 == $date2 || empty($date2)) {
+    return '<span class="date-display-single">'. $date1 .'</span>';
+  }
+  else {
+    return '<span class="date-display-start">'. $date1 .'</span><span class="date-display-separator"> - </span><span class="date-display-end">'. $date2 .'</span>';
+  }
+}
+
+/**
+ * Theme a format interval for a date element
+ *
+ *  @param $field = the field settings
+ *  @param $node = node information, this is not always available and not
+ *     always the full node, it depends on what value was provided to the formatter.
+ *     Only the nid is always guaranteed to be available.
+ *  @param $dates - an array of date information, see explanation for date_field_object for details.
+ *  @return a formatted display
+ *
+ *  Useful values:
+ *    $field['type_name'] - the content type
+ *    $field['type'] - the field type
+ *    $node->nid - the node nid, get other node values using node_load($node->nid)
+ *    $dates['value']['object']->local->timestamp - the local timestamp for the From date
+ *    $dates['value2']['object']->local->timestamp - the local timestamp for the To date
+ *    $dates['value']['object']->db->timestamp - the timestamp of the From date database (GMT) value
+ *    $dates['value2']['object']->db->timestamp - the timestamp of the To date database (GMT) alue
+ */
+function theme_date_format_interval($field, $dates, $node = NULL) {
+  global $user;
+  switch ($field['tz_handling']) {
+    case 'date':
+      $adj = $dates['value']['object']->local->offset;
+      break;
+    case 'user':
+      if (variable_get('configurable_timezones', 1) && $user->uid && strlen($user->timezone)) {
+        $adj = $user->timezone;
+      }
+      else {
+        $adj = variable_get('date_default_timezone', 0);
+      }
+      break;
+    case 'none':
+      $adj = 0;
+      break;
+    default:
+      $adj = variable_get('date_default_timezone', 0);
+  }
+
+  $now = date_time() + $adj;
+
+  // Pull timestamps out of date objects.
+  $timestamp1 = $dates['value']['object']->db->timestamp + $adj;
+  $timestamp2 = ($dates['value2']['object']->db->timestamp ? $dates['value2']['object']->db->timestamp : $timestamp1) + $adj;
+
+  // 1) The date is entirely in the future
+  if ($now < $timestamp1) {
+    return t('!time', array('!time' => format_interval($timestamp1 - $now)));
+  }
+  // 2) Ongoing date
+  elseif ($now > $timestamp1 && $now <= $timestamp2) {
+    //return t('Started !time ago', array('!time' => format_interval($now - $timestamp1)));
+    return t('ongoing');
+  }
+  // 3) Date is in the past
+  else {
+    return t('!time ago', array('!time' => format_interval($now - $timestamp2)));
+  }
+}
+
+/** @} End of addtogroup themeable */

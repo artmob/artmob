@@ -1,0 +1,6 @@
+; $Id: artmob_digitized_works.info,v 3.1 2011/04/26 20:55:33 stop14 Exp $
+name = Artmob Digitized Works
+description = Module shell for uploading Digital Documents via Upload.
+package = Artmob Media
+dependencies = upload
+version = 3.1

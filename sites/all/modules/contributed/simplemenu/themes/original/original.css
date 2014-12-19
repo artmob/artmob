@@ -1,0 +1,50 @@
+/* $Id: original.css,v 1.1.2.2 2007/11/22 19:26:04 m3avrck Exp $ */
+
+body.simplemenu-enabled {
+  margin-top: 21px;
+}
+#simplemenu {
+	background:#ddd;
+	color:#333;
+	border-bottom:1px solid #999;
+	font:11px Verdana, Helvetica, sans-serif;
+	left:0;
+	position:absolute;
+	top:0;
+	width:100%;
+	z-index:9999;
+}
+#simplemenu a {
+	color:#333;
+	text-decoration:none;
+	background:#ddd;
+	border-right:1px solid #999;
+	border-left:1px solid #eee;
+	padding:2px 6px 3px 6px; 
+	height:15px;
+	width:auto;
+}   
+#simplemenu li {
+	background:#ddd;
+	text-align: left;
+}   
+#simplemenu li.expanded > a {
+	background:url(right-green.gif) no-repeat 97%;
+	padding-right:2em;
+}
+#simplemenu li.root > a {
+	font-weight:700;
+	background:url(down-green.gif) no-repeat 97%;
+}
+#simplemenu li:hover, #simplemenu li.sfHover,
+#simplemenu a:focus, #simplemenu a:hover, #simplemenu a:active {
+	background:#3875d7;
+	color:#fff;
+}
+#simplemenu li:hover ul,
+ul#simplemenu li.sfHover ul {
+	border-bottom:1px solid #999;
+}
+#simplemenu li ul a {
+ 	height:auto;
+}

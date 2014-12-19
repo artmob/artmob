@@ -1,0 +1,199 @@
+<?php
+// $Id$
+
+function artmob_ahah_support_uninstall() {
+    db_query("DROP TABLE IF EXISTS {am_contributor_widget}");
+    db_query("DROP TABLE IF EXISTS {am_citation_dates}");
+    db_query("DROP TABLE IF EXISTS {am_annotation}");
+    db_query("DROP TABLE IF EXISTS {am_citation_dc_description}");
+    db_query("DROP TABLE IF EXISTS {am_citation_dc_description_type}");
+    db_query("DROP TABLE IF EXISTS {am_citation_identifier}");
+    db_query("DROP TABLE IF EXISTS {am_citation_identifier_type}");
+    db_query("DROP TABLE IF EXISTS {am_citation_measurement}");
+    db_query("DROP TABLE IF EXISTS {am_citation_measurement_type}");
+    db_query("DROP TABLE IF EXISTS {am_citation_measurement_unit}");
+    db_query("DROP TABLE IF EXISTS {am_citation_series_contributor}");
+}
+
+/**
+ * Implementation of hook_install()
+ */
+function artmob_ahah_support_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+
+    drupal_set_message( "Creating contributor table");
+    db_query(
+      "CREATE TABLE {am_contributor_widget} (
+        `nid` int(10) unsigned NOT NULL default '0',
+        `widget_name` varchar(255)  NOT NULL default '',
+        `subwidget_id` int(10) unsigned NOT NULL default '0',
+        `contributor_nid` int(10) unsigned NOT NULL default '0',
+        `contributor_role` longblob,
+        PRIMARY KEY  (`subwidget_id`)
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;"
+    );
+
+    drupal_set_message( "Creating dates table");
+    db_query(
+      "CREATE TABLE IF NOT EXISTS {am_citation_dates} (
+          `citation_id` int(10) unsigned NOT NULL default '0',
+          `date_type_id` int(10) unsigned NOT NULL default '0',
+          `date_timestamp` text,
+          `widget_name` text,
+          `sequence` int(10) unsigned NOT NULL default '0',
+          `date_day` int(10) unsigned NOT NULL default '0',
+          `date_month` int(10) unsigned NOT NULL default '0',
+          `date_year` text,
+          `date_order` int(11) NOT NULL
+      )/*!40100 DEFAULT CHARACTER SET utf8 */;"
+    );
+
+    drupal_set_message( "Creating annotation table");
+    db_query(
+      "CREATE TABLE {am_annotation} (
+        `nid` int(10) unsigned NOT NULL default '0',
+        `widget_name` varchar(255)  NOT NULL default '',
+        `subwidget_id` int(10) unsigned NOT NULL default '0',
+        `annotator_nid` int(10) unsigned NOT NULL default '0',
+        `annotation` text default '',
+        `annotation_format` int unsigned NOT NULL default '0',
+        PRIMARY KEY  (`subwidget_id`)
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;"
+    );
+
+    drupal_set_message( "Creating Dublin Core Description Table");
+    db_query(
+      "CREATE TABLE {am_citation_dc_description} (
+        `nid` int(10) unsigned NOT NULL default '0',
+        `widget_name` varchar(255)  NOT NULL default '',
+        `subwidget_id` int(10) unsigned NOT NULL default '0',
+        `citation_description_type` varchar(255)  NOT NULL default '',
+        `citation_description` text,
+        PRIMARY KEY  (`subwidget_id`)
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;"
+    );
+
+    db_query(
+      "CREATE TABLE {am_citation_dc_description_type} (
+        item_order int(10) unsigned NOT NULL default '0',
+        product_id varchar(3) NOT NULL,
+        description varchar(100) NOT NULL,
+        notes text,
+        PRIMARY KEY  (product_id)
+      ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='ONIX Code List 48';"
+    );
+
+    db_query(
+      "INSERT INTO {am_citation_dc_description_type} (item_order, product_id, description,notes) VALUES
+        (1, 'PRO','provenance',''),
+        (2, 'CC','catalogue copy',''),
+        (3, 'FD','features and distinctions','');"
+    );
+
+      db_query(
+        "CREATE TABLE {am_citation_identifier} (
+          `nid` int(10) unsigned NOT NULL default '0',
+          `widget_name` varchar(255)  NOT NULL default '',
+          `subwidget_id` int(10) unsigned NOT NULL default '0',
+          `identifier_type_code` varchar(2)  NOT NULL default '',
+          `identifier_type_name` varchar(255)  NOT NULL default '',
+          `identifier_type_value` varchar(255)  NOT NULL default '',
+          PRIMARY KEY  (`subwidget_id`)
+        ) /*!40100 DEFAULT CHARACTER SET utf8 */;"
+      );
+
+      db_query("CREATE TABLE {am_citation_identifier_type} (
+        product_id int(2) unsigned zerofill NOT NULL,
+        description varchar(100) NOT NULL,
+        notes text,
+        PRIMARY KEY  (product_id)
+      ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='ONIX Code List 6 (Issue 3, August 2004)';");
+
+      db_query("INSERT INTO {am_citation_identifier_type} (product_id, description,notes) VALUES
+        (01, 'Proprietary', 'For example, a publisher’s or wholesaler’s product number.'),
+        (02, 'ISBN-10', 'International Standard Book Number, pre-2007, unhyphenated (10 characters)'),
+        (03, 'EAN.UCC-13', 'EAN-UCC article number (13 digits)'),
+        (04, 'UPC', 'UPC product number (12 digits)'),
+        (05, 'ISMN', 'International Standard Music Number (10 digits)'),
+        (06, 'DOI', 'Digital Object Identifier (variable length and character set)'),
+        (13, 'LCCN', 'Library of Congress Control Number (12 characters, alphanumeric)'),
+        (14, 'GTIN-14', 'EAN-UCC Global Trade Item Number (14 digits)'),
+        (15, 'ISBN-13', 'International Standard Book Number, from 2007, unhyphenated (13 digits)'),
+        (17, 'Legal deposit number', 'The number assigned to a publication as part of a national legal deposit process'),
+        (22, 'URN', 'Uniform Resource Name: note that in trade applications an ISBN must be sent as an EAN-13 number and, where required, as an ISBN-13 - it should not be sent as a URN');"
+      );
+
+    drupal_set_message( "Creating measurement table");
+
+    db_query(
+      "CREATE TABLE {am_citation_measurement} (
+        `nid` int(10) unsigned NOT NULL default '0',
+        `widget_name` varchar(255)  NOT NULL default '',
+        `subwidget_id` int(10) unsigned NOT NULL default '0',
+        `measurement_type_code` varchar(255)  NOT NULL default '',
+        `measurement_unit_code` varchar(255)  default '',
+        `measurement_value` varchar(255)  default '',
+        PRIMARY KEY  (`subwidget_id`)
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;"
+    );
+
+      db_query("CREATE TABLE {am_citation_measurement_type} (
+        product_id int(2) unsigned zerofill NOT NULL,
+        description varchar(100) NOT NULL,
+        notes text,
+        PRIMARY KEY  (product_id)
+      ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='ONIX Code List 48';");
+
+      db_query("INSERT INTO {am_citation_measurement_type} (product_id, description,notes) VALUES
+        (01, 'Height', 'For a book, the spine height when standing on a shelf. For a folded map, the height when folded. In general, the height of a product in the form in which it is presented or packaged for retail sale. '),
+        (02, 'Width', 'For a book, the horizontal dimension of the cover when standing upright. For a folded map, the width when folded. In general, the width of a product in the form in which it is presented or packaged for retail sale'),
+        (03, 'Thickness', 'For a book, the thickness of the spine. For a folded map, the thickness when folded. In general, the thickness or depth of a product in the form in which it is presented or packaged for retail sale. '),
+        (04, 'Page trim height', 'Not recommended for general use'),
+        (05, 'Page trim width', 'Not recommended for general use'),
+        (08, 'Unit weight', ''),
+        (09, 'Diameter(sphere)', 'Of a globe, for example'),
+        (10, 'Unfolded/unrolled sheet height', 'The height of a folded or rolled sheet map, poster etc when unfolded'),
+        (11, 'Unfolded/unrolled sheet width', 'The width of a folded or rolled sheet map, poster etc when unfolded'),
+        (12, 'Diameter (tube or cylinder)', 'The diameter of the cross-section of a tube or cylinder, usually carrying a rolled sheet product. Use 01 “height” for the height or length of the tube'),
+        (13, 'Rolled sheet package side measure', 'The length of a side of the cross-section of a long triangular or square package, usually carrying a rolled sheet product. Use 01 “height” for the height or length of the package. ');"
+      );
+
+      db_query("CREATE TABLE {am_citation_measurement_unit} (
+        product_id varchar(2) NOT NULL,
+        description varchar(100) NOT NULL,
+        notes text,
+        PRIMARY KEY  (product_id)
+      ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='ONIX Code List 50';");
+
+      db_query("INSERT INTO {am_citation_measurement_unit} (product_id, description,notes) VALUES
+        ('cm', 'Centimeters', ''),
+        ('gr', 'Grams', ''),
+        ('in', 'Inches (US)', ''),
+        ('lb', 'Pounds (US)', ''),
+        ('mm', 'Millimeters', ''),
+        ('oz', 'Ounces (US)', '');"
+      );
+
+    drupal_set_message( "Creating series contributor table");
+
+    db_query(
+      "CREATE TABLE {am_citation_series_contributor} (
+        `nid` int(10) unsigned NOT NULL default '0',
+        `widget_name` varchar(255)  NOT NULL default '',
+        `subwidget_id` int(10) unsigned NOT NULL default '0',
+        `series_contributor_nid` int(10) unsigned NOT NULL default '0',
+        `series_contributor_role` longblob,
+        PRIMARY KEY  (`subwidget_id`)
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;"
+    );
+  }
+}
+
+/**
+ * Updates
+ */
+function artmob_contributor_widget_update_1() {
+  return _system_update_utf8( array( 'am_contributor' ) );
+}

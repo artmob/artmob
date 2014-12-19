@@ -1,0 +1,1709 @@
+<?php
+// $Id: artmob_respond.module,v 1.0 2008/03/01 08:31:22 drumm Exp $
+
+/* @file
+ * ADDDOCUMENTATION
+ **/
+
+define('ARTMOB_RESPOND_FRAGMENT_KNOW_MORE', 'know-more');
+define('ARTMOB_RESPOND_FRAGMENT_DO_MORE', 'do-more');
+define('ARTMOB_RESPOND_FRAGMENT_LEARN_MORE', 'learn-more');
+
+function artmob_respond_perm() {
+  return array('Administrate responses', 'Add Response Tickets', 'Edit Response Tickets', 'View Response Tickets', 'View Private Response Tickets', 'Remove Response Tickets');
+}
+
+
+function artmob_respond_init() {
+   $module_path = drupal_get_path('module', 'artmob_respond');
+
+   $module_js = $module_path .'/js';
+   $module_css = $module_path .'/css';
+
+   drupal_add_js($module_js ."/artmob_respond.js", 'module', 'footer');
+   drupal_add_css($module_css ."/artmob_respond.css");
+
+   $license_settings = array(
+     'knowmorefr' => ARTMOB_RESPOND_FRAGMENT_KNOW_MORE,
+     'domorefr' => ARTMOB_RESPOND_FRAGMENT_DO_MORE,
+     'learnmorfr' => ARTMOB_RESPOND_FRAGMENT_LEARN_MORE
+   );
+
+   drupal_add_js(array('artmobrespond' => $license_settings), "setting");
+
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function artmob_respond_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+
+  } 
+  else {
+
+    if (arg(0) == 'respond_comment' && arg(1) == 'reply' && is_numeric(arg(2))) {
+      $node = node_load(arg(2));
+      if ($node->nid) {
+        $items[] = array('path' => 'respond_comment/reply', 'title' => t('Reply to comment'),
+          'callback' => 'artmob_respond_comment_reply', 'access' => True, 'type' => MENU_CALLBACK);
+      }
+    }
+
+    if (arg(0) == 'request_comment' && arg(1) == 'reply' && is_numeric(arg(2))) {
+      $node = node_load(arg(2));
+      if ($node->nid) {
+        $items[] = array('path' => 'request_comment/reply', 'title' => t('Reply to comment'),
+          'callback' => 'artmob_respond_request_comment_reply', 'access' => True, 'type' => MENU_CALLBACK);
+      }
+    }
+
+    $items[] = array(
+      'path'              => 'admin/artmob/notifications',
+      'title'             => t('Artmob Notification Centre'),
+      'description'         => t('View public notifications, including citation changes, usage requests and licensing issues.'),
+      'weight'            => -10,
+      'callback'          => 'drupal_get_form',
+      'callback arguments' => array( 'artmob_respond_notifications'),
+      'access'            => user_access('Administrate responses'),
+    );
+
+    $items[] = array(
+      'path'              => 'notifications/resolve',
+      'title'             => t('Fair Dealing Resolve'),
+      'description'       => t('Resolve a ticket'),
+      'weight'            => 5,
+      'callback'          => 'drupal_get_form',
+      'callback arguments' => array( 'artmob_respond_notifications_resolve'),
+      'access'            => user_access('Administrate responses'),
+      'type'              => MENU_LOCAL_TASK,
+
+    );
+
+    $items[] = array(
+      'path'              => 'notifications/delete',
+      'title'             => t('Fair Dealing Delete'),
+      'description'       => t('Delete a ticket'),
+      'weight'            => 5,
+      'callback'          => 'drupal_get_form',
+      'callback arguments' => array( 'artmob_respond_notifications_delete'),
+      'access'            => user_access('Administrate responses'),
+      'type'              => MENU_LOCAL_TASK,
+    );
+
+    $items[] = array(
+      'path'              => 'admin/artmob/respond',
+      'title'             => t('Artmob Respond Settings'),
+      'description'         => t('Artmob Respond Settings'),
+      'weight'            => -10,
+      'callback'          => 'drupal_get_form',
+      'callback arguments' => array( 'artmob_respond_admin_settings'),
+      'access'            => user_access('Administrate responses'),
+    );
+
+  }
+  return $items;
+}
+
+function artmob_respond_notifications_delete() {
+  $form = array();
+  $form['#attributes'] = array('enctype' => "multipart/form-data");
+
+  $form['ticket_nid'] = array(
+    '#type' => 'hidden',
+    '#value' => arg(2)
+  );
+
+  $form['ticket_display'] = array(
+    '#value' => 'Are you sure that you want to delete this ticket?',
+    '#weight' => -5,
+  );
+
+  $form['resolve_cancel'] = array(
+    '#type'          => 'submit',
+    '#value'         => t('Submit'),
+    '#weight' => 0,
+  );
+
+  $form['resolve_submit'] = array(
+    '#type'          => 'submit',
+    '#value'         => t('Cancel'),
+    '#weight' => 4,
+  );
+
+
+  $form['#submit'] = array(
+    'artmob_respond_notifications_delete_submit' => array()
+  );
+
+  return $form;
+
+}
+
+function artmob_respond_notifications_delete_submit($form_id, $form_values) {
+  // drupal_set_message( 'ticket nid = '.$form_values['ticket_nid']);
+  if ( $form_values['op'] == 'Submit' ) {
+   $node= node_load( $form_values['ticket_nid'] );
+   $node->status = 0;
+   node_save( $node );
+   drupal_set_message('The ticket has been deleted');
+ } 
+ else {
+   //drupal_set_message('cancelled');
+ }
+
+  return 'admin/artmob/notifications';
+}
+
+
+function artmob_respond_notifications_resolve() {
+  //drupal_set_message( 'arg(2) = '.arg(2) ); //ticket nid
+  $form = array();
+  $form['#attributes'] = array('enctype' => "multipart/form-data");
+  
+  $form['ticket_nid'] = array(
+    '#type' => 'hidden', 
+    '#value' => arg(2)
+  );
+
+  $node = node_load( arg(2) );
+
+  $form['ticket_status'] = array(
+      '#type'     => 'select',
+      '#title'    => 'Ticket Status',
+      '#options'    => artmob_respond_get_ticket_status_list(),
+      '#weight' => -8,
+      '#default_value' => $node->ticket_status
+  );
+
+  $form['dispute_status'] = array(
+      '#type'     => 'select',
+      '#title'    => 'Dispute Status',
+      '#options'    => artmob_respond_get_dispute_status_list(),
+      '#weight' => -6,
+      '#default_value' => $node->dispute_status
+  );
+
+  $form['resolve_cancel'] = array(
+    '#type'          => 'submit',
+    '#value'         => t('Submit'),
+    '#weight' => 0,
+  );
+
+  $form['resolve_submit'] = array(
+    '#type'          => 'submit',
+    '#value'         => t('Cancel'),
+    '#weight' => 4,
+  );
+
+
+  $form['#submit'] = array(
+    'artmob_respond_notifications_resolve_submit' => array()
+  );
+
+  return $form;
+
+}
+
+function artmob_respond_notifications_resolve_submit($form_id, $form_values) {
+ // drupal_set_message( 'ticket nid = '.$form_values['ticket_nid']);
+ if ( $form_values['op'] == 'Submit' ) {
+   $node= node_load( $form_values['ticket_nid'] );
+   $node->ticket_status = $form_values['ticket_status'];
+   $node->dispute_status = $form_values['dispute_status'];
+   node_save( $node );
+   drupal_set_message('The ticket has been updated');
+ } 
+ else {
+   //drupal_set_message('cancelled');
+ }
+
+  return 'admin/artmob/notifications';
+}
+
+function artmob_respond_notifications( $form_values = NULL ) {
+  //$form = array();
+  $form['#attributes'] = array('enctype' => "multipart/form-data");
+  $form['#multistep'] = True;
+  $form['#redirect'] = False;
+  
+
+  // BUILD THE FILTERS
+  $form['ticket_type'] = array(
+      '#type'     => 'select',
+      '#title'    => 'Ticket Type',
+      '#options'    => artmob_respond_get_ticket_type_list( True ),
+      '#weight' => -2,
+      '#default_value' => $form_values['ticket_type']
+  );
+
+  $form['ticket_status'] = array(
+      '#type'     => 'select',
+      '#title'    => 'Ticket Status',
+      '#options'    => artmob_respond_get_ticket_status_list( True ),
+      '#weight' => 0,
+      '#default_value' => $form_values['ticket_status']
+  );
+
+  $form['dispute_status'] = array(
+      '#type'     => 'select',
+      '#title'    => 'Dispute Status',
+      '#options'    => artmob_respond_get_dispute_status_list( True ),
+      '#weight' => 2,
+      '#default_value' => $form_values['dispute_status']
+  );
+
+  $form['item_status'] = array(
+      '#type'     => 'select',
+      '#title'    => 'Item Status',
+      '#options'    => artmob_respond_get_item_status_list( True ),
+      '#weight' => 4,
+      '#default_value' => $form_values['item_status']
+  );
+
+  $form['filter_submit'] = array(
+    '#type'          => 'submit',
+    '#value'         => t('Submit'),
+    '#weight' => 6,
+  );
+
+
+  // BUILD THE TABLE ATTRIBUTES
+  $attributes = array(
+    'border'      => 1,
+    'cellspacing' => 0,
+    'cellpadding' => 5,
+    'class'       => 'artmob_admin_table'
+  );
+
+  // BUILD THE TABLE HEADER
+  $header = array(
+              0 => array( 'data' => t( 'Ticket Number' ), 'field' => 'ticket_number', 'sort' => 'asc' ),
+              1 => array( 'data' => t( 'Ticket Type' ), 'field' => 'type' ),
+              2 => array( 'data' => t( 'Ticket Status' ), 'field' => 'ticket_status' ),
+              3 => array( 'data' => t( 'Submitted By'),  ),
+              4 => array( 'data' => t( 'Date' ), 'field' => 'created' ),
+              5 => array( 'data' => t( 'Options' )  ),
+           );
+
+  // BUILD THE TABLE QUERY
+  $ticket_status = $form_values['ticket_status'];
+  $dispute_status = $form_values['dispute_status'];
+  $ticket_type = $form_values['ticket_type'];
+  $item_status = $form_values['item_status'];
+  $sql = artmob_respond_build_ticket_admin_query( $ticket_type, $ticket_status, $dispute_status, $item_status );
+  //drupal_set_message( 'sql  = '.$sql );
+
+  $sql_table_sort = tablesort_sql( $header );
+
+  $result = db_query( $sql . $sql_table_sort );
+
+  // BUILD THE TABLE CONTENTS
+  while ($row = db_fetch_object($result)) {
+
+    if ($row->ticket_link_nid > 0) {
+      $to_node = node_load($row->ticket_link_nid);
+      $ttitle = ": {$to_node->title}";
+      $tlink = "node/{$row->ticket_link_nid}";
+    }
+    else {  // TO DO: some to_nodes are coming in blank. this is probably a bug elsewhere.
+      $tlink = "node/{$row->nid}";
+      $ttitle = '';
+    }
+
+    if ( $row->type == 'am_usage_request_ticket' ) {
+      $link_path = '/license';
+      $link_param = 'tabs-tabbed_content-2';
+    }
+    else if ( $row->type == 'amlicensing_ticket' ){
+      $link_path = '/license';
+      $link_param = 'tabs-tabbed_content-1';
+    }
+    else if ( $row->type == 'amcitation_ticket' ){
+      $link_path = '/citation';
+      $link_param = 'tabs-tabbed_content-1';
+    }
+
+    //This links directly to the ticket
+    //$ticket_link = l( "{$row->ticket_number}". $ttitle, 'node/'. $row->nid , array('title' => $row->body));
+    $ticket_link = l( "{$row->ticket_number}". $ttitle, 'node/'. $row->ticket_link_nid.$link_path , array('title' => $row->body),NULL ,$link_param);
+    $ticket_type = artmob_respond_ticket_type_to_string( $row->type );
+    $item_link = $row->ticket_link_nid ? l( $row->link_title, 'node/'. $row->ticket_link_nid ): $row->link_title;
+    $t_status = $row->ticket_status;
+    if ( $row->uid ) {
+      $item_user = user_load( array( 'uid' => $row->uid ));
+      $user_name = $item_user->name;
+    }
+    else {
+      $user_name = 'artmob guest';
+    }
+    $date_value = artmob_main_TimeStampToDisplay( $row->created );
+    $options_link = '<'. l( 'Resolve', 'notifications/resolve/'. $row->nid ) .'>';
+    $options_link .= '<br />'.'<'. l( 'Delete', 'notifications/delete/'. $row->nid ) .'>';
+    $options_link .= '<br />'.'<'. l( 'Respond', 'node/'. $row->ticket_link_nid.$link_path, array(), NULL, $link_param ) .'>';
+
+    if ($row->blackout_mode ) {
+      $options_link .= '<br />'.'<'. l( 'Remove Blackout', 'notifications/blackout/remove/'. $row->ticket_link_nid ) .'>';
+    }
+    else {
+      $options_link .= '<br />'.'<'. l( 'Blackout Item', 'notifications/blackout/add/'. $row->ticket_link_nid ) .'>';
+    }
+
+    $contentarray[] = array( $ticket_link, $ticket_type, $t_status, $user_name, $date_value, $options_link  );
+  }
+
+  $table_view = theme('artmob_respond_admin_ticket_view', $contentarray, $header, $attributes );
+
+
+  $form['table_view'] = array(
+    '#value' => $table_view,
+    '#weight' => 10,
+  );
+
+  $form['#submit'] = array(
+    'artmob_respond_notifications_submit' => array()
+  );
+
+  $form['#validate'] = array(
+    'artmob_respond_notifications_validate' => array()
+  );
+  return $form;
+
+}
+
+function artmob_respond_notifications_submit() {
+  return;
+}
+
+function artmob_respond_admin_settings() {
+  $form['respond_settings'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Response Email Settings'),
+    '#weight' => -2
+    );
+
+  $form['respond_settings']['respond_from_address'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('From Address'),
+    '#description'   => t('Enter the from address for the email'),
+    '#default_value' => variable_get('respond_from_address', '' ),
+    '#tree'          => 'FALSE',
+    '#rows'          => 0,
+  );
+
+  $form['respond_settings']['respond_to_address'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('To Addresses'),
+    '#description'   => t('Enter the email addresses to send the response notifications to. Separate multiple emails with commas'),
+    '#default_value' => variable_get('respond_to_address', '' ),
+    '#tree'          => 'FALSE',
+    '#rows'          => 0,
+  );
+
+  $form['respond_settings']['respond_subject'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Subject'),
+    '#description'   => t('Enter the email subject'),
+    '#default_value' => variable_get('respond_subject', '' ),
+    '#tree'          => 'FALSE',
+    '#rows'          => 0,
+  );
+
+  return system_settings_form($form);
+}
+
+function artmob_respond_ticket_type_to_string( $ticket_type ) {
+  if ( $ticket_type == 'amlicensing_ticket' ) {
+    return 'Licensing Ticket';
+  } 
+  else if ( $ticket_type == 'am_usage_request_ticket' ) {
+    return 'Usage Request Ticket';
+  } 
+  else if ( $ticket_type == 'amcitation_ticket' ) {
+    return 'Citation Ticket';
+  } 
+  else {
+    return '';
+  }
+}
+
+function artmob_respond_build_ticket_admin_query( $ticket_type, $ticket_status, $dispute_status, $item_status ) {
+ $sql = artmob_respond_build_ticket_admin_query_single( 'am_usage_request_ticket', 'a', $ticket_type, $ticket_status, $dispute_status, $item_status );
+ $sql .= ' UNION ';
+ $sql .= artmob_respond_build_ticket_admin_query_single( 'am_licensing_ticket', 'b', $ticket_type, $ticket_status, $dispute_status, $item_status );
+ if ( module_exists( 'artmob_citation_ticket' )) {
+   $sql .= ' UNION ';
+   $sql .= artmob_respond_build_ticket_admin_query_single( 'am_citation_ticket', 'c', $ticket_type, $ticket_status, $dispute_status, $item_status );
+ }
+
+  return $sql;
+}
+
+function artmob_respond_build_ticket_admin_query_single( $table_name, $table_letter, $ticket_type, $ticket_status, $dispute_status, $item_status ) {
+  if ( module_exists( 'artmob_blackout' ) ) {
+    $sql = 'SELECT '. $table_letter .'.*, n.*, z.blackout_mode, t.title as link_title FROM '. $table_name .' '. $table_letter .
+        ' LEFT JOIN node n on n.nid = '. $table_letter .'.nid
+        LEFT JOIN node t on t.nid = '. $table_letter .'.ticket_link_nid
+        LEFT JOIN am_blackout z on z.nid = '. $table_letter .'.ticket_link_nid';
+  } 
+  else {
+    $sql = 'SELECT '. $table_letter .'.*, n.*, t.title as link_title FROM '. $table_name .' '. $table_letter .
+        ' LEFT JOIN node n on n.nid = '. $table_letter .'.nid
+        LEFT JOIN node t on t.nid = '. $table_letter .'.ticket_link_nid';
+  }
+
+  if ( $item_status == ITEMSTATUS_REMOVED ) {
+    $sql .= ' WHERE n.status = 0';
+  } 
+  else {
+    $sql .= ' WHERE n.status = 1';
+  }
+
+  if ( module_exists( 'artmob_blackout' ) ) {
+    if ( $item_status == ITEMSTATUS_BLACKED_OUT ) {
+      $sql .= " AND blackout_mode = 1";
+    }
+  }
+
+  if ( ( $ticket_type <> 'All' ) and (  $ticket_type <> '' )) {
+    $sql .= sprintf( " AND n.type = '%s'", $ticket_type );
+  }
+
+  if ( ( $ticket_status <> 'All' ) and (  $ticket_status <> '' )) {
+    $sql .= sprintf( " AND ticket_status = '%s'", $ticket_status );
+  }
+
+  if ( ( $dispute_status <> 'All' ) and ( $dispute_status <> '' )) {
+    $sql .= sprintf( " AND dispute_status = '%s'", $dispute_status );
+  }
+  return $sql;
+
+}
+
+function theme_artmob_respond_admin_ticket_view($contentarray, $header, $attributes ) {
+  $content .= theme( 'table', $header, $contentarray, $attributes ) ;
+  return $content;
+}
+
+function artmob_respond_discuss_tab( &$node ) {
+  return theme('artmob_respond_discuss_tab', $node);
+}
+
+function artmob_respond_tabbed_content( $node ) {
+  
+  $form = array();
+
+  $form['tabbed_content'] = array(
+    '#type' => 'tabset',
+  );
+
+  $form['tabbed_content']['tab1'] = array(
+    '#type' => 'tabpage',
+    '#title' => t('Know More?'),
+    '#content' => drupal_get_form('correct_licensing', $node),
+  );
+  $form['tabbed_content']['tab2'] = array(
+    '#type' => 'tabpage',
+    '#title' => t('Do More!'),
+    '#content' => drupal_get_form('request_use', $node),
+  );
+  return tabs_render($form);
+}
+
+function artmob_respond_get_introduction( ) {
+  return theme( 'artmob_respond_get_introduction' );
+
+}
+
+function correct_licensing( $node ) {
+  global $user;
+  $op = isset($_POST['op']) ? $_POST['op'] : '';
+
+  $form =array();
+
+  $form['respond_tab']['ticket_link_nid'] = array(
+    '#type' => 'hidden',
+    '#value' => $node['nid'],
+    );
+
+  $form['respond_tab']['username'] = array(
+    '#prefix' => '<h3>',
+    '#value' => $user->name,
+    '#weight' => -4,
+    '#access' => ($user->uid <> 0),
+    '#suffix' => '</h3>',
+  );
+  
+  $form['respond_tab']['note'] = array(
+    '#prefix' => '<div class="comment-note">',
+    '#value' => "We’d like to know more about the licensing terms for this file and incorporated works. If you have more information please let us know below.",
+    '#weight' => -2,
+    '#suffix' => '</div>',
+  );
+  
+  $form['respond_tab']['note2'] = array(
+    '#prefix' => '<div class="comment-note-2">',
+    '#value' => "<p>Please deselect ‘make my comments public’ if you don’t wish your response publicly shared.</p>",
+    '#weight' => -1,
+    '#suffix' => '</div>',
+  );
+
+  $form['respond_tab']['ticket_name'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Name'),
+    '#default_value' => '',
+    '#tree'          => 'FALSE',
+    '#rows'          => 0,
+    '#access' => $user->uid == 0,
+  );
+
+  $form['respond_tab']['ticket_email'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('email'),
+    '#default_value' => '',
+    '#tree'          => 'FALSE',
+    '#rows'          => 1,
+    '#access' => $user->uid == 0,
+  );
+
+  $form['respond_tab']['is_public'] = array(
+    '#type' => 'checkbox',
+    '#title' => t("Make my comments public"),
+    '#default_value' => 1,
+    '#weight' => 0,
+  );
+
+  $form['respond_tab']['respond_comment'] = array(
+    '#type'          => 'textarea',
+   // '#title'         => t('what information would you like to change?'),
+    '#default_value' => '',
+    '#tree'          => 'FALSE',
+    '#rows'          => 10,
+    '#weight'        => 4,
+    '#required'      => False
+  );
+
+
+  $form['respond_tab']['submit'] = array(
+    '#type'     => 'submit',
+    '#value'    => t('Submit'),
+    '#submit'   => True,
+    '#weight'   => 10
+  );
+
+  //I'm not sure why I had to do this but
+  //it would not work otherwise??
+  $node_object = node_load( $node['nid'] );
+  $content = artmob_respond_get_discussion( $node_object );
+
+  $form['respond_tab']['discussion'] = array(
+    '#value' => $content,
+    '#weight' => 12,
+    '#access' => True,
+  );
+
+  $form['#action'] = url('node/'. $node['nid'] .'/license');
+
+  return $form;
+}
+
+function correct_licensing_submit($form_id, $form_values) {
+  global $user;
+
+  $licensing_ticket->title = '';
+  $licensing_ticket->uid = $user->uid;
+  $licensing_ticket->ticket_link_nid = $form_values['ticket_link_nid'];
+
+  $licensing_ticket->type = 'amlicensing_ticket';
+  $licensing_ticket->status = 1;
+  $licensing_ticket->comment = COMMENT_NODE_READ_WRITE; //allow commenting
+
+  $licensing_ticket->is_public = $form_values['is_public'];
+  $licensing_ticket->ticket_name = $form_values['ticket_name'];
+  $licensing_ticket->ticket_email = $form_values['ticket_email'];
+  $licensing_ticket->ticket_status = 'New';
+  $licensing_ticket->dispute_status = 'New';
+  $licensing_ticket->body = $form_values['respond_comment'];
+
+  node_save($licensing_ticket);
+  if ( $user->uid ) {
+    $name = $user->name;
+  } 
+  else {
+    $name = $form_values['ticket_name'];
+  }
+
+  $ticket_type = 'Know More?';
+  artmob_respond_send_email( 'node/'. $form_values['ticket_link_nid'] .'/license', $licensing_ticket, $ticket_type );
+
+  drupal_set_message( t( 'Thank you for contributing your knowledge about this item '. $name .'!' ));
+}
+
+function artmob_respond_send_email( $nid_url, $ticket, $ticket_type, $fragment = '' ) {
+  $mail_success = False;
+  $admin_email = variable_get('respond_to_address', '' );
+  if ($admin_email) {
+    $from = variable_get('respond_from_address', ini_get('sendmail_from'));
+    $subject = variable_get('respond_subject', 'Ticket Submission' );
+    $body = '';
+    $body .= $ticket_type .' ticket submitted'. chr(13) . chr(10);
+    $body .= 'Ticket Message'. chr(13) . chr(10);
+    $body .= $ticket->body . chr(13) . chr(10) . chr(13) . chr(10);
+    $body .= 'from node: '. url( $nid_url, NULL, NULL, True) . chr(13) . chr(10);
+    $body .= 'dispute page: '. url( 'admin/artmob/notifications', NULL, NULL, True ) . chr(13) . chr(10);
+
+    $mail_success = drupal_mail($nid, $admin_email, $subject, $body, $from);
+  }
+  return $mail_success;
+}
+
+function artmob_respond_get_license_information( $node ) {
+  return theme('artmob_respond_get_license_information', $node );
+}
+
+
+function artmob_respond_get_discussion( $node ) {
+  $sql = 'SELECT * FROM {am_licensing_ticket} t left join {node} n on t.nid = n.nid where ticket_link_nid = %d';
+  $args = $node->nid;
+  if ( !user_access('View private licensing comments') ) {
+    $sql .= ' and is_public = 1';
+  }
+  $sql .= ' order by created desc';
+  $query = db_query( $sql, $args );
+  $node_array = array();
+  while ($row = db_fetch_object($query)) {
+    $nid = $row->nid;
+    $temp = array();
+    $temp['node'] = node_load( $nid );
+
+    //Gather all comments
+    $comments = array();
+    $query_comment = db_query('SELECT * FROM {comments} WHERE nid = %d ORDER BY SUBSTRING(thread, 1, (LENGTH(thread) - 1))', $nid );
+     while ($row_comment = db_fetch_object($query_comment)) {
+       $comments[$row_comment->cid] = $row_comment;
+    }
+    $temp['comments'] = $comments;
+    $node_array[$nid] = $temp;
+  }
+  return theme( 'artmob_respond_get_discussion', $node_array, $node );
+}
+
+function request_use( $node ) {
+  global $user;
+  $op = isset($_POST['op']) ? $_POST['op'] : '';
+
+  $form =array();
+  $nid = $node['nid'];
+
+  $form['request_use']['ticket_link_nid'] = array(
+    '#type' => 'hidden',
+    '#value' => $node['nid'],
+  );
+
+  $form['request_use']['introduction'] = array(
+    '#prefix' => '<div class="comment-note">',
+    '#value' => "If you would like to use any of the works listed above outside the scope of the licensing terms provided, please let us know and we will contact the licensor.",
+    '#weight' => -10,
+    '#suffix' => '</div>',
+
+  );
+
+  $form['request_use']['username'] = array(
+    '#prefix' => '<h3>',
+    '#value' => $user->name,
+    '#weight' => -6,
+    '#access' => ($user->uid <> 0),
+    '#suffix' => '</h3>',
+  );
+
+  $form['request_use']['ticket_name'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Name'),
+    '#default_value' => '',
+    '#tree'          => 'FALSE',
+    '#rows'          => 0,
+    '#access' => $user->uid == 0,
+    '#weight' => -4,
+  );
+
+  $form['request_use']['ticket_email'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('email'),
+    '#default_value' => '',
+    '#tree'          => 'FALSE',
+    '#rows'          => 1,
+    '#access' => $user->uid == 0,
+    '#weight' => -2,
+  );
+
+  $form['request_use']['is_public'] = array(
+    '#type' => 'checkbox',
+    '#title' => t("Make my comments public"),
+    '#default_value' => 1,
+    '#weight' => 0,
+  );
+
+  $form['request_use']['respond_comment'] = array(
+    '#type'          => 'textarea',
+    '#title'         => t('Please describe what you would like to do:'),
+    '#default_value' => '',
+    '#tree'          => 'FALSE',
+    '#rows'          => 10,
+    '#weight'        => 4,
+    '#required'      => False
+  );
+
+  $form['request_use']['submit'] = array(
+    '#type'     => 'submit',
+    '#value'    => t('Submit'),
+    '#submit'   => True,
+    '#weight'   => 10
+  );
+
+  $node_object = node_load( $nid );
+  $content .= artmob_respond_get_previous_requests( $node_object );
+
+
+  $form['request_use']['previous_requests'] = array(
+    '#value' => $content,
+    '#weight' => 12,
+    '#access' => TRUE,
+  );
+
+  $form['#action'] = url('node/'. $node['nid'] .'/license') .'#do-more';
+
+  return $form;
+}
+
+function request_use_submit($form_id, $form_values) {
+  global $user;
+
+  $request_use_ticket->title = '';
+  $request_use_ticket->uid = $user->uid;
+  $request_use_ticket->ticket_link_nid = $form_values['ticket_link_nid'];
+
+  $request_use_ticket->type = 'am_usage_request_ticket';
+  $request_use_ticket->status = 1;
+  $licensing_ticket->comment = COMMENT_NODE_READ_WRITE; //allow commenting
+  $request_use_ticket->is_public = $form_values['is_public'];
+  $request_use_ticket->ticket_name = $form_values['ticket_name'];
+  $request_use_ticket->ticket_email = $form_values['ticket_email'];
+  $request_use_ticket->ticket_status = 'New';
+  $request_use_ticket->dispute_status = 'New';
+  $request_use_ticket->body = $form_values['respond_comment'];
+
+  node_save($request_use_ticket);
+  $ticket_type = 'Do More!';
+  artmob_respond_send_email( 'node/'. $form_values['ticket_link_nid'] .'/license', $request_use_ticket, $ticket_type, 'do-more' );
+  drupal_set_message( 'Your request has been submitted' );
+}
+
+function artmob_respond_get_previous_requests( $node ) {
+  $sql = 'select * from {am_usage_request_ticket} t left join {node} n on t.nid = n.nid where ticket_link_nid = %d';
+  $args = $node->nid;
+  if ( !user_access('View private licensing comments') ) {
+    $sql .= ' and is_public = 1';
+  }
+  $sql .= ' order by created desc';
+  $query = db_query( $sql, $args );
+  $node_array = array();
+  while ($row = db_fetch_object($query)) {
+    $nid = $row->nid;
+    $node_array[$nid] = node_load( $nid );
+  }
+  return theme( 'artmob_respond_get_previous_requests', $node_array, $node );
+}
+
+
+/**
+ * Implementation of hook_submit().
+ */
+function artmob_respond_submit(&$node) {
+  global $user;
+  // Set default values for non-administrators.
+  if (!user_access('administer nodes')) {
+    $node->revision = 1;
+    $node->uid = $user->uid;
+  }
+}
+
+
+// Implementation of hook_form().
+function artmob_respond_form(&$node) {
+}
+
+/**
+ * Implementation of hook_form_alter().
+ *
+*/
+function artmob_respond_form_alter($form_id, &$form) {
+  // boilerplate code to determine the node type of the form
+  if (isset($form['type'])) {
+    $type = $form['type']['#value'];
+  }
+  elseif (isset($form['orig_type'])) {
+      $type = $form['orig_type']['#value'];
+  } 
+  else {
+    return;
+  }
+
+  switch ($form_id) {
+    // Form addition that appears on Content Types page. Drupal saves as a setting.
+    case 'node_type_form':
+      break;
+
+    case $type .'_node_form':
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ *
+ */
+function artmob_respond_nodeapi(&$node, $op, $teaser, $page) {
+  switch ($op) {
+    case 'submit':
+      break;
+    case 'update':
+      $bupdate = TRUE;
+
+      //Fall through, with flag.  Therefore with every update we delete
+      //the old associated records and then resave the new ones
+
+    case 'delete':
+
+      if (!$bupdate) {
+        break;
+      }
+
+    case 'insert':
+
+      break;
+    case 'load':
+      break;
+    case 'prepare':
+      break;
+    case 'view':
+    
+      //$enabled = ( (variable_get('rdolicense_'. $node->type, 0)) || module_exists('artmob_discuss'));
+  
+      // handled through theme_artmob_main_artmob_summary at the moment.
+      // the module should have the capability to display these buttons if the summary bar doesn't exist and the conditions are met
+      // changes in the logic of these response buttons may make them redundant here, but the code will be left in for future use.    
+  
+      /*  
+      $enabled = artmob_respond_artmob_enabled($node);
+      
+      if (module_exists('artmob_main')) {
+          $has_summary = artmob_main_display_artmob_summary($node->type);
+      } else {
+          $has_summary = FALSE;
+      } 
+      
+      $view_page = ($page == 1 && (arg(2) == 'view' || !arg(2))) ? TRUE : FALSE;
+      
+            
+      if ($enabled && $view_page && !$has_summary) {
+                $node->content['artmob_respond_summary_icons'] = array(
+                  '#value' => theme('artmob_respond_summary_icons_wrapper'),
+                  '#weight' => 1,
+                );
+      }
+      
+      */
+        
+      break;
+    case 'update':
+      break;
+    case 'delete revision':
+      break;
+    case 'submit':
+      break;
+  }
+}
+
+function artmob_respond_artmob_enabled(&$node) {
+
+  if ( module_exists ('artmob_citation') ) {
+    $has_citation = artmob_citation_has_citation( $node );
+  } 
+  else {
+    $has_citation = FALSE;
+  }
+  //OLD -
+  //$license_enabled = ( ARTMOB_LICENSE_CITATION_COMPATIBLE && variable_get('rdo_citation_'. $node->type, 0)) || ( variable_get('rdolicense_'. $node->type, 0));
+  $license_enabled = (variable_get( 'rdo_license_options_'.$node->type, ARTMOB_LICENSE_MODE_NONE ) != ARTMOB_LICENSE_MODE_NONE );
+
+  $discuss_exists = module_exists('artmob_discuss'); //&& comments enabled for node??
+  $enabled = ($has_citation || $license_enabled || $discuss_exists);
+  
+  return $enabled;
+}
+
+/**
+ * Implementation of hook_license_tab_view() from the license module
+ *
+ */
+function artmob_respond_license_tab_view( $node ) {
+  $content = "<a name='know-more'></a><a name='do-more'></a>";
+  $content .= artmob_respond_tabbed_content((array)$node); //ToDo:!!! move to artmob_response_tabbed_content and called from nodeapi view in artmob_response
+  return $content;
+}
+
+/**
+ * Implementation of hook_citation_tab_view() from the license module
+ *
+ */
+function artmob_respond_citation_tab_view( $node ) {
+  //drupal_set_message( 'in artmob_respond_citation_tab_view' );
+  //drupal_set_message( '$node->nid = '.$node->nid );
+  $content = artmob_respond_correct_citation_tab(  (array)$node );
+  return $content;
+}
+
+function artmob_respond_correct_citation_tab( $node ) {
+  $form =array();
+
+  $form['tabbed_content'] = array(
+    '#type' => 'tabset',
+  );
+
+  $form['tabbed_content']['tab_citation_1'] = array(
+    '#type' => 'tabpage',
+    '#title' => t('Add or correct this information'),
+    '#content' => drupal_get_form('artmob_respond_correct_citation', $node),
+  );
+
+  return tabs_render($form);
+}
+
+function artmob_respond_correct_citation( $node ) {
+  global $user;
+  $op = isset($_POST['op']) ? $_POST['op'] : '';
+
+  $form =array();
+
+  $form['citation_tab']['ticket_link_nid'] = array(
+    '#type' => 'hidden',
+    '#value' => $node['nid'],
+    );
+
+  $form['citation_tab']['username'] = array(
+    '#prefix' => '<h3>',
+    '#value' => $user->name,
+    '#weight' => -1,
+    '#access' => ($user->uid <> 0),
+    '#suffix' => '</h3>',
+  );
+
+  $form['citation_tab']['ticket_name'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Name'),
+    '#default_value' => '',
+    '#tree'          => 'FALSE',
+    '#rows'          => 0,
+    '#access' => $user->uid == 0,
+  );
+
+  $form['citation_tab']['ticket_email'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('email'),
+    '#default_value' => '',
+    '#tree'          => 'FALSE',
+    '#rows'          => 1,
+    '#access' => $user->uid == 0,
+  );
+
+  $form['citation_tab']['is_public'] = array(
+    '#type' => 'checkbox',
+    '#title' => t("Make my comments public"),
+    '#default_value' => 1,
+    '#weight' => 0,
+  );
+
+  $form['citation_tab']['citation_comment'] = array(
+    '#type'          => 'textarea',
+    '#title'         => t(''),
+    '#default_value' => '',
+    '#tree'          => 'FALSE',
+    '#rows'          => 10,
+    '#weight'        => 4,
+    '#required'      => False
+  );
+
+  $form['citation_tab']['submit'] = array(
+    '#type'     => 'submit',
+    '#value'    => t('Submit'),
+    '#submit'   => True,
+    '#weight'   => 10
+  );
+
+  $form['#action'] = url('node/'. $node['nid'] .'/citation');
+
+  return $form;
+
+}
+
+function artmob_respond_correct_citation_submit($form_id, $form_values) {
+  global $user;
+
+  $citation_ticket = new stdClass();
+  $citation_ticket->title = '';
+  $citation_ticket->uid = $user->uid;
+  $citation_ticket->ticket_link_nid = $form_values['ticket_link_nid'];
+
+  $citation_ticket->type = 'amcitation_ticket';
+  $citation_ticket->status = 1;
+  $citation_ticket->comment = COMMENT_NODE_READ_WRITE; //allow commenting
+
+  $citation_ticket->is_public = $form_values['is_public'];
+  $citation_ticket->ticket_name = $form_values['ticket_name'];
+  $citation_ticket->ticket_email = $form_values['ticket_email'];
+  $citation_ticket->ticket_status = 'New';
+  $citation_ticket->dispute_status = 'New';
+  $citation_ticket->body = $form_values['citation_comment'];
+
+  node_save($citation_ticket);
+  $ticket_type = 'Learn More!';
+  artmob_respond_send_email( 'node/'. $form_values['ticket_link_nid'] .'/citation', $citation_ticket, $ticket_type );
+  if ( $user->uid ) {
+    $name = $user->name;
+  } 
+  else {
+    $name = $form_values['ticket_name'];
+  }
+}
+
+// Implementation of hook_help().
+function artmob_respond_help($section) {
+  switch ($section) {
+    case 'admin/help#description':
+      return t('Holds the functions for licensing responses');
+      break;
+    case 'admin/modules#description':
+      return t('Holds the functions for licensing responses');
+      break;
+    case 'admin/node/add#artmob_respond':
+      return t('Holds the functions for licensing responses');
+      break;
+  }
+}
+
+function artmob_respond_get_ticket_type_list( $add_all = False) {
+  if ( $add_all ) {
+    $result['All'] = 'All';
+  }
+  $result['amlicensing_ticket'] = artmob_respond_ticket_type_to_string( 'amlicensing_ticket' );
+  $result['am_usage_request_ticket'] = artmob_respond_ticket_type_to_string( 'am_usage_request_ticket' );
+  if ( module_exists( 'artmob_citation_ticket' ) ) {
+    $result['amcitation_ticket'] = artmob_respond_ticket_type_to_string( 'amcitation_ticket' );
+  }
+  return $result;
+}
+
+function artmob_respond_get_ticket_status_list( $add_all = False) {
+  if ( $add_all ) {
+    $result['All'] = 'All';
+  }
+  $result['New'] = 'New';
+  $result['Pending'] = 'Pending';
+  $result['In Progress'] = 'In Progress';
+  $result['Closed'] = 'Closed';
+  return $result;
+}
+
+function artmob_respond_get_dispute_status_list($add_all = False) {
+  if ( $add_all ) {
+    $result['All'] = 'All';
+  }
+  $result['New'] = 'New';
+  $result['Undisputed'] = 'Undisputed';
+  $result['Under Dispute'] = 'Under Dispute';
+  $result['Dispute Resolved'] = 'Dispute Resolved';
+  return $result;
+}
+
+function artmob_respond_get_item_status_list($add_all = False) {
+  if ( $add_all ) {
+    $result['All'] = 'All';
+  }
+
+  $result[ITEMSTATUS_REMOVED] = ITEMSTATUS_REMOVED;
+  $result[ITEMSTATUS_BLACKED_OUT] = ITEMSTATUS_BLACKED_OUT;
+  return $result;
+}
+
+function node_in_dispute( $node ) {
+  return am_licensing_ticket( $node ) and node_in_dispute_usage_licensing( $node );
+}
+
+function am_licensing_ticket( $node ) {
+  $count = db_result( db_query( "SELECT count( * ) from {am_usage_request_ticket}
+                     where nid = %d and dispute_status = 'Under Dispute'", $node->nid  ));
+  return $count > 0;
+}
+
+function node_in_dispute_usage_licensing( $node ) {
+  
+  $count = db_result( db_query( "SELECT count( * ) from {am_licensing_ticket}
+                     where nid = %d and dispute_status = 'Under Dispute'", $node->nid  ));
+  return $count > 0;
+}
+
+function artmob_respond_IMAGE_PATH() {
+  return base_path() . path_to_theme() ."/images";
+}
+
+
+/////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+//  The following code was hijacked from the comment module
+/// It was changed to work with the respond tab
+/// Basically when a comment is made, it gets attached to the
+//  license it's referring to and not the actual node
+//  furthermore, when submitting the comment the page
+/// will be redirected back here instead of to the license node view.
+/////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+
+/**
+ * This function is responsible for generating a comment reply form.
+ * There are several cases that have to be handled, including:
+ *   - replies to comments
+ *   - replies to nodes
+ *   - attempts to reply to nodes that can no longer accept comments
+ *   - respecting access permissions ('access comments', 'post comments', etc.)
+ *
+ * The node or comment that is being replied to must appear above the comment
+ * form to provide the user context while authoring the comment.
+ *
+ * @param $nid
+ *   Every comment belongs to a node. This is that node's id.
+ * @param $pid
+ *   Some comments are replies to other comments. In those cases, $pid is the parent
+ *   comment's cid.
+ *
+ * @return $output
+ *   The rendered parent node or comment plus the new comment form.
+ */
+function artmob_respond_request_comment_reply($nid, $copyright_nid, $pid = NULL) {
+  variable_set( 'comment_redirect', 'do-more');
+  return artmob_respond_comment_reply($nid, $copyright_nid, $pid );
+}
+
+function artmob_respond_comment_reply($nid, $copyright_nid, $pid = NULL) {
+  // Load the parent node.
+  $node = node_load($nid);
+
+  // Set the breadcrumb trail.
+  menu_set_location(array(array('path' => "node/$copyright_nid/license", 'title' => $node->title), array('path' => "comment/reply/$nid")));
+
+  $op = isset($_POST['op']) ? $_POST['op'] : '';
+
+  $output = '';
+
+//  if (user_access('access comments')) {
+  if (True) {
+    // The user is previewing a comment prior to submitting it.
+    if ($op == t('Preview comment')) {
+      //if (user_access('post comments')) {
+      if (True) {
+        $output .= artmob_respond_comment_form_box(array('pid' => $pid, 'nid' => $nid, 'copyright_nid' => $copyright_nid), NULL);
+      }
+      else {
+        drupal_set_message(t('You are not authorized to post comments.'), 'error');
+        drupal_goto("node/$copyright_nid/license");
+      }
+    }
+    else {
+      // $pid indicates that this is a reply to a comment.
+      if ($pid) {
+        // load the comment whose cid = $pid
+        if ($comment = db_fetch_object(db_query('SELECT c.*, u.uid, u.name AS registered_name, u.picture, u.data FROM {comments} c INNER JOIN {users} u ON c.uid = u.uid WHERE c.cid = %d AND c.status = %d', $pid, COMMENT_PUBLISHED))) {
+          // If that comment exists, make sure that the current comment and the parent comment both
+          // belong to the same parent node.
+          if ($comment->nid != $nid) {
+            // Attempting to reply to a comment not belonging to the current nid.
+            drupal_set_message(t('The comment you are replying to does not exist.'), 'error');
+            drupal_goto("node/$copyright_nid/license");
+          }
+          // Display the parent comment
+          $comment = drupal_unpack($comment);
+          $comment->name = $comment->uid ? $comment->registered_name : $comment->name;
+          $output .= theme('comment_view', $comment);
+        }
+        else {
+          drupal_set_message(t('The comment you are replying to does not exist.'), 'error');
+          drupal_goto("node/$copyright_nid/license");
+        }
+      }
+      // This is the case where the comment is in response to a node. Display the node.
+      else if (user_access('access content')) {
+        $output .= node_view($node);
+      }
+
+      // Should we show the reply box?
+      if (node_comment_mode($nid) != COMMENT_NODE_READ_WRITE) {
+        drupal_set_message(t("This discussion is closed: you can't post new comments."), 'error');
+        drupal_goto("node/$copyright_nid/license");
+      }
+//      else if (user_access('post comments')) {
+      else if (True) {
+        $output .= artmob_respond_comment_form_box(array('pid' => $pid, 'nid' => $nid, 'copyright_nid' => $copyright_nid), t('Reply'));
+      }
+      else {
+        drupal_set_message(t('You are not authorized to post comments.'), 'error');
+        drupal_goto("node/$copyright_nid/license");
+      }
+    }
+  }
+  else {
+    drupal_set_message(t('You are not authorized to view comments.'), 'error');
+    drupal_goto("node/$copyright_nid/license");
+  }
+
+  return $output;
+}
+
+function artmob_respond_comment_form_box($edit, $title = NULL) {
+  return theme('box', $title, drupal_get_form('artmob_respond_comment_form', $edit, $title));
+}
+
+
+function artmob_respond_comment_form($edit, $title = NULL) {
+  global $user;
+
+  $op = isset($_POST['op']) ? $_POST['op'] : '';
+
+  if ($user->uid) {
+    if ($edit['cid'] && user_access('administer comments')) {
+      if ($edit['author']) {
+        $author = $edit['author'];
+      }
+      elseif ($edit['name']) {
+        $author = $edit['name'];
+      }
+      else {
+        $author = $edit['registered_name'];
+      }
+
+      if ($edit['status']) {
+        $status = $edit['status'];
+      }
+      else {
+        $status = 0;
+      }
+
+      if ($edit['date']) {
+        $date = $edit['date'];
+      }
+      else {
+        $date = format_date($edit['timestamp'], 'custom', 'Y-m-d H:i O');
+      }
+
+      $form['admin'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Administration'),
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+        '#weight' => -2,
+      );
+
+      if ($edit['registered_name'] != '') {
+        // The comment is by a registered user
+        $form['admin']['author'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Authored by'),
+          '#size' => 30,
+          '#maxlength' => 60,
+          '#autocomplete_path' => 'user/autocomplete',
+          '#default_value' => $author,
+          '#weight' => -1,
+        );
+      }
+      else {
+        // The comment is by an anonymous user
+        $form['is_anonymous'] = array(
+          '#type' => 'value',
+          '#value' => TRUE,
+        );
+        $form['admin']['name'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Authored by'),
+          '#size' => 30,
+          '#maxlength' => 60,
+          '#default_value' => $author,
+          '#weight' => -1,
+        );
+        $form['admin']['mail'] = array(
+          '#type' => 'textfield',
+          '#title' => t('E-mail'),
+          '#maxlength' => 64,
+          '#size' => 30,
+          '#default_value' => $edit['mail'],
+          '#description' => t('The content of this field is kept private and will not be shown publicly.'),
+        );
+
+        $form['admin']['homepage'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Homepage'),
+          '#maxlength' => 255,
+          '#size' => 30,
+          '#default_value' => $edit['homepage'],
+        );
+      }
+
+      $form['admin']['date'] = array('#type' => 'textfield', '#parents' => array('date'), '#title' => t('Authored on'), '#size' => 20, '#maxlength' => 25, '#default_value' => $date, '#weight' => -1);
+
+      $form['admin']['status'] = array('#type' => 'radios', '#parents' => array('status'), '#title' => t('Status'), '#default_value' =>  $status, '#options' => array(t('Published'), t('Not published')), '#weight' => -1);
+
+    }
+    else {
+      $form['_author'] = array('#type' => 'item', '#title' => t('Your name'), '#value' => theme('username', $user)
+      );
+      $form['author'] = array('#type' => 'value', '#value' => $user->name);
+    }
+  }
+  else if (variable_get('comment_anonymous', COMMENT_ANONYMOUS_MAYNOT_CONTACT) == COMMENT_ANONYMOUS_MAY_CONTACT) {
+    $form['name'] = array('#type' => 'textfield', '#title' => t('Your name'), '#maxlength' => 60, '#size' => 30, '#default_value' => $edit['name'] ? $edit['name'] : variable_get('anonymous', t('Anonymous'))
+    );
+
+    $form['mail'] = array('#type' => 'textfield', '#title' => t('E-mail'), '#maxlength' => 64, '#size' => 30, '#default_value' => $edit['mail'], '#description' => t('The content of this field is kept private and will not be shown publicly.')
+    );
+
+    $form['homepage'] = array('#type' => 'textfield', '#title' => t('Homepage'), '#maxlength' => 255, '#size' => 30, '#default_value' => $edit['homepage']);
+  }
+  else if (variable_get('comment_anonymous', COMMENT_ANONYMOUS_MAYNOT_CONTACT) == COMMENT_ANONYMOUS_MUST_CONTACT) {
+    $form['name'] = array('#type' => 'textfield', '#title' => t('Your name'), '#maxlength' => 60, '#size' => 30, '#default_value' => $edit['name'] ? $edit['name'] : variable_get('anonymous', t('Anonymous')), '#required' => TRUE);
+
+    $form['mail'] = array('#type' => 'textfield', '#title' => t('E-mail'), '#maxlength' => 64, '#size' => 30, '#default_value' => $edit['mail'], '#description' => t('The content of this field is kept private and will not be shown publicly.'), '#required' => TRUE);
+
+    $form['homepage'] = array('#type' => 'textfield', '#title' => t('Homepage'), '#maxlength' => 255, '#size' => 30, '#default_value' => $edit['homepage']);
+  }
+
+  if (variable_get('comment_subject_field', 1) == 1) {
+    $form['subject'] = array('#type' => 'textfield', '#title' => t('Subject'), '#maxlength' => 64, '#default_value' => $edit['subject']);
+  }
+
+  $form['comment_filter']['comment'] = array('#type' => 'textarea', '#title' => t('Comment'), '#rows' => 15, '#default_value' => $edit['comment'] ? $edit['comment'] : $user->signature, '#required' => TRUE);
+  if (!isset($edit['format'])) {
+    $edit['format'] = FILTER_FORMAT_DEFAULT;
+  }
+  $form['comment_filter']['format'] = filter_form($edit['format']);
+
+  $form['cid'] = array('#type' => 'value', '#value' => $edit['cid']);
+  $form['pid'] = array('#type' => 'value', '#value' => $edit['pid']);
+  $form['nid'] = array('#type' => 'value', '#value' => $edit['nid']);
+  $form['uid'] = array('#type' => 'value', '#value' => $edit['uid']);
+  $form['copyright_nid'] = array('#type' => 'value', '#value' => $edit['copyright_nid']);
+
+  //$form['preview'] = array('#type' => 'button', '#value' => t('PPPreview comment'), '#weight' => 19);
+  $form['#token'] = 'comment'. $edit['nid'] . $edit['pid'];
+
+  // Only show post button if preview is optional or if we are in preview mode.
+  // We show the post button in preview mode even if there are form errors so that
+  // optional form elements (e.g., captcha) can be updated in preview mode.
+  //if (!form_get_errors() && ((variable_get('comment_preview', COMMENT_PREVIEW_REQUIRED) == COMMENT_PREVIEW_OPTIONAL) || ($op == t('Preview comment')) || ($op == t('Post comment')))) {
+    $form['submit'] = array('#type' => 'submit', '#value' => t('Post comment'), '#weight' => 20);
+  //}
+
+  if ($op == t('Preview comment')) {
+    $form['#after_build'] = array('artmob_respond_comment_form_add_preview');
+  }
+
+  if ($_REQUEST['destination']) {
+    $form['#attributes']['destination'] = $_REQUEST['destination'];
+  }
+
+  if (empty($edit['cid']) && empty($edit['pid'])) {
+    $form['#action'] = url('respond_comment/reply/'. $edit['nid'] .'/'. $edit['copyright_nid']);
+  }
+
+  // Graft in extra form additions
+  //$form = array_merge($form, comment_invoke_comment($form, 'form'));
+  return $form;
+}
+
+function artmob_respond_comment_form_validate($form_id, $form_values) {
+  comment_validate($form_values);
+}
+
+function _artmob_respond_comment_form_submit($form_values) {
+  if (!isset($form_values['date'])) {
+    $form_values['date'] = 'now';
+  }
+  $form_values['timestamp'] = strtotime($form_values['date']);
+  if (isset($form_values['author'])) {
+    $account = user_load(array('name' => $form_values['author']));
+    $form_values['uid'] = $account->uid;
+    $form_values['name'] = $form_values['author'];
+  }
+  // Validate the comment's subject. If not specified, extract
+  // one from the comment's body.
+  if (trim($form_values['subject']) == '') {
+    // The body may be in any format, so we:
+    // 1) Filter it into HTML
+    // 2) Strip out all HTML tags
+    // 3) Convert entities back to plain-text.
+    // Note: format is checked by check_markup().
+    $form_values['subject'] = trim(truncate_utf8(decode_entities(strip_tags(check_markup($form_values['comment'], $form_values['format']))), 29, TRUE));
+    // Edge cases where the comment body is populated only by HTML tags will
+    // require a default subject.
+    if ($form_values['subject'] == '') {
+      $form_values['subject'] = t('(No subject)');
+    }
+  }
+
+  return $form_values;
+}
+
+function artmob_respond_comment_form_submit($form_id, $form_values) {
+  $form_values = _artmob_respond_comment_form_submit($form_values);
+  if ($cid = comment_save($form_values)) {
+    $comment_redirect = variable_get( 'comment_redirect', '');
+    //reset it to blank
+    variable_set( 'comment_redirect', '');
+    if ( $comment_redirect == '' ) {
+      $comment_redirect = "comment-$cid";
+    }
+    return array('node/'. $form_values['copyright_nid'] .'/license', NULL, $comment_redirect );
+  }
+}
+
+function artmob_respond_comment_form_add_preview($form, $edit) {
+  global $user;
+
+  drupal_set_title(t('Preview commentator'));
+
+  $output = '';
+
+  // Invoke full validation for the form, to protect against cross site
+  // request forgeries (CSRF) and setting arbitrary values for fields such as
+  // the input format. Preview the comment only when form validation does not
+  // set any errors.
+  drupal_validate_form($form['form_id']['#value'], $form);
+  if (!form_get_errors()) {
+    $comment = (object)_comment_form_submit($edit);
+
+    // Attach the user and time information.
+    if ($edit['author']) {
+      $account = user_load(array('name' => $edit['author']));
+    }
+    elseif ($user->uid && !isset($edit['is_anonymous'])) {
+      $account = $user;
+    }
+    if ($account) {
+      $comment->uid = $account->uid;
+      $comment->name = check_plain($account->name);
+    }
+    $comment->timestamp = $edit['timestamp'] ? $edit['timestamp'] : time();
+    $output .= theme('comment_view', $comment);
+  }
+  $form['comment_preview'] = array(
+    '#value' => $output,
+    '#weight' => -100,
+    '#prefix' => '<div class="preview">',
+    '#suffix' => '</div>',
+  );
+
+  $output = '';
+
+  if ($edit['pid']) {
+    $comment = db_fetch_object(db_query('SELECT c.*, u.uid, u.name AS registered_name, u.picture, u.data FROM {comments} c INNER JOIN {users} u ON c.uid = u.uid WHERE c.cid = %d AND c.status = %d', $edit['pid'], COMMENT_PUBLISHED));
+    $comment = drupal_unpack($comment);
+    $comment->name = $comment->uid ? $comment->registered_name : $comment->name;
+    $output .= theme('comment_view', $comment);
+  }
+  else {
+    $form['#suffix'] = node_view(node_load($edit['nid']));
+    $edit['pid'] = 0;
+  }
+
+  $form['comment_preview_below'] = array('#value' => $output, '#weight' => 100);
+
+  return $form;
+}
+
+function theme_artmob_respond_get_previous_requests( $node_array = array(), $node) {
+  $output = "<div class='threaded-discussion' id='copyright-threaded-discussion'>\n";
+  $output = '<h2>previous requests</h2>';
+  if (count($node_array) < 1) {
+    $output .= "<p>No prior requests have been received for special uses of the file or incorporated works.</p>";
+    $output .= "</div>";
+    return $output;
+  }
+  foreach ( $node_array as $key => $value ) {
+    $license_node = $value;
+
+    if ( $value->uid ) {
+      $node_comment_user = user_load( array( 'uid' => $value->uid ));
+      $node_comment->name = $node_comment_user->name;
+      $node_comment->uid = $node_comment_user->uid;
+    } 
+    else {
+      $node_comment->name = $value->ticket_name;
+      $node_comment->uid = 0;
+    }
+
+    /* make comment subject from body */
+
+    $word_array = explode(' ', $value->body);
+    $truncated_array = array_slice($word_array, 0, 10);
+
+    $node_comment->subject = join(' ', $truncated_array);
+
+    if (count($word_array) > count($truncated_array)) {
+      $node_comment->subject .= '...';
+    }
+
+    $node_comment->nid = $value->nid;
+    $node_comment->comment = $value->body;
+    $node_comment->format = $value->format;
+    $node_comment->timestamp = $value->created;
+    $node_comment->cid = $value->nid;
+    //This was commented out and then asked to be put back in (April 25, 2011)
+    //$node_comment->links['respond to this'] = array('title'=>'respond to this','href'=>'citation_comment/reply/'.$license_node->nid.'/'.$node->nid);
+    $node_comment->links['respond to this'] = array('title' => 'respond to this', 'href' => 'request_comment/reply/'. $license_node->nid .'/'. $node->nid);
+
+    //drupal_set_message(devtools_dump($word_array));
+    //drupal_set_message(devtools_dump($truncated_array));
+    //drupal_set_message(devtools_dump($node_comment));
+
+
+    $output .= theme('comment_view', $node_comment);
+    $output .= theme('links', $node_comment->links);
+
+    $output .= '<div class="indented">';
+    $output .= comment_render($value);
+    $output .= "</div>";
+
+  }
+  return $output;
+}
+
+function theme_artmob_respond_summary_icons_wrapper() {
+  $content .= "<table id='summary-icons'>";
+  $content .= theme('artmob_respond_summary_icons');
+  $content .= "</table>";
+  
+  return $content;
+}
+
+function theme_artmob_respond_summary_icons() {
+  $module_path = base_path() . drupal_get_path('module', 'artmob_respond');
+  $image_path = $module_path .'/images';
+
+  $node_id = arg(1);
+  $citation_link = "/node/{$node_id}/citation";
+  $license_link = "/node/{$node_id}/license";
+  $discuss_link = "/node/{$node_id}/discuss";
+
+  $content .= <<<EOT
+    <tr class='artmob-respond-summary'>
+      <td class='col-1'>
+        <div id='learn-more' class='afd-icon'>
+          <a class="afd-link"><img class='afd-btn' src="{$image_path}/button-learn.png" alt='Learn More' /></a>
+          <div id='learn-more-panel' class='afd-panel'>
+            <ul>
+              <li><a href='{$citation_link}#creation' title='Click here to learn more'>Would you like to learn more about the <strong>creation</strong> of this?</a></li>
+              <li><a href='{$license_link}#licensing' title='Click here to learn more'>Would you like to learn more about the <strong>licensing</strong> of this?</a></li>
+              <li><a href='{$discuss_link}' title='Click here to learn more'>Would you like to read reviews and discussions of this?</a></li>
+            </ul>
+          </div>
+        </div>
+      </td>
+      <td class='col-2'>
+        <div id='know-more' class='afd-icon'>
+          <a class="afd-link"><img class='afd-btn' src="{$image_path}/button-know.png" alt='Know More' /></a>
+          <div id='know-more-panel' class='afd-panel'>
+            <ul>
+              <li><a href="{$citation_link}#know-more" title='Click here if you know more'>Share what you know about the <strong>creation</strong> of this.</a></li>
+              <li><a href="{$license_link}#know-more" title='Click here if you know more'>Share what you know about the <strong>licensing</strong> of this.</a></li>
+              <li><a href='{$discuss_link}' title='Click here if you know more'>Share news about this.</a></li>
+              <li><a href='{$discuss_link}' title='Click here if you know more'>Share your memories of this.</a></li>
+            </ul>
+          </div>
+        </div>
+      </td>
+      <td class='col-3'>
+        <div id='do-more' class='afd-icon'>
+          <a class="afd-link"><img class='afd-btn' src="{$image_path}/button-do.png" alt='Do More' /></a>
+          <div id='do-more-panel' class='afd-panel'>
+            <ul>
+              <li><a href="{$license_link}#do-more" title='Click here to do more'>Would you like to use this?</a></li>
+              <li><a href='{$discuss_link}' title='Click here to do more'>Would you like to review this?</a></li>
+            </ul>
+          </div>
+        </div>
+      </td>
+    </tr>
+EOT;
+
+  return $content;
+
+}
+
+function theme_artmob_respond_get_discussion( $node_array = array(), $node) {
+  //This node array is different than usual
+  //The key is the nid
+  //The result is made up of two parts
+  //1.'node' contains the $node object
+  //2.'comments' contains an array of comment objects attached to this node.
+
+
+  $output = '<h2>Discussion</h2>';
+  if (count($node_array) < 1) {
+    $output .= "<p>No additions or corrections have been supplied for the licensing terms of the file or incorporated works.</p>";
+//    $output .= "</div>";
+    return $output;
+  }
+  foreach ( $node_array as $key => $value ) {
+    $license_node = $value['node'];
+    $comments = array();
+    $comments = $value['comments'];
+
+    /* fake up comment properties */
+
+    if ( $license_node->uid ) {
+      $node_comment_user = user_load( array( 'uid' => $license_node->uid ));
+      $node_comment->name = $node_comment_user->name;
+      $node_comment->uid = $node_comment_user->uid;
+    } 
+    else {
+      $node_comment->name = $license_node->ticket_name;
+      $node_comment->uid = 0;
+    }
+
+    /* make comment subject from body */
+
+    $word_array = explode(' ', $license_node->body);
+    $truncated_array = array_slice($word_array, 0, 10);
+
+    $node_comment->subject = join(' ', $truncated_array);
+
+    if (count($word_array) > count($truncated_array)) {
+      $node_comment->subject .= '...';
+    }
+
+    $node_comment->nid = $license_node->nid;
+    $node_comment->comment = $license_node->body;
+    $node_comment->format = $license_node->format;
+    $node_comment->timestamp = $license_node->created;
+    $node_comment->cid = $license_node->nid;
+    $node_comment->links['respond to this'] = array('title' => 'respond to this', 'href' => 'respond_comment/reply/'. $license_node->nid .'/'. $node->nid);
+
+    $output .= theme('comment_view', $node_comment);
+    $output .= theme('links', $node_comment->links);
+
+    $output .= '<div class="indented">';
+    $output .= comment_render($license_node);
+    $output .= "</div>";
+  }
+
+//  $output .= "</div>";
+  return $output;
+}

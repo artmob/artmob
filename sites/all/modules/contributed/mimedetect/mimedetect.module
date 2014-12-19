@@ -1,0 +1,173 @@
+<?php
+// $Id: mimedetect.module,v 1.3.2.6 2009/05/09 17:42:24 drewish Exp $
+
+/**
+ * @file
+ * Provide server side mime type detection.
+ *
+ * @author Darrel O'Pry, http://www.drupal.org/user/22202
+ * @copyright Copyright(c) 2007, Darrel O'Pry
+ */
+
+
+function mimedetect_menu($may_cache) {
+  $items = array();
+  if ($may_cache) {
+    // The admin settings form.
+    $items[] = array(
+      'path' => 'admin/settings/mimedetect',
+      'title' => t('Mime type detection'),
+      'description' => t('Control how the mime type of uploaded files will be determined.'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('mimedetect_settings'),
+    );
+  }
+  return $items;
+}
+
+function mimedetect_requirements($phase) {
+  $requirements = array();
+
+  $t = get_t();
+  $requirement = array(
+    'title' => $t('Mime type detection'),
+  );
+
+  if (extension_loaded('fileinfo')) {
+    $requirement['value'] = $t('PHP Fileinfo Extension');
+    if (!$finfo = @finfo_open(FILEINFO_MIME, drupal_get_path('module', 'mimedetect') .'/magic')) {
+      $requirement['description'] = $t('Fileinfo could not load the magic file. It could be corrupted. Try reinstalling the magic file distributed with the MimeDetect module.');
+      $requirement['severity'] = REQUIREMENT_ERROR;
+    }
+  }
+  else if (variable_get('mimedetect_enable_file_binary', FALSE)) {
+    $binary = variable_get('mimedetect_file_binary', '/usr/bin/file');
+    $requirement['value'] = $t("UNIX 'file' Command");
+    if (!is_executable($binary)) {
+      if (!file_exists($binary)) {
+        $requirement['description'] = $t("The file %path does not exist or is not readable by your webserver. ", array('%path' => $binary));
+      }
+      else {
+        $requirement['description'] = $t("The file %path is not executable by your webserver.", array('%path' => $binary));
+      }
+      $requirement['severity'] = REQUIREMENT_ERROR;
+    }
+  }
+  else {
+    $requirement['value'] = $t('File Extension');
+    $requirement['description'] = $t("MimeDetect is using the browser supplied filename for file extension lookups. It is strongly recommended that you install and configure the PHP Fileinfo Extension or the UNIX 'file' command to provide more accurate severside mime type detection.");
+    $requirement['severity'] = REQUIREMENT_WARNING;
+  }
+
+  return array('mimedetect' => $requirement);
+}
+
+function mimedetect_settings() {
+  // Check if fileinfo is available so we don't present the file options if
+  // they can't use them
+  if (extension_loaded('fileinfo')) {
+    $form['file'] = array(
+      '#value' => t("The MimeDetect module is using PHP's fileinfo extension to detect MIME types. There are no settings for the extension.")
+    );
+  }
+  else {
+    $form['file'] = array(
+      '#type' => 'fieldset',
+      '#title' => t("UNIX 'file' command"),
+    );
+    $form['file']['mimedetect_enable_file_binary'] = array(
+      '#type' => 'checkbox',
+      '#title' => t("Use UNIX 'file' command to detect mime type?"),
+      '#description' => t("The UNIX 'file' command will be used for mime detection only if the PHP Fileinfo extension is not installed or fails to load."),
+      '#default_value' => variable_get('mimedetect_enable_file_binary', FALSE),
+    );
+    $form['file']['mimedetect_file_binary'] = array(
+      '#type' => 'textfield',
+      '#title' => t("Path to the 'file' command"),
+      '#description' => t("The path to the executable 'file' binary."),
+      '#default_value' => variable_get('mimedetect_file_binary', '/usr/bin/file'),
+    );
+    $form = system_settings_form($form);
+  }
+  return $form;
+}
+
+function mimedetect_settings_validate($form_id, $form_values) {
+  // Test file binary settings.
+  if ($form_values['mimedetect_enable_file_binary']) {
+    if (empty($form_values['mimedetect_file_binary'])) {
+      form_set_error('mimedetect_file_binary', t("You must specify the path to the 'file' binary if it is enabled."));
+    }
+    if (!is_executable($form_values['mimedetect_file_binary'])) {
+      if (!file_exists($form_values['mimedetect_file_binary'])) {
+        form_set_error('mimedetect_file_binary', t("The path %path does not exist or is not readable by your webserver.", array('%path' => $form_values['mimedetect_file_binary'])));
+      }
+      else {
+        form_set_error('mimedetect_file_binary', t("%path is not executable by your webserver.", array('%path' => $form_values['mimedetect_file_binary'])));
+      }
+    }
+  }
+}
+
+/**
+ *  Detect File Mime Type...
+ */
+function mimedetect_mime($file) {
+  $file = (object)$file;
+
+  // An additional array of mimetypes not included in file_get_mimetype().
+  static $additional_mimes = array(
+    // Audio types
+    'rmi' => 'audio/midi',
+    'aidff' => 'audio/x-aiff',
+    // Image types
+    'cod' => 'image/cis-cod',
+    'jfif' => 'image/pipeg',
+    'cmx' => 'image/x-cmx',
+    // Video types
+    'mpa' => 'video/mpeg',
+    'mpv2' => 'video/mpeg',
+    'asr' => 'video/x-ms-asf',
+  );
+
+  $mime = FALSE;
+  $magic_file = drupal_get_path('module', 'mimedetect') .'/magic';
+
+  // Try to use the fileinfo extension first.
+  if (extension_loaded('fileinfo')) {
+    static $finfo = FALSE;
+    if ($finfo || $finfo = @finfo_open(FILEINFO_MIME, $magic_file)) {
+      $mime = finfo_file($finfo, realpath($file->filepath));
+    }
+  }
+
+  // Try the 'file' binary.
+  if (!$mime && variable_get('mimedetect_enable_file_binary', FALSE)
+    && ($filebin = variable_get('mimedetect_file_binary', '/usr/bin/file'))
+    && is_executable($filebin)) {
+    // On OSX the -i switch is -I, so if we use the long flags everyone is
+    // happy. I checked back to version 3.41 and it still supports the long
+    // names but if you run into problems you can use " -bi ".
+    $command = $filebin .' --brief --mime --magic-file='. escapeshellarg($magic_file) .' '. escapeshellarg($file->filepath);
+    $mime = trim(exec($command));
+    // with text we often get charset like 'text/plain; charset=us-ascii'
+    $mime = split(';', $mime);
+    $mime = trim($mime[0]);
+  }
+
+  // ASF derived media formats are hard to detect with magic. They're typically
+  // all reported as video/x-ms-asf or application/octet-stream. These aren't
+  // really informative about the media type, so we attempt to figure it out by
+  // extension. I expect OGG to present similar difficulties in determining how
+  // it should be played.
+  if (!$mime || $mime == 'application/octet-stream') {
+    // Try core's mime mapping first...
+    $mime = file_get_mimetype($file->filename);
+    // ...and if that doesn't turn up anything try our additional mappings.
+    if ($mime == 'application/octet-stream') {
+      $mime = file_get_mimetype($file->filename, $additional_mimes);
+    }
+  }
+
+  return $mime;
+}

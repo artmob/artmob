@@ -1,0 +1,7 @@
+; $Id: artmob_video.info,v 1.0 2011/04/26 20:55:33 stop14 Exp $
+name = Artmob Video
+description = Module shell for playing video via Flowplayer.
+dependencies = flashvideo flashvideo_cck
+package = Artmob Media
+version = 3.1
+

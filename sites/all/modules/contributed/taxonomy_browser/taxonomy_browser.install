@@ -1,0 +1,33 @@
+<?php
+// $Id: taxonomy_browser.install,v 1.1.2.5 2008/05/25 18:35:18 nancyw Exp $
+
+/**
+ * @file
+ *    Taxonomy Browse installation functions.
+ */
+
+/**
+ * Implementation of hook_enable().
+ */
+function taxonomy_browser_enable() {
+  drupal_set_message(t('The Taxonomy Browser module has been enabled. You may wish to go to <a href="!url">the settings page</a>.', array('!url' => url('admin/settings/taxonomy-browser'))));
+}
+
+/**
+ * Implementation of hook_uninstall().
+ * There are no tables, so we just delete all variables.
+ */
+function taxonomy_browser_uninstall() {
+  global $user;
+  variable_del('taxonomy_browser_guidelines');
+  variable_del('taxonomy_browser_vocabularies');
+  variable_del('taxonomy_browser_show_unused');
+  variable_del('taxonomy_browser_count_nodes');
+  variable_del('taxonomy_browser_select_type');
+  variable_del('taxonomy_browser_omit');
+  variable_del('taxonomy_browser_allow_children');
+  variable_del('taxonomy_browser_default_op');
+
+  watchdog('Taxonomy Browser', t('Taxonomy Browser module uninstalled by uid @user.', array('@user' => $user->name)));
+  drupal_set_message(t('The Taxonomy Browser module has been uninstalled.'), 'status');
+}

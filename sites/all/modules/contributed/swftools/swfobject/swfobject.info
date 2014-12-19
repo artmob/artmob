@@ -1,0 +1,11 @@
+; $Id: swfobject.info,v 1.1.2.1.2.4 2007/06/18 23:07:06 dww Exp $
+name =  SWFObject
+description = Support for SWFObject by Geoff Stearns
+package = SWF Tools
+dependencies = swftools
+
+; Information added by drupal.org packaging script on 2009-03-09
+version = "5.x-2.4"
+project = "swftools"
+datestamp = "1236624056"
+

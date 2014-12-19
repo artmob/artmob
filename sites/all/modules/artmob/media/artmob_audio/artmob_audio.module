@@ -1,0 +1,367 @@
+<?php
+// $Id: artmob_audio.info,v 1.0 2010/12/10 20:55:33 stop14 Exp $
+
+/* @file
+ * ADDDOCUMENTATION
+ **/
+
+
+//----------------------------------------------
+// CONSTANTS
+//----------------------------------------------
+
+global $base_url;
+define('ARTMOB_AUDIO_PATH', drupal_get_path('module','artmob_audio'));
+define('ARTMOB_PLAYER_SUPPORT_PATH',ARTMOB_AUDIO_PATH . '/support/');
+define('ARTMOB_PLAYER_SUPPORT_PATH_FULL',$base_url . base_path() .  ARTMOB_PLAYER_SUPPORT_PATH);
+
+//* Implementation of hook_node_info().
+//Note that module must match the module name
+function artmob_audio_node_info() {
+  return array(
+    'amAudio' => array(
+      'name' => t('Audio'),
+      'module' => 'artmob_audio',
+      'description' => t("Add podcasts and other audio files to your Artmob archive."),
+      'has_title' => TRUE,
+      'title_label' => t( 'Title' ),
+      'has_body' => TRUE,
+      'body_title' => t('Description')
+    ),
+  );
+}
+
+
+// Implementation of hook_access().
+
+function artmob_audio_access($op, $node) {
+  global $user;
+
+  if ($op == 'create') {
+    // Only registered users can create Articles.
+    return user_access('Add Artmob Media');
+  }
+
+  else if ($op == 'update') {
+    if ( $user->uid == $node->uid ){
+      return user_access('Edit Own Artmob Media');
+    } else {
+      return user_access('Edit Artmob Media');
+    }
+  }
+  else if ($op == 'delete') {
+    return user_access('Remove Artmob Media');
+  }
+  else if ($op == 'view') {
+    return user_access('View Artmob Media');
+  }
+  else {
+    return FALSE;
+  }
+}
+
+
+//----------------------------------------------
+/**
+ * Implementation of hook_help().
+ */
+function artmob_audio_help($section) {
+  switch ($section) {
+    case 'admin/help#artmob_audio':
+      $output = '<p>'. t('The artmob audio module shell for CCK’s filefield') .'</p>';
+      return $output;
+    case 'admin/modules#description':
+    case 'admin/settings/artmob_audio':
+      return (t('Contains a shell for CCK’s filefiled and SWFTools'));
+  }
+}
+
+function artmob_audio_init() {
+
+		if (variable_get('artmob_audio_player', '1pixelout') == 'jplayer') { // jplayer support is suppressed due to incompatibilities with version of jQuery
+			if (arg(0) == 'node' && is_numeric(arg(1))) {
+				$node = node_load(arg(1));
+				if ($node->type == 'amAudio') {
+			  	drupal_add_js(ARTMOB_PLAYER_SUPPORT_PATH. '/jplayer/jquery.jplayer.min.js');
+			  	drupal_add_js(ARTMOB_AUDIO_PATH. '/js/artmob_audio_jplayer.js');
+			  	
+			  	
+			  	$basepath = base_path();
+			  	$player = artmob_audio_get_player();
+			  	
+				  $settings = array(
+				  'filepath' => $basepath  . $node->field_audio[0]['filepath'],
+				  'playerpath' => base_path() . ARTMOB_PLAYER_SUPPORT_PATH . $player['filepath']
+				  );
+				
+				  drupal_add_js(array('artmobaudio' => $settings), "setting");			  	
+			  }
+	  	}
+	  	
+	  	
+	  	
+	  	
+	  	
+		}
+	
+}
+
+//----------------------------------------------
+/**
+ * Implementation of hook_menu().
+ */
+function artmob_audio_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+  } 
+  else {
+    $items[] = array(
+      'path'              => 'admin/artmob/audio',
+      'title'             => t('Artmob Audio Settings'),
+      'weight'            => 0,
+      'callback'          => 'drupal_get_form',
+      'callback arguments' => array( 'artmob_audio_admin_settings'),
+      'access'            => user_access('administer site configuration')
+    );
+  }
+  return $items;
+}
+
+function artmob_audio_admin_settings() {
+  $form['artmob_audio_settings'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Artmob Audio Settings'),
+    '#weight' => -2
+    );
+
+  $form['artmob_audio_settings']['artmob_audio_player'] = array(
+    '#type' => 'select',
+    '#title' => t("Choose an audio player"),
+    '#description' => t('Choose an audio player for your archival audio.'),
+    '#weight' => 3,
+    '#options'=>array('generic'=>'Generic','1pixelout'=>'1 Pixel Out'),
+    '#default_value' => variable_get('artmob_audio_player', '1pixelout'),
+  );
+
+  return system_settings_form($form);
+}
+
+
+// Implementation of hook_form().
+function artmob_audio_form(&$node) {
+
+  $type = node_get_types('type', $node);
+
+  $form['amAudio'] = array(
+    '#type'          => 'fieldset',
+    '#title'         => t('Picture'),
+    '#weight'        => -5,
+    '#collapsible'   => TRUE,
+    '#collapsed'     => FALSE
+  );
+
+  $form['amAudio']['title'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Title'),
+    '#default_value' => $node->title,
+    '#description'   => ARTMOB_MEDIA_TITLE_HELP,
+    '#tree'          => 'FALSE',
+    '#required'      => True,
+    '#weight'        => -8,
+  );
+
+ $form['amAudio']['body'] = array(
+    '#type'          => 'textarea',
+    '#title'         => t('Description'),
+    '#default_value' => $node->body,
+    '#description'   => ARTMOB_MEDIA_DESCRIPTION_HELP,
+    '#tree'          => 'FALSE',
+    '#rows'          => 10,
+    '#required'      => FALSE
+  );
+  $form['amAudio']['format'] = filter_form($node->format);
+
+  return $form;
+
+}
+
+//--------------------------------------------------------------------
+//This hook is used to add form fields to the forms
+//of other module's add node screens.  The fields
+//are defined here just as they were in the hook_form hook.
+function artmob_audio_form_alter($form_id, &$form) {
+  // boilerplate code to determine the node type of the form
+  if (isset($form['type'])) {
+      $type = $form['type']['#value'];
+    }
+  elseif (isset($form['orig_type'])) {
+      $type = $form['orig_type']['#value'];
+    }
+  else {
+    return;
+  }
+
+
+  switch ($form_id) {
+    // Form addition to all Enabled node types.  
+    case $type .'_node_form':
+      break;
+     case 'node_type_form':
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ *
+*/
+function artmob_audio_nodeapi(&$onode, $op, $teaser=NULL, $page=NULL) {
+  switch ($op) {
+    case 'update':
+      $bupdate = TRUE;
+
+      //Fall through, with flag.  Therefore with every update we delete
+      //the old associated records and then resave the new ones
+
+    case 'delete':
+      if (!$bupdate) {
+        break;
+      }
+
+    case 'insert':
+      break;
+    case 'load':
+      return $aload;
+      break;
+    case 'prepare':
+      break;
+    case 'view':
+     break;
+    case 'delete revision':
+      break;
+    case 'submit':
+      break;
+  }
+}
+
+//----------------------------------------------
+function artmob_audio_user($op, &$edit, &$currentuser) {
+  global $user;
+  switch ($op) {
+    case 'load':
+    case 'view':
+    case 'form':
+  };
+}
+
+//----------------------------------------------
+function artmob_audio_view($node, $teaser = FALSE, $page = FALSE) {
+  if ($page) {
+    if ($node->field_audio[0]['filepath']) {
+      $apath = str_replace(file_directory_path(), '', $node->field_audio[0]['filepath']); // SWFTools automatically appends the file path, and filefield adds it as part of the file path.
+      //$ahtml = "<p>Click to play.</p>";
+      //$ahtml .= sprintf('<div class="audio-player"><swf file="%s"></div>', $apath); // note, requires the SWF input filter be set.
+      $ahtml = theme('artmob_audio_swf_player',$node->field_audio[0]['filepath']);
+      $node->body = $ahtml . $node->body;
+    } 
+    
+    $node->body = check_markup($node->body,3, FALSE);
+    $node->content['body'] = array('#value' => theme( 'artmob_audio_basic_view_page', $node, $page ));
+  } 
+  else {
+    $node->teaser = check_markup($node->teaser, $node->format, FALSE);
+    $node->content['body'] = array('#value' => theme( 'artmob_audio_basic_view_teaser', $node, $page ));
+  }
+  return $node;
+}
+
+//----------------------------------------------
+function theme_artmob_audio_basic_view_page( &$node, $page ) {
+  $content = '';
+  $content .= $node->body;
+  return $content;
+}
+
+//----------------------------------------------
+function theme_artmob_audio_basic_view_teaser( &$node, $page ) {
+  $content = '';
+  $content .= $node->teaser;
+  return $content;
+}
+
+function theme_artmob_audio_swf_player($filepath) {
+global $base_url;
+$basepath = base_path();
+$player = artmob_audio_get_player();
+$playerpath = ARTMOB_PLAYER_SUPPORT_PATH_FULL . $player['filepath'];
+$playerclass = $player['key'];
+$filepathfull = $basepath . $filepath;
+$filepathurl = $base_url . $basepath . $filepath;
+
+if ($player['key'] == 'generic-mp3') {
+	$content = <<<EOT
+	<div id='audio-wrapper' class="audio-wrapper {$playerclass}"><div class="swftools"><object width="30" height="31" classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" codebase="http://fpdownload.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=7,0,0,0">
+	<param name="allowScriptAccess" value="sameDomain">
+	<param name="movie" value="{$playerpath}">
+	<param name="wmode" value="opaque">
+	<param name="bgcolor" value="#FFFFFF">
+	<param name="scale" value="showall">
+	<param name="quality" value="autohigh">
+	<param name="align" value="l">
+	<param name="allowFullScreen" value="true">
+	<param name="base" value="{$basepath}">
+	<param name="play" value="true">
+	<param name="menu" value="false">
+	<param name="loop" value="false">
+	<param name="FlashVars" value="{$player['fileparam']}={$filepathurl}">
+	<embed width="30" height="31" swliveconnect="default" src="{$playerpath}" wmode="opaque" bgcolor="#FFFFFF" scale="showall" quality="autohigh" loop="false" menu="false" play="true" name="" base="{$basepath}" allowfullscreen="true" salign="tl" flashvars="{$player['fileparam']}={$filepathurl}" allowscriptaccess="sameDomain" type="application/x-shockwave-flash" pluginspage="http://www.macromedia.com/go/getflashplayer">
+	</object></div>
+	</div>	
+EOT;
+
+	} else if ($player['key'] == '1pixelout') {
+	
+	$content = <<<EOT
+	<div id='audio-wrapper' class="audio-wrapper {$playerclass}">	<div id="swftools-swf-13455510561" class="swftools swftools-onepixelout swftools-onepixelout-processed"><object id="swf-13455510561" name="swf-13455510561" classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000" width="290" height="24"><param name="movie" value="{$playerpath}"><param name="version" value="7"><param name="play" value="true"><param name="loop" value="true"><param name="menu" value="false"><param name="allowfullscreen" value="true"><param name="swliveconnect" value="false"><param name="quality" value="autohigh"><param name="scale" value="showall"><param name="wmode" value="opaque"><param name="align" value="l"><param name="salign" value="tl"><param name="allowscriptaccess" value="sameDomain"><param name="base" value="%2Fsites%2Fdefault%2Ffiles%2Fobt%2F"><param name="flashvars" value="height=24&amp;width=290&amp;autostart=no&amp;loop=no&amp;playerID=13455510561&amp;soundFile={$filepathfull}"><!--[if gte IE 7]>--><object name="swf-13455510561" type="application/x-shockwave-flash" data="{$playerpath}" width="290" height="24"><param name="version" value="7"><param name="play" value="true"><param name="loop" value="true"><param name="menu" value="false"><param name="allowfullscreen" value="true"><param name="swliveconnect" value="false"><param name="quality" value="autohigh"><param name="scale" value="showall"><param name="wmode" value="opaque"><param name="align" value="l"><param name="salign" value="tl"><param name="allowscriptaccess" value="sameDomain"><param name="base" value="%2Fsites%2Fdefault%2Ffiles%2Fobt%2F"><param name="flashvars" value="height=24&amp;width=290&amp;autostart=no&amp;loop=no&amp;playerID=13455510561&amp;soundFile={$filepathfull}"><!--<![endif]--><p>You are missing some Flash content that should appear here! Perhaps your browser cannot display it, or maybe it did not initialize correctly.</p><!--[if gte IE 7]>--></object><!--<![endif]--></object></div>
+	</div>
+EOT;
+	
+	} else {
+
+	$content = <<<EOT
+	<div id='audio-wrapper' class="audio-wrapper {$playerclass}"></div>
+EOT;
+	}
+
+	return $content;
+}
+
+
+function artmob_audio_get_player() {
+	$options = array(
+		'generic'=>array(
+			'key'=>'generic-mp3',
+			'name'=>'Generic',
+			'filepath'=>'generic/generic_mp3.swf',
+			'fileparam'=>'file_url'
+		),
+		'1pixelout'=>array(
+			'key'=>'1pixelout',
+			'name'=>'1 Pixel Out',
+			'filepath'=>'1pixelout/player.swf',
+			'fileparam'=>'soundFile'
+		)/*,
+		'jplayer'=>array(
+			'key'=>'jplayer',
+			'name'=>'jPlayer',
+			'filepath'=>'jplayer'
+			)*/
+		);
+		
+  $player = variable_get('artmob_audio_player', '1pixelout');
+  
+  return $options[$player];
+
+}
+

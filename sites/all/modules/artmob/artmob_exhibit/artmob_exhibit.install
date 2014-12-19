@@ -1,0 +1,115 @@
+<?php
+// $Id: artmob_exhibit install,v 1.0 2011/04/26 01:30:00 stop14 Exp $
+
+/**
+ * @file
+ * Install, update and uninstall functions for the artmob_exhibit module.
+ */
+
+
+/**
+ * Implementation of hook_install().
+ */
+function artmob_exhibit_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      db_query("CREATE TABLE {am_exhibit} (
+        cid integer unsigned auto_increment primary key,
+        nid int unsigned NOT NULL default '0',
+        exhibit_tid int unsigned NOT NULL default '0',
+        StartDate int(11) NOT NULL,
+        StopDate int(11) NOT NULL,
+        curators longblob) /*!40100 DEFAULT CHARACTER SET utf8 */;"
+                        );
+                        
+      db_query("CREATE TABLE {am_exhibit_curators}(
+        exhibit_nid int unsigned NOT NULL default '0',
+        curator_uid int unsigned NOT NULL default '0') /*!40100 DEFAULT CHARACTER SET utf8 */;"
+      );
+
+      db_query("CREATE TABLE {am_exhibit_note} (
+        cid integer unsigned auto_increment primary key,
+        exhibit_nid int unsigned NOT NULL default '0',
+        uid int unsigned NOT NULL default '0',
+                                note text) /*!40100 DEFAULT CHARACTER SET utf8 */;"
+      );
+
+      db_query("CREATE TABLE {am_exhibit_items_note} (
+        cid integer unsigned auto_increment primary key,
+        item_nid int unsigned NOT NULL default '0',
+        exhibit_nid int unsigned NOT NULL default '0',
+        curator_uid int unsigned NOT NULL default '0',
+        weight int(11) NOT NULL default '0',
+        note text) /*!40100 DEFAULT CHARACTER SET utf8 */;"
+      );
+      
+      db_query("CREATE TABLE IF NOT EXISTS {am_exhibit_items_weight} (
+        `cid` int(10) unsigned NOT NULL auto_increment,
+        `item_nid` int(10) unsigned NOT NULL default '0',
+        `exhibit_nid` int(10) unsigned NOT NULL default '0',
+        `weight` int(11) NOT NULL default '0',
+        PRIMARY KEY  (`cid`) ) DEFAULT CHARSET=utf8 AUTO_INCREMENT=18 ;"
+      );
+
+      artmob_exhibit_create_role('curator');
+      artmob_exhibit_create_exhibit_vocabulary();
+      break;
+    case 'pgsql':
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function artmob_exhibit_uninstall() {
+  db_query('DROP TABLE {am_exhibit}');
+  db_query('DROP TABLE {am_exhibit_curators}');
+  db_query('DROP TABLE {am_exhibit_note}');
+  db_query('DROP TABLE {am_exhibit_items_note}');
+  db_query('DROP TABLE {am_exhibit_items_weight}');
+}
+
+function artmob_exhibit_create_role($role) {
+  $rid = artmob_exhibit_get_rid($role);
+  if (!$rid) {
+   //create role
+   $t = db_fetch_object(db_query('SELECT max(rid) as maxrid from {role}'));
+   $rid = $t->rid + 1;
+   db_query("INSERT INTO {role} (name) VALUES ('%s')", $role);
+  }
+  return $rid;
+}
+
+function artmob_exhibit_get_rid($role) {
+  $result = db_query( "SELECT * FROM {role} WHERE name = '%s' ", $role);
+  
+  $row = db_fetch_object($result);
+  
+  if ($row->rid) {
+    return $row->rid;
+  } 
+  else {
+    return 0;
+  }
+}
+
+function artmob_exhibit_create_exhibit_vocabulary() {
+  $values = array(
+   'name' => t('Exhibits'),
+   'nodes' => array('story' => 'story', 'page' => 'page'),
+   'description' => t('Terms represent individual Exhibits. The are created automatically.'),
+   'help' => 'If you wish to include this item in a pre-existing exhibit, you may select the exhibit here. For more information about exhibits, save the item and click the “curate” tab.',
+   'tags' => 0,
+   'hierarchy' => 0,
+   'relations' => 0,
+   'multiple' => 1,
+   'required' => 0,
+   'weight' => 0,
+  );
+
+  drupal_execute('taxonomy_form_vocabulary', $values);
+
+}
+

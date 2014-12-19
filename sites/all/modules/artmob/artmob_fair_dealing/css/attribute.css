@@ -1,0 +1,316 @@
+/*
+
+ 		 Work Type Colour Scheme:
+ 		 
+ 		 A - Literary (Gold)
+ 					Primary: #cba200; 
+ 					Light: #f1c000;
+ 					Dark: #c19b02;
+ 					
+ 		 B - Dramatic  (Fuchsia)
+ 		 			Primary: #df5998;
+ 		 			Light: #f585b9;
+ 		 			Dark: #df2e81;
+ 		 			
+ 		 C - Musical  (Blue)
+ 		 			Primary: #00a9d0;
+ 		 			Light: #5fc9e2;
+ 		 			Dark: #00748f;
+ 		 
+ 		 D - Visual Artistic  (Green)
+ 		 			Primary: #a7d000;
+ 		 			Light: #bae311;
+ 		 			Dark: #90b300;
+ 		 			
+ 		 E - Performance (Orange)
+ 		 			Primary: #ff7800;
+ 		 			Light: #ffa454;
+ 		 			Dark: #e66c00;
+ 		 			
+ 		 Neutral:
+ 		 			Primary: #CCCCCC;
+ 		 			Light: #EDEDED;
+ 		 			Dark: #666666;
+*/
+
+
+/* Add contributor */
+
+.attr-row {
+	border-bottom: 3px solid white;
+}
+
+.attr-row > div, .nc-cell {
+	display: table-cell;
+	padding: 5px;
+}
+
+.attr-row > div.contrib-contributor {
+	border-left: 3px solid white;
+}
+
+.attr-row h4 {
+	color: white;
+	font-size: 11px;
+	font-weight: bold;
+	padding: 0px;
+	margin: 0px 0px 5px;
+}
+
+.new-contributor {
+	border-bottom: 3px solid white;
+}
+
+.new-contributor > div {
+	padding: 5px;
+}
+
+.contrib-delete {
+	text-align: right;
+	width: 40px;
+	border-left: 3px solid white;
+}
+
+.attr-row div.infoval-delete {
+	display: block;
+	float: right;
+	width: 40px;
+	padding: 15px 17px;
+	text-align: right;
+}
+
+.nc-close {
+	text-align: right;
+	width: 40px;
+}
+
+.contrib-delete input {
+	padding-top: 15px;
+	padding-right: 10px;
+}
+
+.nc-close input {
+	padding-top: 5px;
+}	
+
+.add-button-container {
+	margin-top: 0px;
+	margin-bottom: 0px;
+	width: 100%;
+	text-align: right;
+	border-top: 2px solid white;
+}
+
+.add-button-container input {
+	padding: 10px 20px 10px 0px;
+	margin: 0px;
+}
+
+
+.infoval-date-widget {
+	margin-top: 10px;
+}
+
+#work-1 > .innerwork > .info .attr-row {
+	background-color: #cccccc; /* primary */
+}
+
+.worktype-A > .innerwork > .info .attr-row {
+	background-color: #f1c000; /* light */
+}
+
+.worktype-B > .innerwork > .info .attr-row {
+	background-color: #f585b9; /* light */
+}
+
+.worktype-C > .innerwork > .info .attr-row {
+	background-color: #5fc9e2; /* light */
+}
+
+.worktype-D > .innerwork > .info .attr-row {
+	background-color: #bae311; /* light */
+}
+
+.worktype-E > .innerwork > .info .attr-row {
+	background-color: #ffa454; /* light	 */
+}
+
+
+#work-1 > .innerwork > .info .new-contributor {
+	background-color: #cccccc; /* primary */
+}
+
+.worktype-A > .innerwork > .info .new-contributor {
+	background-color: #cba200; /* primary */
+}
+
+.worktype-B > .innerwork > .info .new-contributor {
+	background-color: #df5998; /* primary */
+}
+
+.worktype-C > .innerwork > .info .new-contributor {
+	background-color: #00a9d0; /* primary */
+}
+
+.worktype-D > .innerwork > .info .new-contributor {
+	background-color: #a7d000; /* primary */
+}
+
+.worktype-E > .innerwork > .info .new-contributor {
+	background-color: #ff7800; /* primary */
+}
+
+
+#work-1 > .innerwork > .info .add-button-container {
+	background-color: #999999; /* dark */
+}
+
+.worktype-A > .innerwork > .info .add-button-container {
+	background-color: #c19b02; /* dark */
+}
+
+.worktype-B > .innerwork > .info .add-button-container {
+	background-color: #df2e81; /* dark */
+}
+
+.worktype-C > .innerwork > .info .add-button-container {
+	background-color: #00748f; /* dark */
+}
+
+.worktype-D > .innerwork > .info .add-button-container {
+	background-color: #90b300; /* dark */
+}
+
+.worktype-E > .innerwork > .info .add-button-container {
+	background-color: #e66c00; /* dark */
+}
+
+
+#work-1 > .innerwork > .info .add-button-container:hover {
+	background-color: #666666; /* darker */
+}
+
+.worktype-A > .innerwork > .info .add-button-container:hover {
+	background-color: #f1c000; /* light */
+}
+
+.worktype-B > .innerwork > .info .add-button-container:hover {
+	background-color: #f585b9; /* light */
+}
+
+.worktype-C > .innerwork > .info .add-button-container:hover {
+	background-color: #5fc9e2; /* light */
+}
+
+.worktype-D > .innerwork > .info .add-button-container:hover {
+	background-color: #bae311; /* light */
+}
+
+.worktype-E > .innerwork > .info .add-button-container:hover {
+	background-color: #ffa454; /* light */
+}
+
+
+
+#attribute-tab .artmob-summary {
+	display: none;
+}
+
+#attribute-tab .other_works {
+	display: none;
+}
+
+#main {
+	margin: 0px auto 0px auto;
+	/*border: 1px dashed #699391;*/
+	background-color: #E0FFFC;
+	padding: 40px;
+}
+
+.versioninfo {
+	margin: 0px 0px 10px 0px;
+	font-size: .9em;
+	font-variant: italic;
+}
+
+.indent {
+	padding-left: 30px;
+}
+
+.indent-1 {
+	padding-left: 30px;
+}
+
+.indent-2 {
+	padding-left: 60px;
+}
+
+.indent-3 {
+	padding-left: 90px;
+}
+
+
+
+
+span.highlight {
+	color: #FF5148;
+}
+
+.work-help-text
+{
+	padding-bottom: 8px;
+	font-style: italic;
+}
+
+
+/*
+
+.work h3.fd-label, .work h3, 
+.copyright-module h4, .citation-module h3, .copyright-module h3,
+.summary-body h3, .artmob-summary h4 ,
+.citation-table th, .info-table th {
+	text-transform: uppercase;
+	color:#999;
+	font-size:10px;
+	padding-left: 0;
+	margin-bottom:5px;
+}
+
+*/
+
+#savereport {
+	padding-top: 20px;
+	padding-bottom: 20px;
+}
+
+#savereport input[type="button"] {
+	font-weight: bold;
+	padding: 10px;
+	font-size: 18px;
+}
+
+	
+	
+.artmob-summary h4 {
+	color:#000;
+	margin-bottom:0;
+	}
+
+#attribute-tab .introduction p, .summary-header {
+	background-color: #e6e6e6;
+	color:#666;
+	padding: 10px;
+	font-weight:normal;
+	font-size:1em;
+	text-transform: uppercase;
+	margin-top:10px;
+	margin-bottom:10px;
+	}
+	
+#attribute-tab .introduction p {
+	text-transform: none;
+}
+
+.col-1 {	padding-right:10px; }
+.col-2 {	padding: 0 10px; }
+.col-3 {	padding-left:10px; }

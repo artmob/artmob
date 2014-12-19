@@ -1,0 +1,95 @@
+# LANGUAGE translation of Drupal (taxonomy_browser.module)
+# Copyright 2006 NAME <fred@fredshome.org>
+# Generated from file: taxonomy_browser.module,v 1.14.2.2 2005/04/22 14:58:17 weitzman
+# , fuzzy
+# 
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2006-03-19 16:31+0100\n"
+"PO-Revision-Date: 2006-03-19 17:53+0100\n"
+"Last-Translator: NAME <fred@fredshome.org>\n"
+"Language-Team: French <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;"
+
+#: taxonomy_browser.module:21
+msgid "category browser"
+msgstr "navigateur par catégorie"
+
+#: taxonomy_browser.module:35
+msgid "An interface for viewing content grouped by arbitrary taxonomy terms."
+msgstr "Une interface pour afficher les pages du site regroupées par termes taxonomiques."
+
+#: taxonomy_browser.module:38
+msgid "<p>You may select multiple items from each list by holding down the <code>Ctrl</code> (Mac: <code>command</code>) key while left-clicking each item.</p>"
+msgstr "<p>Vous pouvez sélectionner de multiples items dans chaque liste en maintenant pressée la touche <code>Ctrl</code> (sur Mac&nbsp;:<code>Commande</code>) tout en cliquant sur votre sélection.</p>"
+
+#: taxonomy_browser.module:53
+msgid "Guidelines"
+msgstr "Conseils"
+
+#: taxonomy_browser.module:53
+msgid "Instructions which should appear at top of the category browser main page"
+msgstr "Instructions apparaissant en haut de la page principale de category browser."
+
+#: taxonomy_browser.module:58
+msgid "Included Vocabularies"
+msgstr "Vocabulaires inclus"
+
+#: taxonomy_browser.module:58
+msgid "Select the vocabularies the user can select from on the category browser page"
+msgstr "Sélectionnez le vocabulaire au sein duquel l'utilisateur pourra choisir sur la page de category browser."
+
+#: taxonomy_browser.module:77;133
+msgid "Search"
+msgstr "Chercher"
+
+#: taxonomy_browser.module:84
+msgid "Advanced category search"
+msgstr "Recherche avancée par catégorie"
+
+#: taxonomy_browser.module:99
+msgid "all"
+msgstr "tous"
+
+#: taxonomy_browser.module:103
+msgid "Restrict search by content type"
+msgstr "Restreindre la recherche par type de contenu"
+
+#: taxonomy_browser.module:115
+msgid "%nodetype has no associated categories. Showing all categories instead."
+msgstr "%nodetype n'a aucune catégorie associée. Toutes les catégories sont affichées."
+
+#: taxonomy_browser.module:130
+msgid "Items containing <strong>all</strong> terms"
+msgstr "Items contenant <strong>tous</strong> les termes"
+
+#: taxonomy_browser.module:131
+msgid "Items containing <strong>any</strong> terms"
+msgstr "Items contenant <strong>au moins un</strong> des termes"
+
+#: taxonomy_browser.module:132
+msgid "Scope"
+msgstr "Type de recherche"
+
+#: taxonomy_browser.module:146
+msgid "You must select the vocabularies to display from the <a href=\"%link\">taxonomy browser settings page</a>."
+msgstr "Vous devez choisir les termes à afficher depuis la <a href=\"%link\">page de réglages de taxonomy browser</a>."
+
+#: taxonomy_browser.module:172
+msgid "No posts match your criteria."
+msgstr "Aucune page ne correspond à vos critères."
+
+#: taxonomy_browser.module:176
+msgid "You must select at least one category in your search."
+msgstr "Vous devez sélectionner au moins une catégorie avant de lancer la recherche"
+
+#: taxonomy_browser.module:0
+msgid "taxonomy_browser"
+msgstr "Navigateur taxonomique"
+

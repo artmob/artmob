@@ -1,0 +1,106 @@
+<?php
+// $Id: date_api.module,v 1.1.4.9 2007/10/26 20:12:58 karens Exp $
+
+/**
+ * @file
+ * A module that will make the date API available to other modules with no dependencies on CCK.
+ * To use it, install the module, then add the following code wherever date api functions are needed:
+ *
+ * date_load('date.inc');
+ */
+
+define('DATE_ISO',  'date');
+define('DATE_UNIX', 'datestamp');
+define('DATE_DATETIME', 'datetime');
+define('DATE_STRING_ISO', "Y-m-d\TH:i:s");
+
+define('DATE_FORMAT_ISO', "Y-m-d\TH:i:s");
+define('DATE_FORMAT_DATETIME', "Y-m-d H:i:s");
+define('DATE_FORMAT_ICAL', "YmdTHis");
+
+define('DATE_REGEX_ISO', '/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):?(\d{2})?/');
+define('DATE_REGEX_DATETIME', '/(\d{4})-(\d{2})-(\d{2})\s(\d{2}):(\d{2}):?(\d{2})?/');
+define('DATE_REGEX_LOOSE', '/(\d{4})-?(\d{2})-?(\d{2})([T\s]?(\d{2}):?(\d{2}):?(\d{2})(\.\d+)?(Z|[\+\-]\d{2}:?\d{2})?)?/');
+
+/**
+ *  Set up optional adodb date library to handle dates outside the normal php range
+ *  Could be extended later for other date libraries
+ *
+ *  adodb date library instructions:
+ *    get the file adodb-time.inc.php from http://phplens.com/phpeverywhere/adodb_date_library
+ *    put it in the same folder with date.module
+ *
+ *  external library will be used if available, otherwise api will use standard php date handling functions
+ */
+if (file_exists('./'. drupal_get_path('module', 'date_api') .'/adodb-time.inc.php')) {
+
+  define('DATE_LIBRARY',  'ADODB');
+  define('DATE_MAX_YEAR', 3000);
+  define('DATE_MIN_YEAR', 100);
+  // if there is another program loading adodb-time.inc.php in another directory after this file has run
+  // there will be php errors stating that the functions have already been declared
+  // to fix this, alter the path to the file below to point to the path used by the program that uses the file last
+  //
+  // the standard path to this file
+  //     './'. drupal_get_path('module', 'date_api') .'/adodb-time.inc.php';
+  // an example alternate path if the gallery2 program is installed (gallery2 uses adodb, too)
+  //     strtolower($_SERVER["DOCUMENT_ROOT"]) .'/gallery2/lib/adodb/adodb-time.inc.php';
+  define('DATE_LIBRARY_FILE', './'. drupal_get_path('module', 'date_api') .'/adodb-time.inc.php');
+}
+else {
+  define('DATE_LIBRARY',    '');
+  if (strstr(PHP_OS, 'WIN') && PHP_VERSION < 5.1) {
+    define('DATE_MIN_YEAR', 1970);
+  }
+  else {
+    define('DATE_MIN_YEAR', 1901);
+  }
+  define('DATE_MAX_YEAR', 2038);
+}
+
+/**
+ * Helper to include large files only when needed.
+ */
+function date_load($file) {
+  include_once('./'. drupal_get_path('module', 'date_api') .'/'. $file);
+}
+
+/**
+ * Helper function to left pad date parts with zeros.
+ * Provided because this is needed so often with dates.
+ *
+ * @param int $value
+ *   the value to pad
+ * @param int $size
+ *   total size expected, usually 2 or 4
+ * @return string the padded value
+ */
+function date_pad($value, $size = 2) {
+  return sprintf("%0". $size ."d", $value);
+}
+
+/**
+ * We do this in lots of places, so make it a function.
+ *
+ * @return a timezone name
+ *   Identify the default timezone for a user, if available, otherwise the site.
+ *   May return a blank value if no timezone info has been set up.
+ */
+function date_default_timezone_name($check_user = TRUE) {
+  global $user;
+  if ($check_user && variable_get('configurable_timezones', 1) && !empty($user->timezone_name)) {
+    return $user->timezone_name;
+  }
+  else {
+    return variable_get('date_default_timezone_name', '');
+  }
+}
+
+/**
+ * Implementation of hook_simpletest().
+ */
+function date_api_simpletest() {
+  $dir = drupal_get_path('module', 'date_api') .'/tests';
+  $tests = file_scan_directory($dir, '\.test$');
+  return array_keys($tests);
+}

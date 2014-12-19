@@ -1,0 +1,74 @@
+<?php
+/**
+ *  @file
+ *  This plugin uses code from the Drupal Media Mover Module.
+ */
+
+// $Id: flashvideo_views.module,v 1.2 2007/07/15 18:48:38 travist Exp $
+
+/**
+ * Implementation of hook_help()
+ */
+function flashvideo_views_help($section = 'admin/help#flashvideo_views') {
+   switch ($section) {
+      case 'admin/help#flashvideo_views':
+         $output = 'The FlashVideo Views module provides a new Field in the Views module that allows you to see the Video or Video Thumbnail.';
+         return $output;
+
+      case 'admin/settings/modules#description':  
+         return t('Provides a plugin to allow Views functionality to the FlashVideo Module.');
+   }
+}
+
+/**
+ * The views plugin for the FlashVideo module is developed and maintained by 
+ * user mikesmullin at http://drupal.org/user/108440
+ *
+ *
+ * This include file implements views functionality on behalf of the
+ * flashvideo.module. 
+ */
+
+function flashvideo_views_views_tables() {
+  $tables['flashvideo'] = array(
+    'name' => 'node',
+    'fields' => array(
+      'nid' => array(
+        'name' => t('FlashVideo: Video'),
+        'handler' => 'flashvideo_views_handler_video',
+        'option' => array(
+          '#type' => 'select',
+          '#options' => 'flashvideo_views_option_video',
+        ),
+        'notafield' => TRUE,
+        'sortable' => FALSE,
+      ),
+    ),
+  );
+  return $tables;
+}
+
+/**
+ * Views handler for displaying the video.
+ */
+function flashvideo_views_handler_video($fieldinfo, $fielddata, $value, $data) {
+  $node = node_load($data->nid);
+  switch ($fielddata['options']) {
+    case 0: // Flash Video Player
+       return flashvideo_get_video($node, array());
+    case 1: // Thumbnail Image
+    default:
+       return flashvideo_get_thumbnail($node, array());
+  }
+}
+
+/**
+ * Views - Generate a list of options for the 
+ */
+function flashvideo_views_option_video($op) {
+  return array(
+    t('Flash Video Player'),
+    t('Thumbnail Image')
+  );
+  return $a;
+}

@@ -1,0 +1,1102 @@
+/*-----------------------------------------------------------
+	Artmob Structural Styles v1.0			  December, 2010.
+	.........................................................
+	2010 Artmob Network.
+	.........................................................
+	This CSS covers a basic build of the Artmob structure
+	and style. 'local.css' is the stylesheet where custom
+	colors and images are defined. In this file <mil> 
+	denotes a definition that continues in local.css.
+	
+-----------------------------------------------------------*/
+
+
+/*
+-------------------------------------------------------------
+||	General Structure
+-------------------------------------------------------------
+*/
+body {
+	margin:0;
+	padding:0;
+	background-color:#FFFFFF;
+	font:75% Arial, Helvetica, sans-serif;
+	line-height:1.5em;
+	color:#000000;
+}
+#outer{
+	width:100%;
+}
+#container{
+	margin-left:auto;
+	margin-right:auto;
+	overflow:hidden;
+	width:970px;
+	text-align:left;
+}
+#header {
+	margin:0;
+	overflow:hidden;
+	height:130px;
+/*	This is set to 'relative'
+	so that #menu-area can land 
+	in the bottom-right corner of the div.*/
+	position:relative;
+	/*<mil>*/
+}
+#active-area{
+	/*<mil>*/
+}
+#active-area #content{
+	/*width: auto;*/
+	width: 970px;
+}
+#left-column{
+	width:166px;
+	max-width: 166px;
+	/*<mil>*/
+}
+#right-column{
+	width:222px;
+	/*<mil>*/
+}
+#main {
+	width:540px;
+	vertical-align:baseline;
+	padding:0px 20px 20px 20px;
+}
+#footer {
+	padding:10px 15px 10px 15px;
+	font-size:10px;
+	/*<mil>*/
+}
+
+
+/*
+-------------------------------------------------------------
+||	Basic tags, rules, overrides, and Widgets
+-------------------------------------------------------------
+*/
+p{
+	line-height:140%;
+	vertical-align:baseline;
+	/*<mil>*/
+}
+h1,h2,h3,h4,h5,h6{
+	line-height:1em;
+}
+a{
+	outline: none;
+	-moz-outline-style: none;
+	text-decoration:none;
+	/*<mil>*/
+}
+a:link{
+	/*<mil>*/
+}
+a:hover, a:active, a.active{
+	/*<mil>*/
+}
+a:visited{
+	/*<mil>*/
+}
+a.img{
+	border:none;
+	text-decoration:none;
+}
+input{
+	vertical-align:top;
+}
+li.leaf {
+	margin:0;
+	padding-left:10px;
+}
+.ltrContent{
+	text-align:left;
+}
+.ctrContent{
+	text-align:center;
+}
+.rtlContent{
+	text-align:right;
+}
+table{
+	width:100%;
+}
+th, td{
+	text-align:left;
+}
+table .column1, table .column2{
+	width:45%;
+}
+table .spacer{
+	width:4%;
+}
+.col1 {
+	width:48%;
+	padding-right:2%;
+}
+.col2 {
+	width:48%;
+	padding-left:2%;
+}
+/*
+-------------------------------------------------------------
+||	Tabs
+-------------------------------------------------------------
+*/
+/*   Main Tabs  --------------------------------------------*/
+.tabs{
+	margin:0px 0px 10px 0px;
+	width:auto;
+	background-color:#FFFFFF;
+	border-width:0px 0px 0px 0px;
+	border-color:#FFFFFF;
+	border-style:solid;
+	text-align:left;
+}
+.tabs .primary{
+	padding:4px 0px;
+	border-width:0px 0px 1px 0px;
+	border-color:#B9C5CA;
+	border-style:solid;
+}
+ul.primary{
+	margin-left:0;
+	margin-right:0;
+}
+.tabs .primary li{
+	margin-left:0;
+	margin-right:1px;
+}
+
+/*   Tab Button Behaviour  --------------------------------*/
+ul.primary li{
+}
+ul.primary li a, ul.primary li a:active, ul.primary li a:visited{
+	margin-left:0;
+	margin-right:1px;
+	padding:4px 6px 4px 6px;
+}
+ul.primary li a:hover{
+
+}
+
+/*   The current active tab  ------------------------------*/
+.tabs .primary li.active a{
+	padding-bottom:4px;
+}
+
+/*   Tab Button Behaviour  --------------------------------*/
+#main h1 {
+	background: #333 no-repeat right 10px;;
+	border:1px solid #000;
+	padding:10px 10px .5em 10px;
+	color: #ff8600;
+	font-size: 1.5em;
+	text-shadow: #000 0px -2px 2px; 
+	margin-bottom:10px; 
+	border-width:0;
+	color: #FF8600;}
+
+.asset-title-wrapper {
+	background: #333 no-repeat right 10px;;
+	border:1px solid #000;
+	padding:10px;
+	margin-bottom:10px;
+	color: #ff8600;
+}
+ #main .asset-title-wrapper h1 {
+	background:transparent;
+	border-width:0;
+	color: #FF8600;
+	margin:0 0 .5em 0;
+	font-size: 1.5em;
+	text-shadow: black 0px -2px 2px;}
+
+.view .node-teaser .innernode-ampicture, 
+.item-page .node-teaser .innernode-ampicture, 
+#asset-title-icon-ampicture {
+	background-image: url('images/icons/icon-asset_ampicture.png') ;
+	}
+	
+.view .node-teaser .innernode-amaudio, 
+.item-page .node-teaser .innernode-amaudio, 
+#asset-title-icon-amaudio { 
+	background-image:url('images/icons/icon-asset_amaudio.png'); 
+	}
+.view .node-teaser .innernode-amcitation_ticket, 
+.item-page .node-teaser .innernode-amcitation_ticket, 
+#asset-title-icon-amcitation_ticket { 
+	background-image:url('images/icons/icon-asset_amcitation_ticket.png'); 
+	}
+.view .node-teaser .innernode-amcopyright, 
+.item-page .node-teaser .innernode-amcopyright, 
+#asset-title-icon-amcopyright { 
+	background-image:url('images/icons/icon-asset_amcopyright.png'); 
+	}
+.view .node-teaser .innernode-amlicensing_ticket,
+.item-page .node-teaser .innernode-amlicensing_ticket,
+#asset-title-icon-amlicensing_ticket { 
+	background-image:url('images/icons/icon-asset_amlicensing_ticket.png'); 
+	}
+.view .node-teaser .innernode-ampicture,
+.item-page .node-teaser .innernode-ampicture,
+#asset-title-icon-ampicture { 
+	background-image:url('images/icons/icon-asset_ampicture.png'); 
+	}
+.view .node-teaser .innernode-amvideo,
+.item-page .node-teaser .innernode-amvideo,
+#asset-title-icon-amvideo { 
+	background-image:url('images/icons/icon-asset_amvideo.png'); 
+	}
+.view .node-teaser .innernode-am_usage_request_ticket,
+.item-page .node-teaser .innernode-am_usage_request_ticket,
+#asset-title-icon-am_usage_request_ticket { 
+	background-image:url('images/icons/icon-asset_am_usage_request_ticket.png'); 
+	}
+.view .node-teaser .innernode-articles,
+.item-page .node-teaser .innernode-articles,
+#asset-title-icon-articles { 
+	background-image:url('images/icons/icon-asset_articles.png'); 
+	}
+.view .node-teaser .innernode-blog,
+.item-page .node-teaser .innernode-blog,
+#asset-title-icon-blog { 
+	background-image:url('images/icons/icon-asset_blog.png'); 
+	}
+.view .node-teaser .innernode-citation,
+.item-page .node-teaser .innernode-citation,
+#asset-title-icon-citation { 
+	background-image:url('images/icons/icon-asset_citation.png'); 
+	}
+.view .node-teaser .innernode-contributor,
+.item-page .node-teaser .innernode-contributor,
+#asset-title-icon-contributor { 
+	background-image:url('images/icons/icon-asset_contributor.png'); 
+	}
+.view .node-teaser .innernode-digitizedworks,
+.item-page .node-teaser .innernode-digitizedworks,
+#asset-title-icon-digitizedworks { 
+	background-image:url('images/icons/icon-asset_digitized_works.png'); 
+	}
+.view .node-teaser .innernode-exhibit,
+.item-page .node-teaser .innernode-exhibit,
+#asset-title-icon-exhibit { 
+	background-image:url('images/icons/icon-asset_exhibit.png'); 
+	}
+.view .node-teaser .innernode-license,
+.item-page .node-teaser .innernode-license,
+#asset-title-icon-license { 
+	background-image:url('images/icons/icon-asset_license.png'); 
+	}
+.view .node-teaser .innernode-news,
+.item-page .node-teaser .innernode-news,
+#asset-title-icon-news { 
+	background-image:url('images/icons/icon-asset_news.png'); 
+	}
+.view .node-teaser .innernode-page,
+.item-page .node-teaser .innernode-page,
+#asset-title-icon-page { 
+	background-image:url('images/icons/icon-asset_page.png'); 
+	}
+.view .node-teaser .innernode-pclookup,
+.item-page .node-teaser .innernode-pclookup,
+#asset-title-icon-pclookup { 
+	background-image:url('images/icons/icon-asset_pclookup.png');
+	 }
+.view .node-teaser .innernode-weblinks,
+.item-page .node-teaser .innernode-weblinks,
+#asset-title-icon-weblinks { 
+	background-image:url('images/icons/icon-asset_weblinks.png'); 
+	}
+
+/*
+-------------------------------------------------------------
+||	Forms
+-------------------------------------------------------------
+*/
+/*   Form Buttons   ---------------------------------------*/
+input.form-submit{
+	padding:2px 3px 3px 3px;
+	background-color:#BABFC3;
+	background-position:100% 100%;
+	background-repeat:repeat-x;
+	/*background-image:url('images/general/input_btn_bkgd_up.jpg');*/
+	border:1px solid #4C6E91;
+	font-size:10px;
+	text-transform:uppercase;
+	text-decoration:none;
+	color:#FFFFFF;
+}
+/*   Citation & Copyright   -------------------------------*/
+fieldset, fieldset.collapsed, html.js fieldset.collapsed{
+	margin-bottom:10px;
+	padding:10px 15px;
+	border-width:1px;
+	border-style:solid;
+	border-color:#CECECE;
+	/*<mil>*/
+}
+fieldset legend{
+	padding:0 10px;
+	font-weight:bold;
+}
+.resizable-textarea{
+	width:99%;
+}
+fieldset .form-submit{
+	float:right;
+	margin-bottom:10px;
+}
+
+
+
+.block-search{
+	overflow:hidden;
+}
+#search-block-form .form-text{
+	width:100px;
+	float:left;
+}
+#search-block-form .form-submit{
+	float:right;
+}
+
+/*   Blocks	-----------------------------------------------*/
+#left-column .block{
+	margin:0 10px 15px 10px;
+	padding:0 0 15px 0;
+	/*<mil>*/
+}
+#right-column .block{
+	margin:0 15px 15px 15px;
+	padding:0 0 15px 0;
+	/*<mil>*/
+}
+#main .block{
+	margin:0 0 15px 0;
+	padding:0 0 15px 0;
+	/*<mil>*/
+}
+/*   Widgets	-------------------------------------------*/
+.floatL{
+	float:left;
+}
+.floatR{
+	float:right;
+}
+.bold{
+	font-weight:bold;
+}
+.italic{
+	font-style:italic;
+}
+.underline{
+	font-decoration:underline;
+}
+
+
+/*
+-------------------------------------------------------------
+||	Drupal Overrides
+-------------------------------------------------------------
+*/
+/*   General ----------------------------------------------*/
+tbody{
+	border-top:0px;
+}
+tbody th, th{
+	border-bottom:0;
+}
+td{
+	vertical-align:top;
+}
+/*   L/R Columns ------------------------------------------*/
+#left-column h1, #left-column h2, #left-column h3,
+#right-column h1, #right-column h2, #right-column h3,
+#left-column p, #right-column p{
+	margin-top:0;
+}
+#left-column ol, #right-column ol,
+#left-column ul, #right-column ul{
+	margin:0;
+	padding:0;
+}
+#left-column li, #right-column li{
+	margin:0;
+	padding:0;
+	list-style-type:none;
+	list-style-image:none;
+}
+/*   Left Column ------------------------------------------*/
+
+.browse_assets_menu li a {
+	display: table-cell;
+	padding: 5px 0px 15px 15px;
+	font-size: 12px;
+	line-height: 14px;
+	width: auto;
+	vertical-align: middle;
+}
+
+.browse_assets_menu .asset-icon{
+	display: table-cell;
+	vertical-align: middle;
+	width: 24px;
+	height: 24px;
+}
+
+
+
+.browse_assets_menu li{
+	position:relative;
+	display: table-row;
+}
+.browse_assets_menu span{
+	position:absolute;
+	vertical-align:middle;
+}
+/*   Messages  --------------------------------------------*/
+.messages{
+	display:block;
+	margin:10px 0px 10px 0px;
+	padding:15px;
+	background-color:#FCF8EF;
+	border-width:1px;
+	border-style:solid;
+	border-color:#DAB559;
+	font-weight:bold;
+	font-size:11px;
+	color:#1E1E1E;
+}
+/*   Read More  -------------------------------------------*/
+.read-more .read-more-link img{
+	border:0;
+}
+/*   Supplemental  ----------------------------------------*/
+.links .inline li{
+	padding-left:0;
+	font-size:11px;
+}
+#content-area .supplemental{
+	display:none;
+}
+/*   Advanced Search Styles -------------------------------*/
+.search-advanced .criterion optgroup{
+	font-size:12px;
+}
+/*   Drupal-specific Overrides ----------------------------*/
+/*	Kills clearance attributes and minor 
+	oddities embedded in the drupal core stylesheet.       */
+.node{
+	clear:none;
+}
+.node-form .standard{
+	clear:none;
+}
+.node-form .div{
+	margin-bottom:10px;
+}
+.node .image-attach-body{
+	clear:none;
+}
+#user-admin-buttons, #node-admin-buttons{
+	clear:none;
+}
+.profile{
+	clear:none;
+}
+#user-login-form{
+	text-align:left;
+}
+#user-login-form .item-list{
+	margin-top:10px;
+	display:none;
+}
+#user-login-form ul{
+	padding:0px 0px .25em 0px;
+}
+.feed-icon{
+	display:none;
+}
+/*   Main Tabs  inc. Comments -----------------------------*/
+.tabs{
+	margin:0px 0px 10px 0px;
+	/*<mil>*/
+}
+.tabs .primary{
+	margin:0;
+}
+ul.primary{
+	margin-left:0;
+	margin-right:0;
+	padding:4px 0;
+}
+#tabs-tabbed_content ul.primary{
+	border-bottom:0px !important;
+}
+.tabs .primary li{
+	margin-left:0;
+	margin-right:1px;
+	/*<mil>*/
+}
+
+
+
+/*
+-------------------------------------------------------------
+||	Design: Artmob Header
+-------------------------------------------------------------
+*/
+#artmob-network{
+	padding:0px;
+	width:100%;
+	height:30px;
+	background-color:#000000;
+	font-family:Arial, Helvetica, sans-serif;
+	color:#FFFFFF;
+}
+#artmob-networkBody{
+	margin-left:auto;
+	margin-right:auto;
+	padding-top:10px;
+	width:970px;
+}
+#artmob-network-img{
+	margin-left:25px;
+	margin-right:10px;
+	width:147px;
+	height:9px;
+	background-repeat:no-repeat;
+	background-image:url('images/logos/artmob.png');
+}
+
+
+/*
+-------------------------------------------------------------
+||	Design: The Web Site
+-------------------------------------------------------------
+*/
+/*   Header  -----------------------------------------------*/
+#logo{
+	float:left;
+	margin:0px 10px 0px 20px;
+	height:130px;
+	display:table; 
+	position:relative;
+	vertical-align:middle;
+}
+#logo a{
+	top:25%;
+	display:table-cell;
+	position:absolute;
+}
+.login-shell{
+	float:right;
+	margin-top:25px;
+	width:auto;
+}
+.login-shell div{
+	display:inline;
+	margin-right:20px;
+	/*<mil>*/
+}
+.login-shell a{
+	width:auto;
+	/*<mil>*/
+}
+/*   Primary Links  ---------------------------------------*/
+#menu-area{
+	margin-bottom:5px;
+	position:absolute;
+	width:auto;
+	height:26px;
+	bottom:0;
+	right:0;
+}
+#primary-links-box{
+	padding-top:4px;
+}
+#menu-area ul.links li{
+	margin:0;
+	padding:0;
+	height:30px;
+}
+#menu-area .links a{
+	margin:0;
+	bottom:0;
+	padding:5px 10px;
+	height:30px;
+	/*<mil>*/
+}
+#active-area #top-border{
+	height:23px;
+	/*<mil>*/
+}
+#menu-area .links a:hover, #menu-area .links a:active,
+#menu-area .links a.active, #menu-area .links li a.active{
+	text-decoration:none;
+	background-color:#F4F4F4;
+	color:#000000;
+	/*<mil>*/
+}
+/*   Breadrumbs  ------------------------------------------*/
+#breadcrumbs{
+	margin-bottom:10px;
+	font-size:10px;
+	/*<mil>*/
+}
+.breadcrumbs-dividers{
+	display:inline;
+}
+
+
+/*
+-------------------------------------------------------------
+||	Comments
+-------------------------------------------------------------
+*/
+#comments{
+	clear:both;
+}
+#comments .indented{
+/*	margin-left:0;*/
+}
+.comment{
+	margin:0 0 15px 0;
+/*	border-width:1px 0 0 0;
+	border-style:dashed;
+	border-color:#999999;*/
+}
+.comment h3{
+	font-size:13px;
+	margin-bottom:0.2em;
+}
+.comment h3 a{
+	text-decoration:none;
+	font-weight:normal;
+}
+.comment .submitted{
+	font-style:italic;
+}
+#comments .links .links{
+	display:inline;
+	/*<mil>*/
+}
+#comments .links .links li{
+	padding:0;
+}
+
+/*
+-------------------------------------------------------------
+||	Alpha Browser Menu
+-------------------------------------------------------------
+*/
+.tab-alphabet{
+	width:0;
+	margin-bottom:10px;
+}
+
+
+/*
+-------------------------------------------------------------
+||	Results Browsers
+-------------------------------------------------------------
+*/
+/*   Top Tiers: Tools  ------------------------------------*/
+.results-browser-tools{
+	margin-bottom:2px;
+	border-bottom-width:1px;
+	border-bottom-style:solid;
+	border-bottom-color:#000000;
+	/*<mil>*/
+}
+.rb-top-tier a{
+	font-size:11px;
+}
+.rb-top-tier-1{
+	overflow:hidden;
+	margin-bottom:3px;
+	border-bottom-width:1px;
+	border-bottom-style:solid;
+	border-bottom-color:#000000;
+	/*IE6 Fixes in separate CSS*/
+	clear:both;
+	height:20px;
+	width:100%;
+	/*<mil>*/
+}
+.rb-top-tier-2{
+	height:23px;
+	margin-bottom:8px;
+	border-width:1px 0 0 0;
+	border-style:solid;
+	border-color:#000000;
+	background-repeat:repeat-x;
+	background-image:url('images/widgets/rb_toptier_m.jpg');
+	/*IE6 Fixes in separate CSS*/
+	clear:both;
+	width:100%;
+	/*<mil>*/
+}
+.rb-top-tier-2 .left-cap,
+.rb-top-tier-2 .right-cap{
+	float:left;
+	height:23px;
+	width:10px;
+	background-repeat:no-repeat;
+	background-image:url('images/widgets/rb_toptier_l.jpg');
+}
+.rb-top-tier-2 .right-cap{
+	float:right;
+	background-image:url('images/widgets/rb_toptier_r.jpg');
+}
+.rb-top-tier-2 .midsection{
+	height:23px;
+	font-weight:bold;
+	font-size:11px;
+}
+.rb-top-tier-2 .midsection span{
+	margin:0px 8px;
+}
+.rb-top-tier-2 .midsection a:link{
+	color:#000000;
+	text-decoration:none;
+}
+.rb-top-tier-2 .midsection a:active,
+.rb-top-tier-2 .midsection a.active{
+	color:#666666;
+	text-decoration:none;
+}
+.rb-top-tier-2 .midsection a:hover{
+	color:#000000;
+}
+.rb-top-tier-2 .midsection .rb-showing-results{
+	float:right;
+}
+.results-browser-tools p{
+	margin:3px;
+	/*<mil>*/
+}
+.rb-sort-buttons{
+	float:left;
+	width:auto;
+	margin-right:8px;
+}
+.rb-sort-buttons a:link,
+.rb-sort-buttons a.inactive{
+	background-color:#DDDDDD;
+	border-color:#BBBBBB #BBBBBB #FFFFFF #BBBBBB;
+	border-style:solid;
+	border-width:1px;
+	margin-right:0.5em;
+	padding:0 1em;
+	/*<mil>*/
+}
+.rb-sort-buttons a:active,
+.rb-sort-buttons a.active{
+	padding:0 1em;
+	background-color:#FFFFFF;
+	border-color:#BBBBBB #BBBBBB #FFFFFF #BBBBBB;
+	/*<mil>*/
+}
+.rb-sort-buttons a:hover{
+	background-color:#EEEEEE;
+	border-color:#CCCCCC #CCCCCC #EEEEEE #CCCCCC;
+	color:#000000;
+	/*<mil>*/
+}
+.rb-sort-buttons .DESC span,
+.rb-sort-buttons .ASC span{
+	margin:0 4px;
+	width:6px;
+	height:7px;
+	background-repeat:no-repeat;
+	background-position:0px 3px;
+	background-image:url('images/widgets/arrow_desc.gif');
+}
+.rb-sort-buttons .ASC span{
+	background-image:url('images/widgets/arrow_asc.gif');
+}
+.rb-items-meta{
+	height:20px;
+}
+.rb-items-meta span{
+	width:auto;
+	float:left;
+}
+.rb-nav-buttons{
+	float:right;
+}
+.rb-nav-buttons img{
+	vertical-align:bottom;
+	margin-left:4px;
+	margin-bottom:1px;
+}
+#rb-previous, #rb-next{
+	float:left;
+	margin-right:5px;
+	/*<mil>*/
+}
+/*   Middle Tier: Results Table  --------------------------*/
+.results-browser{
+	margin-top:30px;
+}
+.results-browser .rb-middle-tier table{
+	padding:1px;
+	border-collapse:collapse;
+	border-spacing:2px;
+	border-width:1px;
+	border-style:solid;
+	border-color:#000000;
+	/*<mil>*/
+}
+.results-browser .rb-middle-tier table th,
+.results-browser .rb-middle-tier table td{
+	padding:1px;
+	-moz-border-radius:0px;
+	border-style:inset;
+	border-width:1px;
+	border-color:#000000;
+	/*<mil>*/
+}
+.results-browser .rb-middle-tier .innernode{
+/*	overflow:hidden;*/
+	margin:0px;
+	padding:9px;
+	background-repeat:no-repeat;
+	background-image:url('images/icons/icon-asset_blank.png');
+}
+.innernode-ampicture,
+.innernode-articles,
+.innernode-audio,
+.innernode-digitizedworks,
+.innernode-image,
+.innernode-video,
+.innernode-links,
+.innernode-weblinks{
+	background-repeat:no-repeat;
+}
+
+.results-browser h1{
+	font-size:14px;
+}
+.results-browser h2{
+	margin:0 0 10px 40px;
+	min-height:35px;
+	font-size:1em;
+	/*<mil>*/
+}
+.results-browser .node-teaser img{
+	border-width:1px;
+	border-style:solid;
+	border-color:#000000;
+	/*<mil>*/
+}
+
+.results-browser .node-teaser a.gloss-link img {
+	border: 0px;
+}
+
+.rb-middle-tier{
+	margin-bottom:8px;
+}
+.rb-middle-tier ul{
+	padding-top:8px;
+	padding-bottom:8px;
+}
+.rb-middle-tier li{
+	padding:2px 8px;
+	list-style-type:none;
+}
+.results-browser .supplemental{
+	clear:both;
+	text-align:right;
+	display:none;
+}
+/*   Bottom Tier: Pagination  -----------------------------*/
+.rb-bottom-tier{
+	margin-bottom:8px;
+	text-align:center;
+}
+.rb-bottom-tier .rb-jump-to-link{
+	margin:0 4px;
+}
+
+
+/*
+-------------------------------------------------------------
+||	Assets
+-------------------------------------------------------------
+*/
+.asset-title-wrapper{
+	background-repeat:no-repeat;
+	background-position:100% 0%;
+}
+.asset-title-wrapper h1{
+	margin-right:36px;
+	padding:8px;
+	height:14px;
+	border-style:solid;
+	border-width:1px;
+	font-weight:bold;
+	border-color:#C6C6C6;
+	font-size:16px;
+	/*<mil>*/
+}
+#content-area .content{
+	width:auto;
+}
+#content-area .node{
+	margin-bottom:10px;
+}
+.node .image-large{
+	width:395px !important;
+}
+#video-player object{
+	width:395px !important;
+}
+/*   Asset Sidebar  ---------------------------------------*/
+.asset-sidebar{
+	float:right;
+	overflow:hidden;
+	margin-bottom:10px;
+	margin-left:12px;
+	min-height:250px;
+	background-color:#EAEAEA;
+	font-size:10px;
+	/*<mil>*/
+}
+.asset-sidebar h1{
+	color:#000000;
+	font-size:11px;
+}
+.asset-sidebar h3{
+	margin:1em 0 0 0;
+	font-size:11px;
+	color:#000000;
+}
+.asset-sidebar h4{
+	margin:1em 0 0 0;
+	font-weight:normal;
+	font-size:11px;
+}
+.asset-sidebar span{
+	float:left;
+	width:128px;
+	margin-bottom:10px;
+}
+.asset-sidebar .user-img{
+	overflow:hidden;
+	display:inline;
+	min-height:85px;
+	background-color:#000000;
+}
+.asset-sidebar .asset-sidebar-content{
+	margin:10px;
+}
+.asset-sidebar-content ul, .asset-sidebar-content li{
+	margin:0;
+	padding:0;
+	list-style:none;
+	line-height:1.2em;
+}
+.picture-caption{
+	font-size:0.9em;
+}
+
+.artmob-summary-vertical {
+	width:130px;
+}
+
+.artmob-summary-horizontal {
+	width: 100%;
+}
+
+/*   Similar/Related Info  --------------------------------*/
+.block-similarterms{
+	clear:both;
+}
+.block-similarterms .innernode{
+	overflow:hidden;
+}
+.block-similarterms #innerblockID h2{
+	border-style:solid;
+	border-width:0 0 1px 0;
+	border-color:#B9C5CA;
+	/*<mil>*/
+}
+.block-similarterms #innerblockID .content h2{
+	border-width:0;
+}
+
+/*
+-------------------------------------------------------------
+||	Attachments
+-------------------------------------------------------------
+*/
+/*   Wipe it clean*/
+table#attachments,
+table#attachments thead,
+table#attachments th,
+table#attachments tbody,
+table#attachments tr,
+table#attachments tr.even,
+table#attachments tr.odd,
+table#attachments td{
+	border:0px none transparent;
+	background-color:transparent;
+	border-style:none;
+	border-width:0;
+}
+/*   Rebuild It*/
+table#attachments{
+	float:right;
+	clear:right;
+	margin:20px 0px;
+	border-left-width:9px;
+	border-left-style:solid;
+	border-left-color:#F4F4F4;
+	
+	/*<mil>*/
+}
+table#attachments thead, table#attachments th{
+	height:28px;
+	padding-left:10px;
+	background-color:#F4F4F4;
+	/*<mil>*/
+}
+table#attachments tr.even, table#attachments tr.odd{
+	margin:10px;
+}
+table#attachments td{
+	padding:10px;
+}
+table#attachments td a{
+/*	Note:This margin setting works
+	with the icon setting just below.
+*/
+	margin-bottom:8px;
+}
+	.download-icon{
+		margin-bottom:-8px;
+		margin-right:10px;
+	}
+	
+.artmob-video-player {
+	padding: 40px 0px;
+}
+
+-------------------------------------------------------------
+||	Footer
+-------------------------------------------------------------
+*/
+#footer a, footer a:visited{
+	color:#909AA1;
+}
+#footer a:hover{
+	color:#4B7083;
+}
+
+

@@ -1,0 +1,89 @@
+<?php
+
+/**
+ * @file
+ *
+ * Provide Integration for the image.module and imagecache.
+ */
+
+/**
+ * Add imagecache pipelining to the the image.module size derivatives form
+ */
+function imagecache_form_alter($form_id, &$form) {
+  if($form_id == 'image_admin_settings'){
+    // Sneak in our own little setting alongside the usual image dimensions
+    // UI layout is not perfect, but image.module hard-coded their table formatting.
+    // I want to over-ride theme_image_settings_sizes_form()
+    //
+    // image.module also slightly changed this structure and its API at one point
+    // this code against 1.209.2.51 2008/01/06
+    // test against other image.module releases
+    $sizes = function_exists('image_get_sizes') ? image_get_sizes() : _image_get_sizes();
+
+    $presets = imagecache_presets();
+    $imagecache_options = array(0=>"(no imagecache process)");
+    foreach($presets as $preset) {
+      $imagecache_options[$preset['presetid']] = $preset['presetname'];
+    }
+
+    foreach(element_children($form['image_sizes']) as $key){
+      $form['image_sizes'][$key]['imagecache'] = array(
+        '#type' => 'select',
+        '#default_value' => $sizes[$key]['imagecache'],
+        '#options' => $imagecache_options,
+      );
+      $form['image_sizes'][$key]['operation']['#type'] = 'hidden';
+      $form['image_sizes'][$key]['width']['#type'] = 'hidden';
+      $form['image_sizes'][$key]['height']['#type'] = 'hidden';
+
+    }
+    $form['image_sizes']['#description'] .= t('<p>Note: \'Original\' dimensions
+      will only be used to resize images when they are first uploaded. Existing
+      originals will not be modified. Choose an <a href="!imagecache_settings">imagecache preset</a>
+      to use to generate this derivative image. </p>',
+       array('!imagecache_settings' => url('admin/build/imagecache'))
+    );
+    $form['image_sizes']['#theme'] = 'imagecache_image_settings_sizes_form';
+
+    // Capture the form submission so we can save this setting
+    $form['#submit']['imagecache_save_image_size_settings'] = array();
+  }
+}
+
+function theme_imagecache_image_settings_sizes_form(&$form) {
+  $header = array(t('Label'), t('Imagecache Preset'), t('Link'));
+  foreach (element_children($form) as $key) {
+    $row = array();
+    $row[] = drupal_render($form[$key]['label']);
+    $row[] = drupal_render($form[$key]['imagecache']);
+    $row[] = drupal_render($form[$key]['link']);
+    $rows[] = $row;
+  }
+  $output .= theme('table', $header, $rows);
+  $output .= drupal_render($form);
+
+  return $output;
+}
+
+
+
+/**
+ * Implementation of hook_image_alter()
+ *
+ * Capture the image_build_derivatives phase of image.module
+ * and insert our own manipulations to it any time an image is manipulated.
+ *
+ * This runs the imagecache builder over the input file and places it in the
+ * output destination.
+ */
+function imagecache_image_alter($node, $destination, $sizename) {
+  $sizes = image_get_sizes();
+  $size_def = $sizes[$sizename];
+  // Appended to the dimensions is our 'imagecache' id value. Maybe.
+  if ($presetid = $size_def['imagecache']) {
+    $original = file_create_path($node->images['_original']);
+    $preset = imagecache_preset($presetid);
+    $result = imagecache_build_derivative($preset['actions'], $original, $destination );
+  }
+}
+

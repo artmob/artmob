@@ -1,0 +1,48 @@
+<?php
+
+function ahah_simple_menu($may_cache) {
+  $items = array();
+  if (!$may_cache) {
+  $items[] = array(
+      'path' => 'ahah/simple', 
+      'callback' => 'drupal_get_form',
+    'callback arguments' => array('ahah_simple_page'),
+    'type' => 'CALLBACK',
+    'access' => TRUE,
+  );
+  $items[] = array(
+      'path' => 'ahah/simple_js', 
+      'callback' => 'ahah_simple_js',
+    'type' => 'CALLBACK',
+    'access' => TRUE,
+    );  
+  }
+  return $items;
+}
+
+function ahah_simple_page() {
+  $form = array();
+  $form['target'] = array(
+    '#type' => 'item',
+    '#value' => "Don't do it!",
+    '#prefix' => '<div id="target">',
+    '#suffix' => '</div>',
+  ); 
+  $form['submit'] = array(
+    '#type' => 'button',
+    '#value' => t('Click Me'),
+    '#id' => 'simple-submit',
+    '#ahah_bindings' => array(
+      array( 
+      'event' => 'click',
+        'path' => 'ahah/simple_js',
+        'wrapper' => 'target'
+      )) ,
+  );
+  return $form; 
+}
+
+function ahah_simple_js() {
+  print '<p>No one ever listens.</p>';
+}
+

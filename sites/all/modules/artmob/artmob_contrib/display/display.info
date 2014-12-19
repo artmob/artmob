@@ -1,0 +1,6 @@
+; $Id: display.info,v 2.1 2008/05/12 17:05:59 bill Exp $
+
+name = Stop14 Display Tools
+description = Provides templating-oriented APIs. 6.x version.
+version = 2.x
+core = 6.x

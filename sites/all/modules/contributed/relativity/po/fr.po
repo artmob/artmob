@@ -1,0 +1,537 @@
+# LANGUAGE translation of Drupal (relativity.module)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from file: relativity.module,v 1.27 2006/07/03 04:57:08 darius
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2006-08-27 02:31-0600\n"
+"PO-Revision-Date: 2006-09-01 22:43-0500\n"
+"Last-Translator: Yannick Forest <forestyan@aei.ca>\n"
+"Language-Team: Yannick Forest <forestyan@aei.ca>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Poedit-Language: French\n"
+"X-Poedit-Country: CANADA\n"
+"X-Poedit-SourceCharset: utf-8\n"
+
+#: relativity.module:29
+msgid "Used to relate one node to another as part of a hierarchy."
+msgstr "Utilisé pour lier un noeud à un autre dans le cadre d'une hiérarchie."
+
+#: relativity.module:32
+msgid "Node Relativity query."
+msgstr "Requête de Relativité"
+
+#: relativity.module:138
+msgid "There are no available %s items to attach"
+msgstr "Aucun %$items attachable n'est disponible"
+
+#: relativity.module:229
+msgid "Node relationship removed."
+msgstr "Relation nodale retirée."
+
+#: relativity.module:232
+msgid "Node relationship cannot currently be removed."
+msgstr "La relation nodale ne peut être retirée pour l'instant."
+
+#: relativity.module:236
+msgid "Either that node does not exist or you don't have proper privileges to update it"
+msgstr "Soit le noeud est inexistant, soit vous n'avez pas le droit d'accès permettant de le modifier."
+
+#: relativity.module:252
+msgid "Node relationship created."
+msgstr "La relation nodale a été créée."
+
+#: relativity.module:268
+msgid "content type requires parent"
+msgstr "ce type de contenu requiert un item parent"
+
+#: relativity.module:284
+msgid "create content"
+msgstr "créer un contenu"
+
+#: relativity.module:293
+msgid "list of %type nodes to attach"
+msgstr "liste de tous les noeuds %type  à attacher"
+
+#: relativity.module:300
+msgid "attach node to parent"
+msgstr "attache un noeud à l'item parent"
+
+#: relativity.module:307
+msgid "unparent node"
+msgstr "détacher du noeud parent"
+
+#: relativity.module:316;1349
+msgid "node relativity query"
+msgstr "requête de relativité nodale"
+
+#: relativity.module:323
+msgid "regular settings"
+msgstr "paramètres réguliers"
+
+#: relativity.module:330
+msgid "display settings"
+msgstr "paramètres d'affichage"
+
+#: relativity.module:339
+msgid "advanced settings"
+msgstr "paramètres avancés"
+
+#: relativity.module:365
+msgid "Relativity Regular Settings"
+msgstr "Paramètres de relativité réguliers"
+
+#: relativity.module:370
+msgid "Relativity Display Settings"
+msgstr "Paramètres d'affichage de relativité"
+
+#: relativity.module:375
+msgid "Relativity Advanced Settings"
+msgstr "Paramètres avancés de relativité"
+
+#: relativity.module:379;381
+msgid "Attachment"
+msgstr "Liaison"
+
+#: relativity.module:380
+msgid "Display"
+msgstr "Affichage"
+
+#: relativity.module:397;597
+msgid "Global Attachment Options"
+msgstr "Options globales de liaisons"
+
+#: relativity.module:402
+msgid "Enforce Parental Rules"
+msgstr "Appliquer les règles de parenté"
+
+#: relativity.module:405
+msgid "If checked, nodes cannot be created without a parent if they require a parent to exist."
+msgstr "Si coché, les noeuds ne pourront être créés sans parent s'ils nécessitent l'existence d'un noeud parent. "
+
+#: relativity.module:410
+msgid "Allowable Ancestor Navigation Block Node types"
+msgstr "Types permis de blocs de navigation des ancêtres"
+
+#: relativity.module:413
+msgid "What types of nodes are allowed to be used in the navigation block?"
+msgstr "Indiquez les types de noeuds permissibles dans le bloc de navigation"
+
+#: relativity.module:422
+msgid "Node Sorting Options"
+msgstr "Options de tri des noeuds"
+
+#: relativity.module:444
+msgid "Sort Order for %name Nodes"
+msgstr "Ordre de tri pour les noeuds %name"
+
+#: relativity.module:458;545;652
+msgid "%label Options for %name (%type) nodes"
+msgstr "Option de %label pour les noeuds %name de type %type"
+
+#: relativity.module:465
+msgid "%chname Child Ordinality for %pname Parents"
+msgstr "Ordinalité filiale des %chname pour les parents %pname"
+
+#: relativity.module:467;659
+msgid "any"
+msgstr "n'importe quel"
+
+#: relativity.module:467
+msgid "1"
+msgstr "1"
+
+#: relativity.module:467
+msgid "2"
+msgstr "2"
+
+#: relativity.module:467
+msgid "3"
+msgstr "3"
+
+#: relativity.module:467
+msgid "4"
+msgstr "4"
+
+#: relativity.module:467
+msgid "5"
+msgstr "5"
+
+#: relativity.module:467
+msgid "6"
+msgstr "6"
+
+#: relativity.module:467
+msgid "7"
+msgstr "7"
+
+#: relativity.module:467
+msgid "8"
+msgstr "8"
+
+#: relativity.module:467
+msgid "9"
+msgstr "9"
+
+#: relativity.module:467
+msgid "10"
+msgstr "10"
+
+#: relativity.module:480
+msgid "Require Common Child Node Types for %chname Children"
+msgstr "Les noeuds %chname nécessitent un type de noeud fillial commun"
+
+#: relativity.module:483
+msgid "Require that any child of this type already have a child in common of the specified type.  This allows particular circular relationships to be created."
+msgstr "Le type spécifié exige que tous les noeuds enfants de ce type aient déjà un noeud enfant en commun. Ceci permet la création d'une relation circulaire particulière."
+
+#: relativity.module:498;659
+msgid "none"
+msgstr "aucun"
+
+#: relativity.module:503
+msgid "Use Relativity Query For Listing %chname Children"
+msgstr "Utiliser une requête de relativité pour produire une liste des noeuds enfants %chname"
+
+#: relativity.module:506
+msgid "Use the specified relativity query to identify possible children."
+msgstr "Utiliser la requête de relativité spécifiée pour identifier les noeuds enfants possibles."
+
+#: relativity.module:520
+msgid "Global Display Options"
+msgstr "Options globales d'affichage "
+
+#: relativity.module:525
+msgid "Show Ancestor Navigation Above Node Body"
+msgstr "Afficher le bloc de navigation des ancêtres au dessus du contenu du noeud"
+
+#: relativity.module:528
+msgid "If checked, a listing of the node's ancestors will be displayed above each node."
+msgstr "Lorsque coché, la liste des noeuds ancêtres sera affichée au dessus de chacun des noeuds."
+
+#: relativity.module:533
+msgid "Show Ancestor Navigation Below Node Body"
+msgstr "Affiche le bloc de navigation des ancêtres sous le contenu"
+
+#: relativity.module:536
+msgid "If checked, a listing of the node's ancestors will be displayed below each node."
+msgstr "Lorsque coché, la liste des ancêtres de ces noeuds sera affichée sous chacun d'entre eux."
+
+#: relativity.module:550
+msgid "Show parent nodes"
+msgstr "Afficher les noeuds parents"
+
+#: relativity.module:553
+msgid "If checked, a list of all parents will be displayed with each node."
+msgstr "Lorsque coché, la liste de tous les noeuds parents sera affichée avec chacun noeud."
+
+#: relativity.module:558
+msgid "Show children nodes"
+msgstr "Affiche les noeuds enfants"
+
+#: relativity.module:561
+msgid "If checked, a list of all children will be displayed with each node."
+msgstr "Lorsque coché, la liste des noeuds enfants s'affichera avec chaque noeud."
+
+#: relativity.module:566
+msgid "Show actions"
+msgstr "Afficher les actions"
+
+#: relativity.module:569
+msgid "If checked, a list of all possible actions will be displayed with each node."
+msgstr "Lorsque coché, la liste de toutes les actions possibles sera affichée avec chaque noeud."
+
+#: relativity.module:572;1499
+msgid "title only"
+msgstr "titre seulement"
+
+#: relativity.module:572;1499
+msgid "node teaser"
+msgstr "noeud abrégé"
+
+#: relativity.module:572;1499
+msgid "node body"
+msgstr "contenu du noeud"
+
+#: relativity.module:572
+msgid "hide this child type"
+msgstr "cache ce type de noeud enfant"
+
+#: relativity.module:577
+msgid "%chname Child Rendering Rule for %pname Parents"
+msgstr "Les règles d'affichage des noeuds %chname pour les noeuds parents %pname"
+
+#: relativity.module:592
+msgid "Below are the general settings for node relationships for each node type.  The %display and %advanced pages use the settings on this page, so be sure to save these settings before proceeding to either of them."
+msgstr "Ci-dessous, vous trouverez les paramètres généraux de relations nodales pour chaque type de noeud. Les pages %display et %advanced utilisent les paramètres de cette page: assurez-vous de sauvegarder ces paramètres avant de continuer."
+
+#: relativity.module:602
+msgid "Which Node types Should Relationships be Managed For?"
+msgstr "Pour quels types de noeuds les relations devraient-elles être gérées?"
+
+#: relativity.module:605
+msgid "What types of nodes should Node Relativity use for configuration?  Be sure to include any node type involved (both parent and children types). After saving this, configuration options will appear for all of the node types that you specified."
+msgstr "Indiquez les types de noeuds que le module Relativité doit utiliser pour la configuration. Assurez-vous d'inclure tous les types de noeuds impliqués (autant parents qu'enfants). Après avoir sauvegardé ceci, les options de configuration vont apparaître pour tous les types de noeuds que vous aurez sélectionnés."
+
+#: relativity.module:616
+msgid "Label for Parent Nodes links"
+msgstr "Étiquette pour les noeuds de type parent"
+
+#: relativity.module:617
+msgid "Related Parents"
+msgstr "Parents liés"
+
+#: relativity.module:624
+msgid "Label for Child Nodes links"
+msgstr "Étiquette pour les noeuds de type enfant"
+
+#: relativity.module:625;1757
+msgid "Related Items"
+msgstr "Items reliés"
+
+#: relativity.module:632
+msgid "Label for Related Actions links"
+msgstr "Étiquette pour les actions reliées "
+
+#: relativity.module:633;1926
+msgid "Related Actions"
+msgstr "Actions reliées"
+
+#: relativity.module:640
+msgid "Label for Ancestor Navigation links"
+msgstr "Étiquette pour les liens de navigation vers les ancêtres"
+
+#: relativity.module:641;1316;1328;1720
+msgid "Related Ancestors"
+msgstr "Ancêtres reliés"
+
+#: relativity.module:657
+msgid "Parental Ordinality"
+msgstr "Ordinalité parentale"
+
+#: relativity.module:659
+msgid "one"
+msgstr "un"
+
+#: relativity.module:659
+msgid "one or more"
+msgstr "un ou plus"
+
+#: relativity.module:660
+msgid "How many parents can this node type have?"
+msgstr "Indiquez combien de parents ce type de noeud peut posséder."
+
+#: relativity.module:665
+msgid "Allowable Child Node types"
+msgstr "Types de noeuds filiaux disponibles"
+
+#: relativity.module:668
+msgid "What types of nodes are allowed to be attached to this type?"
+msgstr "Indiquez les types de noeuds qui peuvent être attachés à celui-ci."
+
+#: relativity.module:690
+msgid "Navigate through a node's ancestors"
+msgstr "Navigation à travers les noeuds ancêtres"
+
+#: relativity.module:813
+msgid "Search algorithm '%algo' not supported"
+msgstr "L'algorithme de recherche '%algo' n'est pas supporté"
+
+#: relativity.module:1084
+msgid "Access denied"
+msgstr "Accès refusé"
+
+#: relativity.module:1191
+msgid "Removing dependent children (%children) from dependent parents (%parents)"
+msgstr "Détacher la dépendance filiale (%children) des dépendances parentales (%parents)"
+
+#: relativity.module:1248
+msgid "You're not allowed to create this type of attachment."
+msgstr "Vous n'êtes par autorisé à créer ce type de liaison."
+
+#: relativity.module:1399
+msgid "Title"
+msgstr "Titre"
+
+#: relativity.module:1414;1777
+msgid "Specify the node id (nid) of the starting node"
+msgstr "Indiquez l'identificateur (nid) du noeud de départ"
+
+#: relativity.module:1424
+msgid "Follow Parent Paths"
+msgstr "Suivre les pistes parentales"
+
+#: relativity.module:1427
+msgid "If checked, the search engine will follow parent-oriented paths while searching for results."
+msgstr "Lorsque coché, le moteur de recherche va suivre la piste parentale pour arriver à ses résultats."
+
+#: relativity.module:1431
+msgid "Follow Child Paths"
+msgstr "Suivre les pistes filiales"
+
+#: relativity.module:1434
+msgid "If checked, the search engine will follow child-oriented paths while searching for results."
+msgstr "Lorsque coché, le moteur de recherche va suivre la piste filiale pour arriver à ses résultats."
+
+#: relativity.module:1438
+msgid "Require Unique Types"
+msgstr "Exige des types uniques"
+
+#: relativity.module:1441
+msgid "If checked, the search engine will return only the first instance of each node type found."
+msgstr "Lorsque coché, le moteur de recherche va retourner uniquement la première instance de chacun des noeuds trouvé."
+
+#: relativity.module:1452
+msgid "Max Search Results"
+msgstr "Nombre max. de résultats"
+
+#: relativity.module:1455
+msgid "The maximum number of results to return."
+msgstr "Nombre maximum de résultats à retourner."
+
+#: relativity.module:1459
+msgid "Search Distance"
+msgstr "Distance de la recherche"
+
+#: relativity.module:1462
+msgid "How many levels away from the starting node should be searched (recursion depth)?"
+msgstr "Indiquez l'éloignement (en niveaux) du noeud de départ pour la recherche (profondeur de récursion)."
+
+#: relativity.module:1466
+msgid "Search Algorithm"
+msgstr "Algorithme de recherche"
+
+#: relativity.module:1468
+msgid "Depth-First Search"
+msgstr "Recherche Depth-First (DFS)"
+
+#: relativity.module:1469
+msgid "Specify the search algorithm to use for searching the network of nodes (currently, only DFS is supported)."
+msgstr "Indiquez l'algorithme de recherche qui doit être utilisé pour rechercher le réseau de noeuds (seul DFS est supporté pour le moment)."
+
+#: relativity.module:1473
+msgid "Search Node types"
+msgstr "Types de noeuds à rechercher"
+
+#: relativity.module:1476
+msgid "Specify which node types to search for.  Only include nodes of this type in the results (leave blank for all)."
+msgstr "Indiquez les types de noeuds à rechercher. Les résultats ne comprendront que ces types de noeuds (laisser vide pour indiquer \"tout\")."
+
+#: relativity.module:1481
+msgid "End Point Node types"
+msgstr "Noeuds de type terminal"
+
+#: relativity.module:1484
+msgid "Specify which node types to stop searching beyond, but include in the results."
+msgstr "Indiquez le dernier type de noeud à rechercher, mais inclure celui-ci dans les résultats."
+
+#: relativity.module:1489
+msgid "Avoid Node types"
+msgstr "Ignorer les noeuds de ce type"
+
+#: relativity.module:1492
+msgid "Specify which node types to avoid completely. These will not be included in the results."
+msgstr "Indiquez les types de noeuds à éviter complètement. Ceux-ci ne seront pas inclus dans les résultats."
+
+#: relativity.module:1497
+msgid "Display Format"
+msgstr "Format d'affichage"
+
+#: relativity.module:1500
+msgid "Specify the way in which the results should be formatted."
+msgstr "Spécifiez la méthode de mise en forme des résultats."
+
+#: relativity.module:1504
+msgid "Perform Search Trace"
+msgstr "Effectuer un cheminement de recherche"
+
+#: relativity.module:1507
+msgid "If checked, the search engine will log each node that was found leading up to each result."
+msgstr "Lorsque coché, le moteur de recherche gardera une trace de chaque noeud pour lequel il a obtenu un résultat."
+
+#: relativity.module:1511
+msgid "Only Search My Nodes"
+msgstr "Ne rechercher que mes propres noeuds"
+
+#: relativity.module:1514
+msgid "If checked, the search engine will only consider noded created by the current user when it is searching for nodes."
+msgstr "Lorsque coché, le moteur de recherche se limitera aux noeuds créés par l'utilisateur en cours pour rechercher des noeuds. "
+
+#: relativity.module:1518
+msgid "Display Search Node Form Field"
+msgstr "Afficher le champs de recherche par noeuds dans le formulaire"
+
+#: relativity.module:1521
+msgid "If checked, the search page will display a form field allowing viewers to specify an alternate starting node."
+msgstr "Losque coché, la page de recherche affichera un champs permettant aux utilisateurs de spécifier un noeud de départ différent."
+
+#: relativity.module:1525
+msgid "Display Search Keyword Form Field"
+msgstr "Afficher un champs de mot clé"
+
+#: relativity.module:1528
+msgid "If checked, the search page will display a form field allowing viewers to specify a keyword to filter the results on."
+msgstr "Lorsque coché, cette page de recherche affichera une option permettant aux utilisateurs de spécifier un mot clé pour filtrer les résultats."
+
+#: relativity.module:1543;1556
+msgid "Either \"Follow Parent Paths\" or \"Follow Child Paths\" must be selected."
+msgstr "Sélectionner soit  \"Suivre les liens parentaux\" ou \"Suivre les liens filiaux\"."
+
+#: relativity.module:1631;1634
+msgid "Search Results"
+msgstr "Résultats de la recherche"
+
+#: relativity.module:1786
+msgid "Search Words (optional)"
+msgstr "Mots recherchés (optionnel)"
+
+#: relativity.module:1795
+msgid "Search"
+msgstr "Recherche"
+
+#: relativity.module:1832
+msgid "(Distance: %depth)"
+msgstr "(Distance: %depth)"
+
+#: relativity.module:1836;1842
+msgid " (Distance: %depth)"
+msgstr " (Distance: %depth)"
+
+#: relativity.module:1887
+msgid "create new %type"
+msgstr "créer un nouveau %type"
+
+#: relativity.module:1894
+msgid "attach existing %type"
+msgstr "lier un %type existant"
+
+#: relativity.module:1897
+msgid "attach %type"
+msgstr "lier %type"
+
+#: relativity.module:1919
+msgid "Remove "
+msgstr "Retirer "
+
+#: relativity.module:1832
+msgid "1 comment"
+msgid_plural "%count comments"
+msgstr[0] "commentaire"
+msgstr[1] "commentaires"
+
+#: relativity.module:355
+msgid "create node relativity queries"
+msgstr "créer une requête de relativité"
+
+#: relativity.module:355
+msgid "edit own node relativity queries"
+msgstr "modifier ses propres requêtes de relativité"
+
+#: relativity.module:0
+msgid "relativity"
+msgstr "relativité"
+

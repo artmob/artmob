@@ -1,0 +1,25 @@
+.calendar {
+  z-index: 6;
+}
+.calendar table {
+  width: auto;
+}
+.calendar table td {
+  font-size: 100%;
+}
+.jscalendar-icon {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent url(calendar.png) no-repeat center top;
+}
+input.form-text.jscalendar {
+  margin-right: 4px;
+  width: 11.5em;
+}
+div.form-item.jscalendar {
+  width: 16em;
+}

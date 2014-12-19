@@ -1,0 +1,87 @@
+<?php
+// $Id: filefield.install,v 1.2.6.2 2008/01/03 16:40:38 jpetso Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function filefield_install() {
+}
+
+function filefield_update_1() {
+  $ret = array();
+
+  include_once(drupal_get_path('module', 'content') .'/content.module');
+  include_once(drupal_get_path('module', 'content') .'/content_admin.inc');
+
+  $fields = content_fields();
+
+  foreach ($fields as $field) {
+    switch ($field['type']) {
+      case 'file':
+        $columns = array(
+          'list' => array('type' => 'int', 'not null' => TRUE, 'default' => '0'),
+        );
+        content_alter_db_field(array(), array(), $field, $columns);
+        break;
+    }
+  }
+  db_query('DELETE FROM {cache}');
+  return $ret;
+}
+
+function filefield_update_2() {
+  cache_clear_all('*', 'cache_menu', TRUE);
+  return array();
+}
+
+/**
+ * Update to filefield 5.x-2.3: Move the 'show_list' widget setting
+ * to the (inverse) 'force_list' field setting.
+ */
+function filefield_update_3() {
+  $ret = array();
+
+  include_once(drupal_get_path('module', 'content') .'/content.module');
+  include_once(drupal_get_path('module', 'content') .'/content_admin.inc');
+
+  $fields = content_fields();
+  foreach ($fields as $field) {
+    switch ($field['type']) {
+      case 'file':
+        $result = db_query("SELECT * FROM {node_field_instance} WHERE field_name = '%s'", $field['field_name']);
+
+        while ($instance = db_fetch_object($result)) {
+          $widget_settings = unserialize($instance->widget_settings);
+
+          if (isset($widget_settings['show_list'])) {
+            $show_list = $widget_settings['show_list'];
+            unset($widget_settings['show_list']);
+
+            // write the widget settings without 'show_list' to the instance
+            $ret[] = update_sql(
+              "UPDATE {node_field_instance}
+               SET widget_settings = '". serialize($widget_settings) ."'
+               WHERE field_name = '". $field['field_name'] ."'
+               AND type_name = '". $instance->type_name ."'"
+            );
+
+            // write the field settings with the new $force_list to the global settings
+            $global = db_result(db_query(
+              "SELECT * FROM {node_field} WHERE field_name = '%s'", $field['field_name']
+            ));
+            $field_settings = unserialize($global->global_settings);
+            $field_settings['force_list'] = ($show_list == 0) ? 1 : 0;
+            $ret[] = update_sql(
+              "UPDATE {node_field}
+               SET global_settings = '". serialize($field_settings) ."'
+               WHERE field_name = '". $field['field_name'] ."'"
+            );
+          }
+        }
+        break;
+    }
+  }
+  db_query('DELETE FROM {cache}');
+  db_query('DELETE FROM {cache_content}');
+  return $ret;
+}

@@ -1,0 +1,147 @@
+<?php
+// $Id: jscalendar.module,v 1.14.2.7 2008/06/19 22:35:37 nedjo Exp $
+
+/**
+ * @file
+ * Provide popup calendar.
+ *
+ * Usage:
+ *
+ * <code>
+ * $form['date'] = array(
+ *   '#type' => 'textfield',
+ *   '#attributes' => array('class' => 'jscalendar')
+ * );
+ *
+ * // Optionally, set startup parameters.
+ * // E.g., don't show time.
+ * $form['#jscalendar_showsTime'] = 'false';
+ * </code>
+ */
+
+/**
+ * Implementation of hook_menu()
+ */
+function jscalendar_menu($may_cache){
+  $items = array();
+  if ($may_cache) {
+    $items[] = array(
+      'path' => 'admin/settings/jscalendar',
+      'title' => t('JS Calendar'),
+      'description' => t('Configurations for the popup calendar'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('jscalendar_admin_settings'),
+      'access' => user_access('administer site configuration'),
+    );
+    
+  }
+  return $items;
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function jscalendar_form_alter($form_id, &$form) {
+  if ($form_id == 'comment_form' && isset($form['admin']) && isset($form['admin']['date'])) {
+    $form['admin']['date']['#attributes'] = array('class' => 'jscalendar');
+  }
+  elseif (isset($form['type']) && $form['type']['#value'] .'_node_form' == $form_id && isset($form['author']) && isset($form['author']['date'])) {
+    $form['author']['date']['#attributes'] = array('class' => 'jscalendar');
+  }
+  foreach (element_children($form) as $key) {
+    if (isset($form[$key]) && isset($form[$key]['#attributes']) && isset($form[$key]['#attributes']['class']) && !(strpos($form[$key]['#attributes']['class'], 'jscalendar') === FALSE)) {
+      jscalendar_load();
+      $settings = array('ifFormat', 'showsTime', 'timeFormat');
+      foreach ($settings as $setting) {
+        if (isset($form[$key]['#jscalendar_' . $setting])) {
+          $form[$key.'_jscalendar']['#tree'] = TRUE;
+          $form[$key.'_jscalendar'][$setting] = array(
+            '#type' => 'hidden',
+            '#value' => $form[$key]['#jscalendar_' . $setting]
+          );
+          unset($form[$key]['#jscalendar_' . $setting]);
+        }
+      }
+    }
+    // If necessary, recurse through all children.
+    jscalendar_form_alter($form_id, $form[$key]);
+  }
+}
+
+/**
+ * Menu callback for admin settings.
+ */
+function jscalendar_admin_settings() {
+  $form = array();
+  $form['jscalendar_css'] = array(
+    '#type' => 'select',
+    '#title' => t('JSCalendar style'),
+    '#description' => t('Choose the JSCalendar style.'),
+    '#default_value' => variable_get('jscalendar_css', NULL),
+    '#options' => jscalendar_available_styles(),
+  );
+  $form = system_settings_form($form);
+  return $form;
+}
+
+/**
+ * Search recursively for any CSS file.
+ */
+function jscalendar_available_styles($dir = NULL) {
+  $path = drupal_get_path('module', 'jscalendar');
+  $files = file_scan_directory($path, '\.css$');
+  foreach ($files as $file) {
+    if ($file->basename != 'jscalendar.css') {
+      if ($file->basename == 'theme.css') {
+        $file->name = str_replace(array($path .'/lib/skins/', '/theme.css'), '', $file->filename);
+      }
+      $jscalendar_styles[$file->filename] = $file->name;
+    }
+  }
+  return $jscalendar_styles;
+}
+
+/**
+ * Load needed files.
+ */
+function jscalendar_load($lib_locale = NULL) {
+  global $locale;
+  static $loaded = FALSE;
+
+  if ($loaded) {
+    return;
+  }
+
+  // If the locale library hasn't been explicitly set, we look for support for the current locale.
+  if (empty($lib_locale)) {
+    // Supported directly.
+    if (in_array($locale, array('af', 'bg', 'ca', 'da', 'de', 'el', 'es', 'fi', 'fr', 'hu', 'id', 'is', 'it', 'ja', 'kn', 'ko', 'lt', 'nl', 'pl', 'ro', 'ru', 'sk', 'sv', 'tr'))) {
+      $lib_locale = $locale;
+    }
+    // Supported indirectly.
+    else if ($locale == 'cs') {
+       $lib_locale = 'cs-utf8';
+    }
+    else if ($locale == 'he') {
+       $lib_locale = 'he-utf8';
+    }
+    else if (($locale == 'pt-br') || ($locale == 'pt-pt')) {
+       $lib_locale = 'pt';
+    }
+    else if (($locale == 'zh-hans') || ($locale == 'zh-hant')) {
+       $lib_locale = 'zh';
+    }
+    // Not supported, default to 'en'.
+    else {
+      $lib_locale = 'en';
+    }
+  }
+  $path = drupal_get_path('module', 'jscalendar');
+  drupal_add_js($path . '/lib/calendar_stripped.js');
+  drupal_add_js($path . '/lib/calendar-setup_stripped.js');
+  drupal_add_js($path . '/lib/lang/calendar-' . $lib_locale . '.js');
+  drupal_add_js($path . '/jscalendar.js');
+  drupal_add_css($path .'/jscalendar.css');
+  drupal_add_css(variable_get('jscalendar_css', $path .'/lib/skins/aqua/theme.css'));
+  $loaded = TRUE;
+}

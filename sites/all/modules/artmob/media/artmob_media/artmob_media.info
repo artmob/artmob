@@ -1,0 +1,6 @@
+; $Id: artmob_media.info,v3.1 2008/03/13 20:55:33 stop14 Exp $
+name = Artmob Media
+description = Adds common elements for other Artmob media modules.
+package = Artmob Media
+version = 3.1
+

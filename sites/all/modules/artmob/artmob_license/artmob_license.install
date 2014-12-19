@@ -1,0 +1,98 @@
+<?php
+// $Id: artmob_license install,v 1.0 2008/03/01 01:30:00 drumm Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function artmob_license_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+    db_query("CREATE TABLE IF NOT EXISTS {am_license} (
+    `license_id` int(10) unsigned NOT NULL auto_increment,
+    `nid` int(10) unsigned NOT NULL default '0',
+    `uid` int(10) unsigned NOT NULL default '0',
+    `license_name` text NOT NULL,
+    `license_description` text NOT NULL,
+    `description_format` text NOT NULL,
+    `source` text NOT NULL,
+    `version` text,
+    `web_reference` text,
+    `related_license_id` int(10) unsigned NOT NULL default '0',
+    `large_icon_path` text NOT NULL,
+    `small_icon_path` text NOT NULL,
+    `additional_instructions` text,
+    `instruction_format` int(10) unsigned NOT NULL default '0',
+    PRIMARY KEY  (`license_id`)
+    ) ENGINE=MyISAM  DEFAULT CHARSET=utf8 ");
+    
+      db_query("CREATE TABLE {am_copyright_holders} (
+        cid integer unsigned auto_increment primary key,
+        node_nid int unsigned NOT NULL default '0',
+        contributor_id int unsigned NOT NULL default '0',
+        contributor_nid int unsigned NOT NULL default '0',
+        license_id int unsigned NOT NULL default '0',
+        first_name text,
+        key_name text
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+      db_query("CREATE TABLE {am_license_contributors} (
+        cid integer unsigned auto_increment primary key,
+        citation_id int unsigned NOT NULL default '0',
+        license_id int unsigned NOT NULL default '0',
+        contributor_id int unsigned NOT NULL default '0'
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+      db_query("CREATE TABLE {am_node_license} (
+        node_nid int unsigned NOT NULL default '0',
+        contributor_id int unsigned NOT NULL default '0',
+        license_id int unsigned NOT NULL default '0',
+        widget_name text,
+        sequence int unsigned NOT NULL default '0'
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+      db_query("CREATE TABLE {am_citation_license} (
+        citation_id int unsigned NOT NULL default '0',
+        contributor_id int unsigned NOT NULL default '0',
+        license_id int unsigned NOT NULL default '0',
+        widget_name text,
+        sequence int unsigned NOT NULL default '0'
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+
+      break;
+    case 'pgsql':
+      break;
+  }
+  
+  $core_licenses  = array(
+  array('title'=>'Creative Commons: Attribution','body'=>'You may distribute, remix, tweak and build upon this work, even commercially, as long as you credit the copyright holder(s) for the original creation.','source'=>'http://creativecommons.org/licenses/by/3.0/','version'=>3.0),
+  array('title'=>'Creative Commons: Attribution-NoDerivatives','body'=>'You may redistribute this work, commercially and non-commercially, as long as it is passed along unchanged and in whole, with credit to the copyright holder(s).','source'=>'http://creativecommons.org/licenses/by-nd/3.0/','version'=>3.0),
+  array('title'=>'Creative Commons: Attribution-NonCommercial-ShareAlike','body'=>'You may remix, tweak, and build upon this work non-commercially, as long as you credit the copyright holder(s) and license your new creations under the identical terms.','source'=>'http://creativecommons.org/licenses/by-nc-sa/3.0','version'=>3.0),
+  array('title'=>'Creative Commons: Attribution-ShareAlike','body'=>'You may remix, tweak, and build upon this work even for commercial purposes, as long as you credit the copyright holder(s) and license your new creations under the identical terms. This license is often compared to “copyleft” free and open source software licenses. All new works based on this work  must carry the same license, so any derivatives will also allow commercial use. This is the license used by Wikipedia.','source'=>'http://creativecommons.org/licenses/by-sa/3.0','version'=>3.0),
+  array('title'=>'Creative Commons: Attribution-NonCommercial','body'=>'You may remix, tweak, and build upon this work non-commercially, and although your new works must also acknowledge the copyright holder(s) and be non-commercial, you don’t have to license your derivative works on the same terms.','source'=>'http://creativecommons.org/licenses/by-nc/3.0','version'=>3.0),
+  array('title'=>'Creative Commons: Attribution-NonCommercial-NoDerivatives','body'=>'You may download this work and share it with others as long as you give credit to the copyright holder(s), but you can’t change it in any way or use it commercially.','source'=>'http://creativecommons.org/licenses/by-nc-nd/3.0','version'=>3.0)
+  );
+  
+  foreach ($core_licenses as $licenses) {
+    $nobj = (object) $licenses;
+    $nobj->type = "license";
+    $nobj->status = 1;
+    $nobj->nid = '';
+    node_save($nobj);
+  }
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function artmob_license_uninstall() {
+  db_query('DROP TABLE {am_license}');
+  db_query('DROP TABLE {am_copyright_holders}');
+  db_query('DROP TABLE {am_license_contributors}');
+  db_query('DROP TABLE {am_node_license}');
+  db_query('DROP TABLE {am_citation_license}');
+}
+
+
+?>

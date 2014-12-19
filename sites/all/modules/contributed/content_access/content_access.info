@@ -1,0 +1,9 @@
+; $Id: content_access.info,v 1.1 2007/05/17 20:32:07 fago Exp $
+name = Content Access
+description = Provides flexible content access control
+package = Access control
+; Information added by drupal.org packaging script on 2007-08-20
+version = "5.x-1.2"
+project = "content_access"
+datestamp = "1187603704"
+

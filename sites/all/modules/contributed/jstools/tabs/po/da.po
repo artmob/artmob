@@ -1,0 +1,126 @@
+# Danish translation of Drupal (tabs.module)
+# Copyright 2007 Morten Wulff <wulff@ratatosk.net>
+msgid ""
+msgstr ""
+"Project-Id-Version: Danish translation of Drupal (tabs.module) $Id: da.po,v 1.1.2.1 2007/09/22 13:36:26 wulff Exp $\n"
+"POT-Creation-Date: 2007-09-22 15:28+0200\n"
+"PO-Revision-Date: 2007-09-22 15:35+0100\n"
+"Last-Translator: Morten Wulff <wulff@ratatosk.net>\n"
+"Language-Team: Danish <l10n@drupaldanmark.dk>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Poedit-Language: Danish\n"
+"X-Poedit-Country: DENMARK\n"
+
+#: tabs.module:14
+#: tabs.info:0
+msgid "Tabs"
+msgstr "Faner"
+
+#: tabs.module:15
+msgid "Configuration for tabs"
+msgstr "Indstillinger for faner"
+
+#: tabs.module:33
+msgid "Slide effect"
+msgstr "Glid"
+
+#: tabs.module:34
+msgid "Apply slide effect when changing tabs."
+msgstr "Brug glide-effekt ved skift mellem faner."
+
+#: tabs.module:36;43;57
+msgid "disabled"
+msgstr "deaktiveret"
+
+#: tabs.module:36;43;57
+msgid "enabled"
+msgstr "aktiveret"
+
+#: tabs.module:40
+msgid "Fade effect"
+msgstr "Fade"
+
+#: tabs.module:41
+msgid "Apply fade effect when changing tabs."
+msgstr "Brug fade-effekt ved skift mellem faner."
+
+#: tabs.module:47
+msgid "Effect speed"
+msgstr "Effekthastighed"
+
+#: tabs.module:48
+msgid "Speed at which to apply effects."
+msgstr "Hvor hurtigt effekterne udføres"
+
+#: tabs.module:50
+msgid "slow"
+msgstr "langsom"
+
+#: tabs.module:50
+msgid "fast"
+msgstr "hurtig"
+
+#: tabs.module:54
+msgid "Fixed height"
+msgstr "Fast højde"
+
+#: tabs.module:55
+msgid "Set all tabs to have the height of the tallest tab. If not enabled, content will adjust to fit when tabs are changed. Note: fixed height is not fully compatible with slide and fade effects."
+msgstr "Angiv at alle faner skal have samme højde som den højeste fane. Alternativt tilpasser indholdet sig når fanerne ændres. Bemlrk: Fast højde er ikke fuldt kompatibelt med glid- og fade-effekterne."
+
+#: tabs.module:0
+msgid "tabs"
+msgstr "faner"
+
+#: tabs.info:0
+msgid "A helper module for creating tabbed pages."
+msgstr "Modul der opretter sider med faneblade."
+
+#: tabs.info:0
+#: docs/tabsexample.info:0
+msgid "Javascript tools"
+msgstr "Javascript værktøjer"
+
+#: docs/tabsexample.module:12
+msgid "tabs example"
+msgstr "fane eksempel"
+
+#: docs/tabsexample.module:33;46
+msgid "One"
+msgstr "Første"
+
+#: docs/tabsexample.module:34;47
+msgid "First tab content."
+msgstr "Indhold af første fane."
+
+#: docs/tabsexample.module:38;51
+msgid "Two"
+msgstr "Anden"
+
+#: docs/tabsexample.module:39;52
+msgid "Second tab content."
+msgstr "Indhold af anden fane."
+
+#: docs/tabsexample.module:56
+msgid "Three"
+msgstr "Tredje"
+
+#: docs/tabsexample.module:57
+msgid "Third tab content."
+msgstr "Indhold af tredje fane."
+
+#: docs/tabsexample.module:0
+msgid "tabsexample"
+msgstr "fane eksempel"
+
+#: docs/tabsexample.info:0
+msgid "Tabs Example"
+msgstr "Fane eksempel"
+
+#: docs/tabsexample.info:0
+msgid "An example tabs implementation. Access the sample tabs at /tabsexample."
+msgstr "Eksempel på implementering af faner. Du kan se fanerne på /tabsexample."
+

@@ -1,0 +1,6 @@
+; $Id: artmob_reporting.info,v 1.0 2011/04/15 20:55:33 stop14 Exp $
+name = Artmob Reporting
+description = Provides statistic report for Artmob-related features.
+package = Artmob
+; dependencies = 
+version = 3.1

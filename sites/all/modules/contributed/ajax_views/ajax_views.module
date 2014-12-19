@@ -1,0 +1,305 @@
+<?php
+
+/**
+ * Implementation of hook_views_style_plugins.
+ * 
+ * Add this type to the view style drop down (adds to both Page and Block type)
+ */
+function ajax_views_views_style_plugins() {
+	return array(
+		'ajax_view' => array(
+			'name' => t('AJAX Paging Block View'),
+			'theme' => 'views_ajax',
+    		'validate' => 'ajax_views_plugin_validate',
+			'weight' => -12,
+		),
+		
+  	);
+}
+
+/**
+ * Add this argument to the arguments drop down.
+ */
+function ajax_views_views_arguments() {
+  $arguments = array(
+    'ajax_response' => array(
+      'name' => t('AJAX Views: AJAX Selector'),
+      'handler' => 'views_handler_arg_ajax',
+      'option' => 'string',
+      'help' => t('This argument specifies an AJAX selector (/ajax).'),
+    ),
+  );
+  return $arguments;
+}
+
+/**
+ * Ajax views validation callback. 
+ * 
+ * Makes sure that the Paged Block is only specifed on the Block group.
+ */
+function ajax_views_plugin_validate($type, $view, $form) {
+	// Ensure AJAX Block is not specified as a Page Type
+	if ($view['page_type'] == 'ajax_view') {
+		form_error($form["$type-info"]['page_type'], t('AJAX Paging Block View can only be specified on a Block.'));
+	}
+
+	// Ensure AJAX Block is specified as a Block Type, that the AJAX Selector is also specified
+	if ($view['block_type'] == 'ajax_view') {
+		$has_ajax_argument = false;
+		foreach ($view['argument'] as $argument) {
+			if($argument['type'] == 'ajax_response') {
+				$has_ajax_argument = true;
+				break;
+			}
+		}
+		
+		if(!$has_ajax_argument) {
+			form_error($form["$type-info"]['block_type'], t('If you specify AJAX Paging Block View, then you must also add the AJAX Selector as an argument.'));
+		}
+	}
+}
+
+/**
+ * Handler for our own ajax_views argument; mimics the feed selector
+ */
+function views_handler_arg_ajax($op, &$query, $argtype, $arg = '') {
+  switch($op) {
+    case 'summary':
+    case 'sort':
+    case 'link':
+    case 'title':
+      break;
+    case 'filter':
+      // This is a clone of the default selector, but it just invokes ours
+      // rather than calling all of them.
+      ajax_views_ajax_argument('argument', $GLOBALS['current_view'], $arg, $argtype);
+  }
+}
+
+/**
+ * Ajax/Feed argument hook that will convert us to an Ajax page or RSS Feed.
+ * the 4th argument isn't part of the hook, but we use it to differentiate
+ * when called as a hook or when called manually from views_rss_views_post_view
+ */
+function ajax_views_ajax_argument($op, &$view, $arg, $argdata = NULL) {
+	if ($op == 'argument' && $arg == 'ajax') {
+  	if($arg == 'ajax') {
+  		$view->page_type = 'ajax_view';
+  		$view->pager_limit = $view->nodes_per_block;
+    }
+
+    if ($argdata['options']) {
+      $view->description = $argdata['options'];
+    }
+
+    // reset the 'real url' to the URL without the ajax argument.
+    $view_args = array();
+    $max = count($view->args);
+    foreach ($view->args as $id => $view_arg) {
+      ++$count;
+      if ($view_arg == $arg && $view->argument[$id]['id'] == $argdata['id']) {
+        if ($count != $max) {
+          $view_args[] = $argdata['wildcard'];
+        }
+      }
+      else {
+        $view_args[] = $view_arg;
+      }
+    }
+    $view->feed_url = views_get_url($view, $view_args);
+  }
+}
+
+/**
+ * Main theme function for ajax views. This will get called for any block that has
+ * the AJAX View type specified, or for any page with the AJAX View Argument (/ajax)
+ * specified.  So this is a traffic cop to render both the block wrapper, and the ajax
+ * content that is held within the wrapper. 
+ * 
+ * You can simply override views_ajax_block or views_ajax_page to control the style
+ * of these rendering across the entire site, or you can append the view name to the 
+ * end to customize specific renderings, for example: views_ajax_page_press_releases for
+ * a view with the name press_releases.
+ *
+ * @param $view		The View
+ * @param $nodes	An array of nodes to render
+ * @param $type		The type of view (in this case 'page')
+ * @return 			The themed content.
+ */
+function theme_views_ajax($view, $nodes, $type) {
+
+	if($type == 'block') {
+		$function = 'views_ajax_block';
+	}
+	else if($type == 'page') {
+		$function = 'views_ajax_page';
+	}
+	else {
+		return;
+	}
+	
+	if (!($func = theme_get_function($function . "_" . $view->name))) {
+		$func = theme_get_function($function);
+	}
+
+	if ($func) {
+		$args = func_get_args();
+		return call_user_func_array($func, $args);
+	}
+	return;
+}
+
+/**
+ * Generate the appropriate ajax url, inserting wildcards for all things
+ * except our ajax selector.
+ */
+function _generate_ajax_url($view) {
+	$url .= "$view->url";
+  $i = 0;
+  foreach ($view->argument as $argument) {
+    if($argument['type'] == 'ajax_response') {
+      $url .= "/ajax";
+    }
+    else if ($view->args[$i]){
+      $url .= '/' . $view->args[$i];
+    }
+    else if ($argument['wildcard']) {
+      $url .= '/' . $argument['wildcard'];
+    }
+    else {
+      $url .= "/*";
+    }
+    $i++;
+  }
+  return url($url);
+}
+
+/**
+ * Theme function to render the body of the ajax-ified block. This default returns a div
+ * and some javascript to load the first page via jQuery.
+ *
+ * @param $view		The View
+ * @param $nodes	An array of nodes to render
+ * @param $type		The type of view (in this case 'page')
+ * @return 			The content of the block.
+ */
+function theme_views_ajax_block($view, $nodes, $type) {
+
+	$ajax_url = _generate_ajax_url($view);
+	$view_css = views_css_safe("ajax-view-block-$view->name");
+	drupal_add_css(drupal_get_path('module', 'ajax_views') . '/ajax_views.css');
+	drupal_add_js(drupal_get_path('module', 'ajax_views') . '/ajax_views.js');
+	drupal_add_js("$(document).ready(function() {
+		$.get('$ajax_url', {page: 0}, function(data, status) {
+			$('.$view_css').html(data);
+		});
+	})", "inline");
+	
+	$output .= "<div class='$view_css'>";
+	$output .= theme_image('misc/progress.gif', 'Progress') . "&nbsp;&nbsp; Loading content for $view->page_title";
+	$output .= "</div>";
+	return $output;
+}
+
+/**
+ * Theme function to render the dynamic ajax page that is served to the block. This function
+ * exits so it will not get wrapped by page.tpl.php.
+ *
+ * @param $view		The View
+ * @param $nodes	An array of nodes to render
+ * @param $type		The type of view (in this case 'page')
+ */
+function theme_views_ajax_page($view, $nodes, $type) {
+	
+	//$output .= '<pre>' . print_r($view, true) . '</pre>';
+	$output .= '<div class="ajax_views_headers">';
+	$output .= '<div class="title">' . l($view->page_title, $view->url) . '</div>';
+	if ( _has_feed_argument($view) ) {
+    	$output .= '<div class="rss">' . theme_image('misc/feed.png') . '&nbsp;' . l("RSS",  "$view->url/feed") . '</div>';
+	}
+	$output .= '<div style="clear:both;"></div>';
+	$output .= '</div>';
+	
+	$output .= "<div class='ajax_views_body'>";
+	if (count($nodes)) {
+
+		$function = "views_ajax_page_item";
+		if (!($func = theme_get_function($function . "_" . $view->name))) {
+			$func = theme_get_function($function);
+		}
+		
+		$rendered_nodes = array();
+		foreach($nodes as $node) {
+			$current = node_load($node->nid);
+			$rendered_nodes[] = call_user_func($func, $current); 
+		}
+		
+		$output .= theme('item_list', $rendered_nodes);
+	}
+	else 
+		$output .= views_get_textarea($view, 'block', 'empty');
+
+	$output .= "</div>";
+		
+	$output .= theme('views_ajax_block_pager', $view);
+	
+	drupal_set_header('Content-Type: text/html; charset=utf-8');
+	print $output;
+	module_invoke_all('exit');
+	exit; 
+}
+
+/**
+ * Theme function to render the dynamic ajax page individual items that are served to the block. 
+ *
+ * @param $node		The nodes to render
+ */
+function theme_views_ajax_page_item($node) {
+	//return '<pre>' . print_r($node, true) . '</pre>';
+	return l($node->title, "node/$node->nid");	
+}
+
+function theme_views_ajax_block_pager($view) {
+	
+	$ajax_url = _generate_ajax_url($view);
+	$view_css = views_css_safe("ajax-view-block-$view->name");
+  	$total_pages = ceil($view->total_rows / $view->pager_limit);
+  	$current_page = isset($_GET['page']) ? $_GET['page'] : 0;
+
+  	$output .= '<div class="ajax_views_footers">';
+	$output .= '<div class="ajax_pager_link ajax_prev">&nbsp;';
+  	if ($current_page > 0) {
+		$onclick = "return fetchPage('.$view_css', '$ajax_url', " . ($current_page - 1) . ")";
+	    $output .= l(t('< Previous'), '', array('onclick' => $onclick));
+	}
+	$output .= '</div>';
+	
+	$output .= "<div class='ajax_pages'>&nbsp;";
+	if ($total_pages > 1) {
+		$readable_page = $current_page + 1;
+		$output .= "$readable_page of $total_pages";
+	}
+	$output .= "</div>";
+	
+	$output .= '<div class="ajax_pager_link ajax_next">&nbsp;';
+	if ($current_page + 1 < $total_pages) {
+		$onclick = "return fetchPage('.$view_css', '$ajax_url', " . ($current_page + 1) . ")";
+	    $output .= l(t('Next >'), '', array('onclick' => $onclick));
+	}
+	$output .= '</div>';
+	$output .= '</div>';
+	return $output;
+}
+
+/**
+ * Returns true if the provided view has the rss_feed argument configured.
+ */
+function _has_feed_argument($view) {
+
+    foreach ($view->argument as $argument) {
+        if($argument['type'] == 'rss_feed') {
+            return true;
+        }
+    }
+	return false;
+}

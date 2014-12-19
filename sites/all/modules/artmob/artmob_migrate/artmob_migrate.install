@@ -1,0 +1,28 @@
+<?php
+// $Id: artmob_migrate install,v 1.0 2008/03/07 01:30:00 drumm Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function artmob_migrate_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      db_query("CREATE TABLE {am_migrate} (
+        tool_id integer unsigned NOT NULL default '0',
+        tool_name text,
+        is_run smallint default 0,
+        date_run int(11) NOT NULL,
+        uid int unsigned NOT NULL default '0'
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+      break;
+    case 'pgsql':
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function artmob_migrate_uninstall() {
+}

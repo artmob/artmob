@@ -1,0 +1,6 @@
+; $Id: artmob_main.info,v 3.1 2010/04/26 20:55:33 stop14 Exp $
+name = Artmob Main
+description = This module supports the Artmob Theme and provides a special browsing view for archival sites.
+package = Artmob
+dependencies = content filefield imagefield lightbox2 imageapi views display
+version = 3.1

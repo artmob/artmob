@@ -1,0 +1,188 @@
+# $Id: fr.po,v 1.1.2.3 2008/10/14 09:25:20 slybud Exp $
+#
+# French translation of Drupal (general)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  filefield.module,v 1.50.2.40 2008/06/03 01:46:40 jpetso
+#  filefield.info,v 1.5.2.2 2008/01/22 23:28:15 dopry
+#  filefield_meta.info,v 1.1.2.1 2008/01/22 23:28:15 dopry
+#  filefield_meta.module,v 1.1.2.4 2008/03/09 05:50:46 dopry
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: French translation for filefield drupal module\n"
+"POT-Creation-Date: 2008-10-14 10:42+0200\n"
+"PO-Revision-Date: 2008-10-14 10:54+0100\n"
+"Last-Translator: Sylvain Moreau <sylvain.moreau@ows.fr>\n"
+"Language-Team: Sylvain Moreau, OWS <sylvain.moreau@ows.fr>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n!=1);\n"
+"X-Poedit-Language: French\n"
+
+#: filefield.module:103
+msgid "Always list files"
+msgstr "Toujours lister les fichiers"
+
+#: filefield.module:105
+msgid "If enabled, the \"List\" checkbox will be hidden and files are always shown. Otherwise, the user can choose for each file whether it should be listed or not."
+msgstr "Si activé, la case à cocher \"Lister\" sera cachée et les fichiers toujours affichés. Autrement, l'utilisateur pourra décider pour chaque fichier s'il doit être listé ou non."
+
+#: filefield.module:126
+msgid "Has file"
+msgstr "Possède un fichier"
+
+#: filefield.module:179
+msgid "File upload was unsuccessful."
+msgstr "Le transfert a échoué."
+
+#: filefield.module:302
+msgid "Permitted upload file extensions"
+msgstr "Extensions de fichier permises"
+
+#: filefield.module:305
+msgid "Extensions a user can upload to this field. Separate extensions with a space and do not include the leading dot. Leaving this blank will allow users to upload a file with any extension."
+msgstr "Les extensions qu'un utilisateur peut téléverser vers ce champ. Séparer les extensions avec un espace et ne pas inclure le point initial. Laisser ce champ vide permettra aux utilisateurs de téléverser un fichier possédant n'importe quelle extension."
+
+#: filefield.module:309;909
+msgid "File path"
+msgstr "Chemin du fichier"
+
+#: filefield.module:311
+msgid "Optional subdirectory within the \"%dir\" directory where files will be stored. Do not include trailing slash."
+msgstr "Sous-répertoire facultatif au sein de \"%dir\" où les fichiers seront stockés. Ne pas inclure le slash final."
+
+#: filefield.module:408
+msgid "Files with the extension %ext are not allowed. Please upload a file with an extension from the following list: %allowed_extensions"
+msgstr "Les fichiers avec l'extension %ext ne sont pas admis. Veuillez envoyer un fichier avec une extension figurant dans la liste suivante: %allowed_extensions"
+
+#: filefield.module:469
+msgid "Changes made to the attachments are not permanent until you save this post."
+msgstr "Les changements apportés aux fichiers attachés ne sont pas permanents tant que vous n'avez pas sauvegardé ce formulaire"
+
+#: filefield.module:490
+msgid "Maximum file size: !size."
+msgstr "Taille maximale du fichier: !size."
+
+#: filefield.module:495
+msgid "Allowed extensions: %ext."
+msgstr "Extensions autorisées: %ext."
+
+#: filefield.module:504
+msgid "Attach new file"
+msgstr "Attacher un nouveau fichier"
+
+#: filefield.module:513
+msgid "Upload"
+msgstr "Transfert"
+
+#: filefield.module:543
+msgid "If a new file is uploaded, this file will be replaced upon submitting this form."
+msgstr "Si un nouveau fichier est transféré, ce fichier sera remplacé lors de la validation de ce formulaire."
+
+#: filefield.module:688
+msgid "@field is required. Please upload a file."
+msgstr "@field est obligatoire. Veuillez téléverser un fichier."
+
+#: filefield.module:698
+msgid "@field is required. Please keep at least one file or upload a new one."
+msgstr "@field est obligatoire. Veuillez conserver au moins au moins un fichier ou en téléverser un nouveau."
+
+#: filefield.module:711
+msgid "Default"
+msgstr "Par Défaut"
+
+#: filefield.module:748;749
+msgid "Delete"
+msgstr "Supprimer"
+
+#: filefield.module:748;749
+msgid "Description"
+msgstr "Description"
+
+#: filefield.module:748;749
+msgid "Size"
+msgstr "Taille"
+
+#: filefield.module:749
+msgid "List"
+msgstr "Liste"
+
+#: filefield.module:906
+msgid "File ID"
+msgstr "ID du fichier"
+
+#: filefield.module:907
+msgid "File description"
+msgstr "Description du fichier"
+
+#: filefield.module:908
+msgid "File name"
+msgstr "Nom du fichier"
+
+#: filefield.module:910
+msgid "File MIME type"
+msgstr "Type MIME du fichier"
+
+#: filefield.module:911
+msgid "File size"
+msgstr "Taille du fichier"
+
+#: filefield.module:912
+msgid "Fully formatted HTML file tag"
+msgstr "Balise HTML fichier formatée entièrement"
+
+#: (duplicate) filefield.module:56
+msgid "FileField PHP"
+msgstr "PHP FileField"
+
+#: (duplicate) filefield.module:57
+msgid "FileField requires at least PHP %version."
+msgstr "FileField requiert au minimum la version %version de PHP."
+
+#: filefield.module:82
+msgid "view filefield uploads"
+msgstr "Voir les fichiers de filefield"
+
+#: filefield.module:0
+msgid "filefield"
+msgstr "filefield"
+
+#: filefield.info:0
+msgid "File Field"
+msgstr "Champ de fichier"
+
+#: filefield.info:0
+msgid "Defines a file field type."
+msgstr "Définit un type de champ fichier."
+
+#: filefield.info:0
+#: filefield_meta/filefield_meta.info:0
+msgid "CCK"
+msgstr "CCK"
+
+#: filefield_meta/filefield_meta.module:52
+msgid "width: !w; height: !h; duration: !d"
+msgstr "largeur : !w; hauteur : !h; durée : !d"
+
+#: (duplicate) filefield_meta/filefield_meta.module:37
+msgid "FileField Meta PHP"
+msgstr "PHP Meta FileField"
+
+#: (duplicate) filefield_meta/filefield_meta.module:38
+msgid "FileField Meta requires at least PHP %version."
+msgstr "FileField Meta requiert au minimum la version %version de PHP"
+
+#: filefield_meta/filefield_meta.module:0
+msgid "filefield_meta"
+msgstr "filefield_meta"
+
+#: filefield_meta/filefield_meta.info:0
+msgid "FileField - Meta"
+msgstr "FileField - Meta"
+
+#: filefield_meta/filefield_meta.info:0
+msgid "Add metadata gathering and storage to filefield."
+msgstr "Ajoute la collecte et le stockage de metadata au champ fichier (fielfield)."
+

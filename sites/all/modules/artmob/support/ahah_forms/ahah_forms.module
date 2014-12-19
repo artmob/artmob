@@ -1,0 +1,90 @@
+<?php
+ // $Id: ahah_forms.module,v 1.0 2011/09/15 17:10:33 ramani Exp $
+
+
+/**
+ * @file
+ * Generate the glue between form array and javascript ahah.js.  
+ * Parse the #bind array, and build the Drupal.settings.ahah.elements array
+ * 
+ * $element['foo'] = array( 
+ *   '#type' => 'button'
+ *   '#ahah_bindings' => array ( 
+ *     'event' => 'click',
+ *     'path' => 'widget/widget_update_js',
+ *     'wrapper' => 'widget_wrapper_widget1',
+ *     'params' => array( 'widget_name_js' => 'widget1' ),
+ *   ),
+ * );
+ * 
+   $name = 'widget1';
+   $element[$name] = array (
+    '#tree' => TRUE,
+      '#prefix' => '<div id="widget_wrapper_' . $name .'">',
+      '#suffix' => '</div>',
+      '#ahah_bindings' => array( 
+        array (
+          'selector' => 'input.widget_remove_' + widget_name,
+          'event' => 'click',
+          'path' => 'widget/widget_update_js',
+          'wrapper' => 'widget_wrapper_' . $name,
+          'params' => array( 'widget_name_js' => $name ),          
+        ),
+        array (
+          'selector' => 'select.widget_weight_' + widget_name,
+          'event' => 'change',
+          'path' => 'widget/widget_update_js',
+          'wrapper' => 'widget_wrapper_' . $name,
+          'params' => array( 'widget_name_js' => $name ),          
+        ),
+        
+      ),
+  );
+ * 
+ */
+
+function ahah_forms_form_alter($form_id, &$form) {
+  $form['#after_build'][] =  'ahah_forms_bind_form';
+}
+
+function ahah_forms_scan_form_children( $form_element, $form_id, &$bindings ) {
+  if ( is_array( element_children($form_element) ) ) {
+    foreach (element_children($form_element) as $key) {
+      if ( is_array( $form_element[$key]['#ahah_bindings'] ) ) {
+        foreach ($form_element[$key]['#ahah_bindings'] as $binding) {
+          $binding['form_id'] = $form_id;
+           $binding['id'] = $form_element[$key]['#id'];
+          $bindings[] = $binding;            
+        }
+      }
+      ahah_forms_scan_form_children( $form_element[$key], $form_id, $bindings );
+    }
+  }
+}  
+   
+function ahah_forms_bind_form( $form ) {  
+  $bindings = array();  
+  ahah_forms_scan_form_children( $form, $form['#id'],  $bindings );
+  //  drupal_set_message( "After Scan: Wrapper Bindings = " . dprint_r( $bindings, TRUE ) ); 
+  
+  if ( count( $bindings ) > 0 ) {
+    //add in required javascript files
+    $module_path = drupal_get_path('module', 'ahah_forms');
+    drupal_add_js("$module_path/lib/form.js"); // jquery plugin for easy ahah form submition
+    drupal_add_js("$module_path/ahah_forms.js", 'module', 'footer'); // put in footer, so it can listen to other js files set bindings (kludgy)  
+    
+    drupal_add_js( 
+      array( 
+        'ahah' => array(
+          'basePaths' => array( 'base' => base_path(), 'module' => $module_path ), 
+          'bindings' => array( $bindings ),
+        ), 
+      ), 
+      'setting'
+    );
+  }
+    
+  return $form;
+}
+
+

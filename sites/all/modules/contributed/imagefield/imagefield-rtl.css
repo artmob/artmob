@@ -1,0 +1,14 @@
+div.imagefield-edit-preview  {
+  float:right; /*  LTR: float: left; */
+}
+
+div.imagefield-edit-image-detail {
+  margin-left:20px; /* LTR: margin-left: 180px; */
+  margin-right:180px; /* LTR: margin-right: 20px; */
+}
+
+div.imagefield-edit-image-flags div.form-item {
+	float:left; /* LTR: float: right; */
+}
+
+

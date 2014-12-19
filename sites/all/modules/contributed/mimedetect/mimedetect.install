@@ -1,0 +1,14 @@
+<?php
+// $Id: mimedetect.install,v 1.1.2.1 2008/07/21 21:51:29 drewish Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function mimedetect_install() {
+}
+
+function mimedetect_uninstall() {
+  variable_del('mimedetect_enable_file_binary');
+  variable_del('mimedetect_file_binary');
+}
+

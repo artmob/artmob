@@ -1,0 +1,17 @@
+; $Id: flashvideo_cck.info,v 1.2.2.2 2007/12/11 02:51:17 travist Exp $
+name = FlashVideo CCK
+description = Provides a plugin to allow CCK parameters to overide FlashVideo functionality.
+package = "FlashVideo"
+dependencies = content flashvideo
+
+; Information added by drupal.org packaging script on 2007-12-01
+version = "5.x-2.x-dev"
+project = "flashvideo"
+datestamp = "1196510576"
+
+
+; Information added by drupal.org packaging script on 2008-02-21
+version = "5.x-2.7"
+project = "flashvideo"
+datestamp = "1203565807"
+

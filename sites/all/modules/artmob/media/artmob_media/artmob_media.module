@@ -1,0 +1,229 @@
+<?php
+// $Id: artmob_media.info,v 1.0 2010/12/10 20:55:33 stop14 Exp $
+
+/* @file
+ * ADDDOCUMENTATION
+ **/
+
+//----------------------------------------------
+// CONSTANTS
+//----------------------------------------------
+
+define ('ARTMOB_MEDIA_PATH', drupal_get_path('module', 'artmob_media'));
+
+
+define ('ARTMOB_VIDEO_EXISTS', module_exists('artmob_video'));
+define ('ARTMOB_DIGITIZED_WORKS_EXISTS', module_exists('artmob_digitized_works'));
+define ('ARTMOB_AUDIO_EXISTS', module_exists('artmob_audio'));
+define ('ARTMOB_IMAGES_EXISTS', module_exists('artmob_picture'));
+define ('ARTMOB_ARTICLES_EXISTS', module_exists('artmob_articles'));
+define ('ARTMOB_CONTRIBUTORS_EXISTS', module_exists('artmob_contributors'));
+
+define ('ARTMOB_MEDIA_TITLE_HELP',t('If there is a known title for this item, please use it. The title for this item will appear to the user. It will be used for alphabetical sorting, and will be indexed by the search tool so it should be descriptive of the content.'));
+define ('ARTMOB_MEDIA_DESCRIPTION_HELP',t('The description can be used to elaborate on the title or to include other contextual information. Brevity is encouraged here because there are other metadata fields that may be filled in. Note that Drupal will use the first portion of this description in “teaser lists” of content.'));
+
+function artmob_media_perm() {
+  return array('Add Artmob Media', 'Edit Artmob Media', 'Edit Own Artmob Media', 'View Artmob Media', 'Remove Artmob Media');
+}
+
+//----------------------------------------------
+/**
+ * Implementation of hook_menu().
+ */
+function artmob_media_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+  } 
+  else {
+  }
+  return $items;
+}
+
+function artmob_media_init() {
+
+}
+
+function artmob_media_block($op = 'list', $delta = 0) {
+  if ($op == 'list') {
+    $block[0]['info'] = t('Media Browsing Menu');
+    return $block;
+  }
+  else if ($op == 'configure') {
+    switch ($delta) {
+      case 0:  
+      break;
+    }
+    return $form;
+  }
+  else if ($op == 'save') {
+    switch ($delta) {
+      case 0: //Browsing Menu Block
+        break;
+    }
+  }
+  else if ($op == 'view') {
+    switch ($delta) {
+      case 0:  //Browsing Menu Block
+        $view = views_get_view('artmob_browse_all');
+        $links['browse-all-link'] = array(
+          'title' => 'Browse All',
+          'href'  => $view->url .'/all/all'
+        );
+        
+        if (ARTMOB_AUDIO_EXISTS) {
+      $view = views_get_view('artmob_audio');
+      $links['audio'] = array(
+      'title' => 'Audio',
+      'href'  => $view->url
+      );
+    }
+    
+    if (ARTMOB_DIGITIZED_WORKS_EXISTS) {
+      $view = views_get_view('artmob_digitized_works');
+      $links['digitized-works-link'] = array(
+      'title' => 'Documents',
+      'href'  => $view->url
+      );
+        }
+
+        if (ARTMOB_IMAGES_EXISTS) {
+      $view = views_get_view('artmob_images');
+      $links['images'] = array(
+      'title' => 'Images',
+      'href'  => $view->url
+      );
+        }
+        
+        if (ARTMOB_VIDEO_EXISTS) {
+      $view = views_get_view('artmob_video');
+      $links['video'] = array(
+      'title' => 'Video',
+      'href'  => $view->url
+      );
+        }
+    
+    if (ARTMOB_ARTICLES_EXISTS) {
+      $view = views_get_view('artmob_articles');
+      $links['articles'] = array(
+      'title' => 'Articles',
+      'href'  => $view->url
+      );
+        }
+        
+        /* Not yet implemented */
+    
+    /*
+    if (ARTMOB_CONTRIBUTORS_EXISTS) { 
+      $view = views_get_view('artmob_contributors');
+      $links['contributors'] = array(
+      'title' => 'Contributors',
+      'href'  => $view->url
+      );
+        }
+        */
+        
+    $blcok['subject'] = "Browse the Archive";
+        $block['content'] =  theme('artmob_media_browse_menu');
+        break;
+    }
+    return $block;
+
+  }
+} 
+
+function artmob_media_get_content_type($type) {
+  
+  foreach (artmob_media_build_asset_browser_array() as $key => $media) {
+    if ($type == $key && $media['content_type']) {
+      return $media['content_type'];
+    }
+  }
+  
+  return NULL;
+}
+
+function artmob_media_build_asset_browser_array() {
+  $asset_links = array(
+    'all' => array(
+      'display' => TRUE,
+      'icon' => 'btn_browse_all.gif',
+      'label' => 'Browse All',
+      'link' => url('browse/content/all/all')
+    ),
+    'audio' => array(
+      'display' => ARTMOB_AUDIO_EXISTS,
+      'icon' => 'btn_browse_audio.gif',
+      'label' => 'Audio',
+      'content_type' => 'amAudio',
+      'link' => url('media/audio')
+    ),
+    'digitized_works' => array(
+      'display' => ARTMOB_DIGITIZED_WORKS_EXISTS,
+      'icon' => 'btn_browse_digitized_works.gif',
+      'label' => 'Documents',
+      'content_type' => 'DigitizedWorks',
+      'link' => url('media/digitized_works')
+    ),
+    'images' => array(
+      'display' => ARTMOB_IMAGES_EXISTS,
+      'icon' => 'btn_browse_images.gif',
+      'label' => 'Images',
+      'content_type' => 'amPicture',
+      'link' => url('media/images')
+
+    ),
+    'video' => array(
+      'display' => ARTMOB_VIDEO_EXISTS,
+      'icon' => 'btn_browse_video.gif',
+      'label' => 'Video',
+      'content_type' => 'amVideo',
+      'link' => url('media/videos')
+
+    ),
+    'articles' => array(
+      'display' => ARTMOB_ARTICLES_EXISTS,
+      'icon' => 'btn_browse_articles.gif',
+      'label' => 'Articles',
+      'content_type' => 'articles',
+      'link' => url('articles')
+
+    ),
+    'contributors' => array(
+      'display' => ARTMOB_CONTRIBUTORS_EXISTS,
+      'icon' => 'btn_browse_articles.gif',
+      'label' => 'Contributors',
+      'content_type' => 'contributors',
+      'link' => url('contributors')
+
+    ),
+  );
+
+  return $asset_links;
+
+}
+
+function theme_artmob_media_browse_menu($links=NULL) {  
+
+  $asset_links = artmob_media_build_asset_browser_array();
+  
+  $path = base_path() . path_to_theme() ."/images/icons/";
+  
+  /*$model_str = "<li  class='browse-%s-link'><img class='asset-icon' src='%s' alt='%s'/><a href='%s' class='browse-%s-link'>%s</a></li>"; */ /* uncomment if override if using artmob theme  */
+  $model_str = "<li  class='browse-%s-link'><a href='%s' class='browse-%s-link'>%s</a></li>";
+  
+  $content = '<div class="browse_assets_menu"><ul>';
+  
+  foreach ($asset_links as $asset_type => $asset_link) {
+    if ($asset_link['display']) {
+      /*$content .= sprintf($model_str,$asset_type,$path . $asset_link['icon'],$asset_link['label'],$asset_link['link'],$asset_type,$asset_link['label']);*/
+      $content .= sprintf($model_str, $asset_type, $asset_link['link'], $asset_type, $asset_link['label']);
+    }
+  
+  }
+  
+  $content .= '</ul></div>';
+
+  return $content;
+}
+

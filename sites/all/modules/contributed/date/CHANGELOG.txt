@@ -1,0 +1,162 @@
+Date Module
+===========
+
+Version 1.8
+===========
+
+- 189093 fix elusive bug that caused some CCK Views arguments to disappear in certain configurations.
+- Fix call by reference errors.
+- 197563 fix re-named function in date_views.
+- 189093 rework way includes are handled to try to ensure the right functions are available at the right time.
+- 192349 support both 'n' and 'm' formats for month input formats.
+- 188340 add field info to date_views_date_range.
+- 189591 add more checks for whether Views is enabled before calling Views functions.
+
+Version 1.7
+===========
+
+- Move cached views info to cache_views so it gets cleared when views_invalidate_cache() is called.
+- Lots of fixes for the update processes. Get rid of older updates that are re-done in later updates and create a data_integrity and db_integrity update.
+- Fix ical export to match changes in ical parser.
+- Cleanup of ical export code.
+- Expand date-only ISO date to full ISO date automatically. Needed for better handling of ical feeds.
+- Fix DURATION handling in ical parser.
+- Cleanup calendar ical import.
+- 170371 make sure date api is available during updates.
+- 163712 fix some subtle problems in link titles and query parameters when working with partial ISO dates, like only year and month.
+- 175914 make sure month and day don't get set to zero when creating timestamps to format dates, since zero values will revert to the previous day.
+- 183845 make sure lable and description are translated
+- 160052 make sure no errors are thrown when gmmktime is called and 'all' is one of the arguments.
+- Expand the description for date_copy import of event nodes.
+- Make sure option to not delete old nodes in date copy is working right.
+- Improved ical parser to extract ical data and import it into date fields.
+- Found a better way to unfold ical data. The previous method would break if there were any QUOTED-PRINTABLE values in the ical file.
+- Add reworked ical file as developed for 5.2 version of date module. This file can parse many additional parts of the ical file and won't mistakenly perform timezone conversions on imported data.
+- 163584 fix to make sure taxonomy values get imported with ical import.
+- Adding 'even empty' means we don't need views_pre_view() to add in navigation on empty pages.
+- 148120 add validation to make sure 'Display all values' is selected for the Date Browser argument.
+- Make sure text-parts is an array.
+- 160370 add translation to 'all'.
+- 178408 make sure $ret uses update_sql.
+- Cache date_views array so we don't have to re-create it on every page.
+- 181374 change the way time-ago is computed to allow properly for timezone adjustment.
+- Add simpletests to use PHP5 date handling to check that Date API is working right.
+- Fix a problem with timezone handling in southern timezones.
+- Fix miscellaneous items that can lead to timezone conversion errors.
+- 167000 fix timezone display, a few more changes for the new way timezone display works.
+- 156171 Timezone offsets were not getting saved. Fix that and repair the database.
+- Make sure Views is enabled before including the file.
+- Preparing for Version 5.2. The only database changes in 5.2 are changes to settings, so adding the enough changes to current version so it is possible to try 5.2 out and return to this version with no loss of data. In 5.2 settings changes will add several ways to control default values and other improvements which are just placekeepers to prevent data loss in this version.
+- 143894 changed ical VALUE=DATE to VALUE=DATE-TIME which apparently Google Calendar likes better.
+- 143347 use http_request and better error handling message in ical import.
+
+Version 1.6
+===========
+
+- 56397 remove extraneous ';'.
+- Get rid of hook_init(), add helper function date_load(), move date.inc constants to date_api.module.
+- 153245 fix typo in Date API documentation.
+- 151304 include date.inc in theme so it works outside the module.
+- 152207 make timezones.inc independent of the event module, needed because not all versions of event module now use it.
+- Fix a typo in the new date_unset_granularity() function.
+- fix some invalid functions and missing includes for ical date imports in Date Copy.
+- 142509 remove deprecated date_set_granularity() function in date_copy and replace it with newer function.
+- 138980 fix permissions, use less memory by resetting node cache, and add warning message to turn off email notifications.
+- 139454 date display options were not getting saved.
+
+Version 1.5
+===========
+
+- 130689 move drupal_get_installed_schema_version inside install() and update() functions
+- 137515 fix logic for figuring out when timezone conversion is needed
+- 137624 make sure years back and forward store values when set to 0
+- 128355 make sure empty to date values are filled in with from date values
+- Move css to hook_menu()
+- 130611 make sure no html is returned in default theme when dates are empty
+- 134587 fix method of stipping undesired granularity out of dates which was generating critical errors
+- 133731 make sure items not in granularity array get stripped out of both stored dates and date format strings.
+- 123376 fix validation logic when both to and from dates are required
+- 126363 add space before UTC so strtotime will work right
+- fix calculation of server timezone adj
+
+Version 1.4
+===========
+
+NOTE Date API has been split out into a separate module to make the API available with no dependency on CCK. For best update results, uninstall the Date module before adding the updated file to the site, then immediately go to the modules page and enable both the Date and Date API modules.
+
+- 126551 themeing improvements: 1) A 'timestamp' formatter which will return the timestamp value of a date. You can use that instead of a formatter that returns a formatted value if you want to do your own formatting of the results. 2) A 'Days ago' formatter that applies format_interval() to the date. It uses a theme_date_format_interval() to allow you to tailor the results depending on whether it is a future or past date and incorporate both the To date and From date into the results. 3) All formatters now run through a theme to give you more places to jump in and make changes to the display. The theme has the complete date object to work with. 4) A date_field_object() function that will bring back a complete date object for a given field. The function description contains details about what exactly is in that object, but it includes both from and to dates as timestamps, ISO dates and arrays of date parts.
+
+- 123886 make sure cached data isn't empty
+- 125803 get help text to display in selector widget
+- 123365 fix Views filter to properly handle both from and to dates
+- 121544 use 'From date' and 'To date' instead of 'From' and 'To' for better translations.
+- 121259 split date api out so it can be used by other modules with no dependency on CCK
+- 117791 add validation to submitted filter values to avoid creating invalid SQL
+- Improve ISO week range function and add function to find last day of month
+- 125483 more corrections to week calculation
+- 125338 fix postgresql handling, lots of help from havran
+- 124320 fix fatal errors in identifying include paths
+- 123179 send date and node objects to theme to add more flexibility to ways that it can be displayed.
+- 121259 fix to make transition to separate Date API easier since  non-existant functions will cause fatal error that prevents ability to get back to module installation page.
+
+Version 1.3
+===========
+
+- 113489 add filters and arguments for 'to' dates as well as 'from' dates.
+- Get rid of embedded help text and point to d.o handbook page instead to make it easier to keep it current.
+- Add handling for date-specific timezone offset
+- 120154 refactor date sql wrapper to take into account server timezone adjustments for functions like NOW() and TIMESTAMP()
+- More timezone cleanup, make sure zone is not removed twice when using adodb
+- More fixes for validation combinations of from/to dates; Clean up handling of timezone element - give it a weight, only need one form element no matter how many date fields; Clean up handling of non-required to date and other empty or error values, make sure they don't get stored in date object or displayed;
+- 119674 minutes and seconds need integer values
+- 114088 use private adodb get_date function to eliminate timezone adjustment
+- 119820 fix error in date_is_required function
+- 120154 make sure FROM_UNIXTIME and NOW are not adjusted for server timezone
+- 93525 fix translation of displayed month and day names
+- 116244 fix incorrect placement of timezone in form
+- Adding better validation to set errors for invalid dates, adding helper function to determine when from and to dates are required
+- 114088, 84492 fixes to make sure dates without time and old dates do not ever get timezone conversions applied.
+- 119055 remove debugging code
+- 115809 fix handling of optional, non-empty to date
+- 102786 update pathauto for both date field types
+- 115846 site-wide format wasn't getting saved
+- 114088 no timezone adjustment on very old dates
+- 115127 fix missing timezone value
+
+Version 1.2
+===========
+
+- 113959, 114654 empty calendar not created for non-existant days
+- Fix for back/next url
+- 113714 correct invalid foreach argument by altering method of calling views handler for non-date fields
+- 112182, 111701, 108071 - extra fields not showing up in calendar teaser
+- 99223 fix current date
+- 113125 - current view needs a link in the links listed aboved the calendar
+- Fix display of time in calendar, fix content type name in legend
+- 109336 default to current month instead of year
+- Cleanup handling of 'to' date for non-CCK date, fix links at top of calendar
+- 108957 add include path, patch by retodd, incorporate from/to cck date option from latest version of date module.
+- Incorporate from/to date capability added to cvs version of date module.
+- 108957 add include path
+- 89097  reverse sign on option delta, fix view tablename aliases
+- 114265 handle empty 'to' date values by filling with 'from' date. Fix block view of date browser, use new CCK views table alias.
+- 80592  alter default value handling to match changes in CCK, display blank value as default for to date if not required, make sure blank value is stored as NULL
+
+
+Version 1.1
+===========
+
+Database update required.
+
+- 113444 custom input format wasn't getting saved, small adjustments to display and handling of from/to dates
+- 84119  prepare for new default value handling by date module. No changes yet, just getting functions and callbacks in place.
+
+- 80592  adding from/to date capability, add theming for multiple and from/to dates, pull all date form and display elements out into theme functions, simplify database handling by making all columns accept null values, move validation from the widget to the field. This is step one in the process of adding handling for repeat dates. Requires database update.
+
+- 105392 fix week in date browser; fix version in info file; make 'site' the timezone default
+- 102786 add pathauto integration
+- 107667 force multiselect size in Opera; set default select to select instead of text
+- 106477 get timezone from field not param, patch by dkruglyak
+- 94106  keep multiple values from multiplying.
+- 91540  fix granularity validation
+

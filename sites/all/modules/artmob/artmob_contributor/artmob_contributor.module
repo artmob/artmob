@@ -1,0 +1,1136 @@
+<?php
+// $Id: artmob_contributor.module,v 1.0 2008/03/01 08:31:22 drumm Exp $
+
+/**
+ * @file
+ * Allows users to enter a Link to an Article.
+ */
+
+
+//* Implementation of hook_node_info().
+
+define (CONTRIBUTOR_TYPE_PERSON, 0 );
+define (CONTRIBUTOR_TYPE_CORPORATION, 1 );
+
+function artmob_contributor_node_info() {
+  return array(
+    'Contributor'
+     => array(
+      'name' => t('Contributor'),
+      'module' => 'artmob_contributor',
+      'description' => t("This allows a user to enter a new Contributor")
+    ),
+  );
+}
+
+// Implementation of hook_perm().
+
+function artmob_contributor_perm() {
+    return array('Add Contributor', 'Edit Contributor', 'Remove Contributor', 'View Contributor');
+}
+
+
+// Implementation of hook_access().
+
+function artmob_contributor_access($op, $node) {
+  global $user;
+
+  if ($op == 'create') {
+    // Only registered users can create Articles.
+    return user_access('Add Contributor');
+  }
+
+  else if ($op == 'update') {
+    // Only registered users can update an Article.
+    return user_access('Edit Contributor');
+  }
+  else if ($op == 'delete') {
+    // Only registered users can delete an Article.
+    return user_access('Delete Contributor');
+  }
+  else if ($op == 'view') {
+    // Only registered users can view an Article if it is locked.
+    return user_access('View Contributor');
+  }
+  else {
+    return FALSE;
+  }   
+}
+
+/**
+ * Implementation of hook_link().
+*/
+
+/**
+ * Implementation of hook_menu().
+ */
+function artmob_contributor_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+  }
+  else {
+
+    $items[] = array(
+      'path' => 'contributors',
+      'callback' => 'artmob_contributor_listing_page',
+      'type'  => MENU_NORMAL_ITEM,
+      'access' => TRUE,
+      'title' => 'Contributors'
+    );
+
+    $items[] = array(
+      'path'  => 'artmob_contributor_add_contributor',
+      'title' => t('Contributor Add'),
+      'callback' => 'artmob_contributor_add_contributor',
+      'type' => MENU_CALLBACK,
+      'access' => user_access('access content'),
+    );
+
+    $items[] = array(
+      'path'  => 'artmob_contributor_get_contributors_by_id',
+      'title' => t('Get Contributor List'),
+      'callback' => 'artmob_contributor_get_contributors_by_id',
+      'type' => MENU_CALLBACK,
+      'access' => user_access('access content'),
+    );
+
+  }
+
+  return $items;
+}
+
+
+
+function artmob_contributor_listing_page() {
+
+  $contributor_links = array();
+  
+  foreach (artmob_contributor_BuildContributorList(FALSE, TRUE) as $id => $contributor) {
+    $contributor_links[] = l($contributor, "node/". $id);
+  }
+
+  
+  
+  return theme('artmob_contributor_listing_page', $contributor_links);
+}
+
+function theme_artmob_contributor_listing_page($contributor_links) {
+
+  $output = '';
+  $output .= '<p>Here are the list of known contributors to this archive:';
+  
+  $output .= display_columnize_items($contributor_links, 2);
+
+  return $output;
+  
+}
+
+function artmob_contributor_view($node, $teaser = FALSE, $page = FALSE) {
+  if ($page) {
+    $node->body = check_markup($node->body, $node->filter, FALSE);
+  $node->content['artmob_contributor'] = array('#value' => theme( 'artmob_contributor_basic_view', $node, $page ));
+  } 
+  else {
+    $node->teaser = check_markup($node->teaser, $node->filter, FALSE);
+    $node->content['artmob_contributor'] = array('#value' => theme( 'artmob_contributor_teaser_view', $node, $page ));
+  }
+  return $node;
+}
+
+function theme_artmob_contributor_basic_view( &$node, $page ) {
+  $content = '';
+  $content .= $node->body;
+  return $content;
+}
+
+function theme_artmob_contributor_teaser_view( &$node, $page ) {
+  $content = '';
+  $content .= $node->teaser;
+  return $content;
+}
+
+/*
+function theme_artmob_contributor_basic_view( &$node, $page ) {
+  if ($page) {
+    //The node prepare has kind of done it all so just return blank for now
+    $content = '<h1> First Name:  '.$node->first_name.'</h1>';
+    $content .= '<h1> Last Name:  '.$node->last_name.'</h1>';
+    $content .= '<h6> '.check_markup( $node->body, $node->format, FALSE ).'</h6>';
+  }
+  else{
+    //This kind of fakes a teaser because I couldn't get it to automatically tease me.
+    $temp .= '...';
+    $content = '<h1> First Name:  '.$node->first_name.'</h1>';
+    $content .= '<h1> Last Name:  '.$node->last_name.'</h1>';
+    $content .= '<h6> '.$node->teaser.'</h6>';
+  }
+  return $content;
+}*/
+
+/**
+ * Implementation of hook_block().
+ *
+ * Displays the Link in a block.
+ */
+function artmob_contributor_block($op = 'list', $delta = 0) {
+  //Possible choices for $op are: list,configure,save & view
+  //if $op is list then must return an array of arrays which must at least
+  //define an 'info' element describing the block.  Other optional elements include
+  //weight, enabled and region (ie 'right' or 'left).
+
+  //if $op is view then we must return an array which must have a 'subject'
+  //element and a 'content' element defining the block (indexed by $delta).
+
+  //if $op is configure then optionally return a string containing the
+  //configuration form.
+
+  //if $op is save then return nothing.
+
+  if ($op == 'list') {
+    $block[0]['info'] = t('Articles contributed by...');
+    $block[1]['info'] = t('Contributors to this item...');
+    $block[2]['info'] = t('Works in the archive');
+    $block[3]['info'] = t('Copyrights held by...');
+    if ( module_exists( 'artmob_license' ) and module_exists( 'artmob_citation')  and module_exists( 'artmob_fair_dealing' )) {
+      $block[4]['info'] = t('Contributor Digital Objects Block');
+      $block[5]['info'] = t('Contributor Digital Objects Node View');
+    }
+    return $block;
+  }
+  else if ($op == 'configure') {
+    switch ($delta) {
+      case 0:
+        break;
+    }
+    return $form;
+  }
+  else if ($op == 'save') {
+    switch ($delta) {
+      case 0:
+        break;
+    }
+  }
+  else if ($op == 'view') {
+    switch ($delta) {
+      case 0: //Articles contributed by...
+        if ( (arg(0) == 'node') and (is_numeric(arg(1)))) {
+          $nid = arg(1);
+          $node = node_load( $nid );
+          if ( $node->type == 'artmob_contributor' ) {
+            $contentarray = array();
+            $contentarray = artmob_contributor_ArticlesFromThisContributor( $nid );
+            if ( count( $contentarray ) > 0 ) {
+              $block['subject'] = 'Articles contributed by '. $node->title;
+              $block['content'] = theme('artmob_contributor_articles_by_block', $contentarray);
+            }
+          }
+        }
+        break;
+      case 1: //Contributors to this item...
+        if ( (arg(0) == 'node') and (is_numeric(arg(1)))) {
+          $nid = arg(1);
+          $node = node_load( $nid );
+          if ( $node->type == 'Artcles' ) {
+            $contentarray = array();
+            $contentarray = artmob_contributor_ContributorsFromThisArticle( $nid );
+            if ( count( $contentarray ) > 0 ) {
+              $block['subject'] = 'Contributors to this item';
+              $block['content'] = theme('artmob_contributor_contributed_by_block', $contentarray );
+            }
+          }
+        }
+        break;
+      case 2: //Works in the archive
+        if ( (arg(0) == 'node') and (is_numeric(arg(1)))) {
+          $nid = arg(1);
+          $node = node_load( $nid );
+          if ( $node->type == 'artmob_contributor' || strtolower($node->type) == 'contributor') { // backwards compatibility
+            $contentarray = array();
+            $contentarray = artmob_contributor_WorksFromThisContributor( $nid );
+            if ( count( $contentarray ) > 0 ) {
+              $block['subject'] = 'Works in the Archive';
+              $block['content'] = theme('artmob_contributor_works_by_block', $contentarray);
+            }
+            else {
+             // drupal_set_message($node->type);
+            }
+          }
+        }
+        break;
+      case 3: //Copyrights held by...
+        if ( (arg(0) == 'node') and (is_numeric(arg(1)))) {
+          $nid = arg(1);
+          $node = node_load( $nid );
+          if ( $node->type == 'artmob_contributor' || strtolower($node->type) == 'contributor') { // backwards compatibility
+            $contentarray = array();
+            $contentarray = artmob_contributor_CopyrightsHeldByThisContributor( $nid );
+            if ( count( $contentarray ) > 0 ) {
+              $block['subject'] = 'Copyrights held by '. $node->title;
+              $block['content'] = theme('artmob_contributor_copyrights_by_block', $contentarray);
+            }
+          }
+        }
+        break;
+      case 4: //Contributor Digital Objects Block
+        if ( (arg(0) == 'node') and (is_numeric(arg(1)))) {
+          $nid = arg(1);
+          $node = node_load( $nid );
+          if ( $node->type == 'artmob_contributor' || strtolower($node->type) == 'contributor') { // backwards compatibility
+            $contentarray = artmob_contributor_digital_objects_by_contributor( $nid );
+            if ( count( $contentarray ) > 0 ) {
+              $block['subject'] = 'Digital Objects for '. $node->title;
+              $block['content'] = theme('artmob_contributor_digital_objects_by_block', $contentarray);
+            }
+          }
+        }
+        break;
+      case 5: //Contributor Digital Objects Node View
+        if ( (arg(0) == 'node') and (is_numeric(arg(1)))) {
+          $nid = arg(1);
+          $node = node_load( $nid );
+          if ( $node->type == 'artmob_contributor' || strtolower($node->type) == 'contributor') { // backwards compatibility
+            $contentarray = artmob_contributor_digital_objects_by_contributor( $nid );
+            if ( count( $contentarray ) > 0 ) {
+              $block['subject'] = 'Digital Objects for '. $node->title;
+              $block['content'] = theme('artmob_contributor_digital_objects_by_node_view', $contentarray);
+            }
+          }
+        }
+        break;
+    }
+    return $block;
+  }
+}
+
+function theme_artmob_contributor_articles_by_block( $contentarray )  {
+  $content = '<ul>';
+  foreach ($contentarray as $node) {
+    $content .= '<li>'. l( $node->title, 'node/'. $node->nid );
+  }
+  $content .= '</ul>';
+  return $content;
+}
+
+function theme_artmob_contributor_works_by_block( $contentarray )  {
+  
+  foreach ($contentarray as $nobj) {
+    $content .= node_view(node_load($nobj->nid), TRUE, FALSE, FALSE);
+  }
+
+  return $content;
+}
+
+function theme_artmob_contributor_contributed_by_block( $contentarray )  {
+  $content = '<ul>';
+  foreach ($contentarray as $node) {
+    $content .= '<li>'. l( $node->first_name .' '. $node->last_name, 'node/'. $node->nid );
+  }
+  $content .= '</ul>';
+  return $content;
+}
+
+function theme_artmob_contributor_copyrights_by_block( $contentarray )  {
+  $content = '<ul>';
+  foreach ($contentarray as $node) {
+    $content .= '<li>'. l( $node->title, 'node/'. $node->nid );
+  }
+  $content .= '</ul>';
+  return $content;
+}
+
+function theme_artmob_contributor_digital_objects_by_block( $contentarray )  {
+  $content = '<ul>';
+  foreach ($contentarray as $nid) {
+    $node = node_load( $nid );
+    $content .= '<li>'. l( $node->title, 'node/'. $node->nid );
+  }
+  $content .= '</ul>';
+  return $content;
+}
+
+function theme_artmob_contributor_digital_objects_by_node_view( $contentarray )  {
+  $content = '<ul>';
+  foreach ($contentarray as $nid) {
+    $node = node_load( $nid );
+    $content .= '<li>'. l( $node->title, 'node/'. $node->nid );
+  }
+  $content .= '</ul>';
+  return $content;
+}
+
+// Implementation of hook_insert().
+function artmob_contributor_insert($node) {
+  $node->title = $node->first_name .' '. $node->last_name;
+  db_query("INSERT INTO {am_contributor} (nid, uid, first_name, last_name, email, contributor_type)
+                               VALUES (%d, %d, '%s', '%s', '%s', %d )",
+       $node->nid, $node->uid, $node->first_name, $node->last_name, $node->email, $node->contributor_type);
+}
+
+// Implementation of hook_update().
+function artmob_contributor_update($node) {
+  $node->title = $node->first_name .' '. $node->last_name;
+  db_query("UPDATE {am_contributor}
+            set uid = %d,
+            first_name = '%s',
+            last_name = '%s',
+            email = '%s',
+            contributor_type = %d
+
+            where nid = %d",
+
+            $node->uid,
+            $node->first_name,
+            $node->last_name,
+            $node->email,
+            $node->contributor_type,
+
+            $node->nid);
+}
+
+// Implementation of hook_delete().
+function artmob_contributor_delete($node) {
+  db_query("Delete FROM {am_contributor}
+             where nid = %d",
+             $node->nid);
+}
+
+
+// Implementation of hook_load().
+function artmob_contributor_load($node) {
+
+/* joe's code
+  $t = db_fetch_object(db_query('SELECT * FROM {am_contributor} WHERE nid = %d', $node->nid));
+  return $t;
+*/
+
+  $t = db_fetch_array(db_query('SELECT * FROM {am_contributor} WHERE nid = %d', $node->nid));
+  return $t;
+}
+
+
+/**
+ * Implementation of hook_submit().
+ */
+function artmob_contributor_submit(&$node) {
+  global $user;
+  if ($node->contributor_type == CONTRIBUTOR_TYPE_CORPORATION) {
+    $node->title = $node->last_name;
+  } else {
+    $node->title = ($node->first_name ? $node->first_name . ' ': '') . $node->last_name;
+  }
+//  drupal_set_message( 'node title = '.$node->title );
+  // Set default values for non-administrators.
+  if (!user_access('administer nodes')) {
+    $node->revision = 1;
+    $node->uid = $user->uid;
+  }
+}
+
+
+// Implementation of hook_form().
+function artmob_contributor_form(&$node) {
+
+  $type = node_get_types('type', $node);
+
+  $form['Contributor'] = array(
+    '#type'          => 'fieldset',
+    '#title'         => t('Contributor'),
+    '#weight'        => -5,
+    '#collapsible'   => TRUE,
+    '#collapsed'     => FALSE
+  );
+
+  $form['Contributor']['first_name'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('First Name'),
+    '#default_value' => $node->first_name,
+    '#description'   => t("enter the Contributor's first name"),
+    '#tree'          => 'FALSE',
+    '#rows'          => 1,
+    '#weight'        => -10,
+    '#required'      => FALSE
+  );
+
+  $form['Contributor']['last_name'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('last_name'),
+    '#default_value' => $node->last_name,
+    '#description'   => t("enter the Contributor's last name"),
+    '#tree'          => 'FALSE',
+    '#rows'          => 1,
+    '#weight'        => -8,
+    '#required'      => TRUE
+  );
+
+  $form['Contributor']['email'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('email'),
+    '#default_value' => $node->email,
+    '#description'   => t("enter the Contributor's email"),
+    '#tree'          => 'FALSE',
+    '#rows'          => 1,
+    '#weight'        => -6,
+    '#required'      => FALSE
+  );
+
+  $options = pcmain_build_user_list( True, 'Other' );
+
+  $form['Contributor']['uid'] = array(
+    '#type'          => 'select',
+    '#title'         => t('User ID'),
+    '#default_value' => $node->uid,
+    '#description'   => t('Select the site user who is the Contributor'),
+    '#tree'          => 'FALSE',
+    '#options'       => $options,
+    '#access'        => TRUE,
+    '#weight'        => 10,
+    '#required'      => True
+  );
+
+  $form['Contributor']['body'] = array(
+    '#type'          => 'textarea',
+    '#title'         => t('Biography'),
+    '#default_value' => $node->body,
+    '#description'   => t("enter the Contributor's biography"),
+    '#tree'          => 'FALSE',
+    '#rows'          => 3,
+    '#weight'        => 4,
+    '#required'      => FALSE
+  );
+  $form['Contributor']['format'] = filter_form($node->format, 5);
+
+  return $form;
+
+}
+
+/**
+ * Implementation of hook_form_alter().
+ *
+*/
+function artmob_contributor_form_alter($form_id, &$form) {
+  // boilerplate code to determine the node type of the form
+  if (isset($form['type'])) {
+    $type = $form['type']['#value'];
+  }
+  elseif (isset($form['orig_type'])) {
+      $type = $form['orig_type']['#value'];
+  } 
+  else {
+    return;
+  }
+
+  //This condition will allow the rdoContributor radio
+  //button to be defaulted to on for new modules.  Therefore,
+  //whenever a new module/NodeType is added to the project
+  //it will automatically be turned on and have the ability
+  //to have contributors
+  if (($form['#node_type']->type == 'artmob_contributor') || ($type == 'artmob_contributor')) {
+    //$enabled = 0;
+  }
+  else{
+    //$enabled = variable_get('rdoContributor_'. $type, 0);
+  }
+
+  switch ($form_id) {
+    // Form addition that appears on Content Types page. Drupal saves as a setting.
+    case 'node_type_form':
+      /* OLD -
+      $citation_enabled = variable_get('rdo_citation_'. $type, 0);
+      if ( $citation_enabled ) {
+        $enabled = 0;
+      }
+      if ($form['#node_type']->type != 'artmob_contributor') {
+        $form['artmob']['rdoContributor'] = array(
+          '#type' => 'radios',
+          '#title' => t('Attach Contributors'),
+          '#default_value' => $enabled,
+          '#options' => array(0 => t('Disabled'), 1 => t('Enabled')),
+          '#disabled' => $citation_enabled,
+          '#description' => t('Should this node allow users to attach contributors?'),
+          );
+      }
+      */
+      break;
+
+    // Form addition to all Enabled node types.  A node is enabled using
+    // rdoContributor radio button that we added to the content types page
+    // in the hook_form_alter hook above.
+    case $type .'_node_form':
+
+/*
+      if (($enabled) {
+
+        $options1 = array();
+        $options2 = array();
+        $options3 = array();
+        $options4 = array();
+        $options5 = array();
+
+        $roles1 = array();
+        $roles2 = array();
+        $roles3 = array();
+        $roles4 = array();
+        $roles5 = array();
+
+        $options1 = Contributor_BuildContributorList();
+        $options2 = Contributor_BuildContributorList();
+        $options3 = Contributor_BuildContributorList();
+        $options4 = Contributor_BuildContributorList();
+        $options5 = Contributor_BuildContributorList();
+
+        $roles1 = Contributor_BuildRolesList();
+        $roles2 = Contributor_BuildRolesList();
+        $roles3 = Contributor_BuildRolesList();
+        $roles4 = Contributor_BuildRolesList();
+        $roles5 = Contributor_BuildRolesList();
+
+        $form['Contributor1'] = array(
+          '#type' => 'fieldset',
+          '#tree' =>  FALSE,
+          '#title' => 'Contributor 1',
+          '#collapsible'  => TRUE,
+          '#collapsed'  => FALSE,
+        );
+
+        $form['Contributor1']['lstContributor1'] = array (
+            '#type'     => 'select',
+            '#title'    => 'Contributor',
+            '#options'    => $options1,
+            '#default_value' => $form['#node']->lstContributor1
+        );
+        
+        $default = Contributor_get_role_default( $form['#node']->lstRole1 );
+
+        $form['Contributor1']['lstRole1'] = array (
+            '#type'     => 'select',
+            '#title'    => 'Contributor Role',
+            '#options'    => $roles1,
+            '#default_value' => $default,
+            '#multiple' => True,
+            '#size' => 10
+        );
+
+        $form['Contributor2'] = array(
+          '#type' => 'fieldset',
+          '#tree' =>  FALSE,
+          '#title' => 'Contributor 2',
+          '#collapsible'  => TRUE,
+          '#collapsed'  => FALSE,
+        );
+
+        $form['Contributor2']['lstContributor2'] = array (
+            '#type'     => 'select',
+            '#title'    => 'Contributor',
+            '#options'    => $options1,
+            '#default_value' => $form['#node']->lstContributor2
+        );
+
+        $default = Contributor_get_role_default( $form['#node']->lstRole2 );
+
+        $form['Contributor2']['lstRole2'] = array (
+            '#type'     => 'select',
+            '#title'    => 'Contributor Role',
+            '#options'    => $roles2,
+            '#default_value' => $default,
+            '#multiple' => True,
+            '#size' => 10
+        );
+
+        $form['Contributor3'] = array(
+          '#type' => 'fieldset',
+          '#tree' =>  FALSE,
+          '#title' => 'Contributor 3',
+          '#collapsible'  => TRUE,
+          '#collapsed'  => FALSE,
+        );
+
+        $form['Contributor3']['lstContributor3'] = array (
+            '#type'     => 'select',
+            '#title'    => 'Contributor',
+            '#options'    => $options1,
+            '#default_value' => $form['#node']->lstContributor3
+        );
+
+        $default = Contributor_get_role_default( $form['#node']->lstRole3 );
+
+        $form['Contributor3']['lstRole3'] = array (
+            '#type'     => 'select',
+            '#title'    => 'Contributor Role',
+            '#options'    => $roles3,
+            '#default_value' => $default,
+            '#multiple' => True,
+            '#size' => 10
+        );
+
+        $form['Contributor4'] = array(
+          '#type' => 'fieldset',
+          '#tree' =>  FALSE,
+          '#title' => 'Contributor 4',
+          '#collapsible'  => TRUE,
+          '#collapsed'  => FALSE,
+        );
+
+        $form['Contributor4']['lstContributor4'] = array (
+            '#type'     => 'select',
+            '#title'    => 'Contributor',
+            '#options'    => $options1,
+            '#default_value' => $form['#node']->lstContributor4
+        );
+
+        $default = Contributor_get_role_default( $form['#node']->lstRole4 );
+
+        $form['Contributor4']['lstRole4'] = array (
+            '#type'     => 'select',
+            '#title'    => 'Contributor Role',
+            '#options'    => $roles4,
+            '#default_value' => $default,
+            '#multiple' => True,
+            '#size' => 10
+        );
+
+        $form['Contributor5'] = array(
+          '#type' => 'fieldset',
+          '#tree' =>  FALSE,
+          '#title' => 'Contributor 5',
+          '#collapsible'  => TRUE,
+          '#collapsed'  => FALSE,
+        );
+
+        $form['Contributor5']['lstContributor5'] = array (
+            '#type'     => 'select',
+            '#title'    => 'Contributor',
+            '#options'    => $options1,
+            '#default_value' => $form['#node']->lstContributor5
+        );
+
+        $default = Contributor_get_role_default( $form['#node']->lstRole5 );
+
+        $form['Contributor5']['lstRole5'] = array (
+            '#type'     => 'select',
+            '#title'    => 'Contributor Role',
+            '#options'    => $roles5,
+            '#default_value' => $default,
+            '#multiple' => True,
+            '#size' => 10
+        );
+      }
+*/
+      break;
+  }
+
+
+}
+
+
+/**
+ * Implementation of hook_nodeapi().
+ *
+ */
+function artmob_contributor_nodeapi(&$node, $op, $teaser, $page) {
+  switch ($op) {
+    case 'update':
+      $bupdate = TRUE;
+
+      //Fall through, with flag.  Therefore with every update we delete
+      //the old associated records and then resave the new ones
+
+    case 'delete':
+/*
+      if ( $node->type <> 'artmob_contributor') {
+//        $sql = sprintf( 'DELETE FROM {PC_NodeLink} WHERE FromNode=%d AND ToType="%s"', $node->nid, "artmob_contributor" );
+        db_query('DELETE FROM {PC_NodeLink} WHERE FromNode=%d AND ToType="%s"', $node->nid, "artmob_contributor");
+      }
+*/
+      if (!$bupdate) {
+        break;
+      }
+
+    case 'insert':
+/*
+      //Save all 5 contributors
+      if ( $node->type <> 'Contributor') {
+        db_query("INSERT INTO {PC_NodeLink} (FromNode, ToNode, FromType, ToType, LinkIndex, LinkBlob ) VALUES (%d,%d,'%s','%s',%d,'%s')", $node->nid, $node->lstContributor1, $node->type, 'Contributor', 1, serialize( $node->lstRole1 ) );
+        db_query("INSERT INTO {PC_NodeLink} (FromNode, ToNode, FromType, ToType, LinkIndex, LinkBlob ) VALUES (%d,%d,'%s','%s',%d,'%s')", $node->nid, $node->lstContributor2, $node->type, 'Contributor', 2, serialize( $node->lstRole2 ) );
+        db_query("INSERT INTO {PC_NodeLink} (FromNode, ToNode, FromType, ToType, LinkIndex, LinkBlob ) VALUES (%d,%d,'%s','%s',%d,'%s')", $node->nid, $node->lstContributor3, $node->type, 'Contributor', 3, serialize( $node->lstRole3 ) );
+        db_query("INSERT INTO {PC_NodeLink} (FromNode, ToNode, FromType, ToType, LinkIndex, LinkBlob ) VALUES (%d,%d,'%s','%s',%d,'%s')", $node->nid, $node->lstContributor4, $node->type, 'Contributor', 4, serialize( $node->lstRole4 ) );
+        db_query("INSERT INTO {PC_NodeLink} (FromNode, ToNode, FromType, ToType, LinkIndex, LinkBlob ) VALUES (%d,%d,'%s','%s',%d,'%s')", $node->nid, $node->lstContributor5, $node->type, 'Contributor', 5, serialize( $node->lstRole5 ) );
+      }
+*/
+      break;
+    case 'load':
+/*
+      if (variable_get('rdoContributor_'. $node->type, 0)) {
+
+       for ( $counter = 1; $counter <= 5; $counter += 1) {
+//          $sql = sprintf( "SELECT ToNode, LinkBlob FROM {PC_NodeLink} WHERE FromNode=%d AND ToType='%s' AND LinkIndex = %d",$node->nid,'Contributor', $counter );
+          $oResult = db_query("SELECT ToNode, LinkBlob FROM {PC_NodeLink} WHERE FromNode=%d AND ToType='%s' AND LinkIndex = %d",$node->nid,'Contributor', $counter);
+          while ($oRow = db_fetch_object($oResult)) {
+            $aLoad['lstContributor'.$counter][] = $oRow->ToNode;
+            $aLoad['lstRole'.$counter] = unserialize( $oRow->LinkBlob );
+          }
+        }
+        return $aLoad;
+      }
+*/
+
+      break;
+
+    case 'prepare':
+      break;
+    case 'view':
+      break;
+    case 'update':
+      break;
+    case 'delete revision':
+      break;
+    case 'submit':
+      break;
+  }
+}
+
+
+// Implementation of hook_help().
+function artmob_contributor_help($section) {
+  switch ($section) {
+    case 'admin/help#description':
+      return t('Enables the creation of contributors.');
+      break;
+    case 'admin/modules#description':
+      return t('Enables the creation of contributors.');
+      break;
+    case 'admin/node/add#artmob_contributor':
+      return t('A contributor. Use this page to add a contributor.');
+      break;
+  }
+}
+
+function artmob_contributor_BuildContributorList( $include_none = TRUE, $filter = FALSE, $include_unknown = FALSE) {
+  $return = array();
+  if ( $include_none ) {
+    $return[0] = 'None';
+  }
+  if ( $include_unknown ) {
+    $return[-1] = 'Unknown';
+  }
+  $result = db_query("SELECT a.* FROM {am_contributor} a LEFT JOIN {node}
+                      n on a.nid = n.nid WHERE status = 1
+                      ORDER BY last_name, first_name");
+
+  while ($data = db_fetch_object($result)) {
+    if ($data->contributor_type == CONTRIBUTOR_TYPE_CORPORATION) {
+      $return[$data->nid] = $data->last_name;
+    } else {
+      $aname = array($data->last_name, $data->first_name);
+      $return[$data->nid] = implode(', ',$aname);
+    }
+  }
+/*
+  while ( $data = db_fetch_object($result)) {
+    if (!$filter) {
+      if ( $data->last_name ) {
+        $return[$data->nid] = $data->last_name .', '. $data->first_name;
+      } 
+      else {
+        $return[$data->nid] = $data->first_name;
+      }
+    } else {
+       if ( artmob_contributor_filter_item($data) ) {
+         $return[$data->nid] = $data->last_name .', '. $data->first_name;
+       } 
+       else {
+         $return[$data->nid] = $data->first_name;
+       }
+    }
+  }
+  */
+  return $return;
+
+}
+
+function artmob_contributor_filter_item($data) {
+  // temporary function to filter out oddities in contributor data
+
+  if (strtolower($data->last_name) == 'last name' || strtolower($data->first_name) == 'first name' || $data->last_name == '') {
+    return FALSE;
+  }
+  else {
+    return TRUE;
+  }
+  
+
+}
+
+function artmob_contributor_BuildContributorListByID( $include_none = True ) {
+  $return = array();
+  if ( $include_none ) {
+    $return[0] = 'None';
+  }
+  $result = db_query("SELECT a.* FROM {am_contributor} a LEFT JOIN {node}
+                      n on a.nid = n.nid WHERE status = 1
+                      ORDER BY last_name, first_name");
+
+  while ( $data = db_fetch_object($result)) {
+    if ( $data->last_name ) {
+      $return[$data->contributor_id] = $data->last_name .', '. $data->first_name;
+    } 
+    else {
+      $return[$data->contributor_id] = $data->first_name;
+    }
+  }
+  return $return;
+
+}
+
+function artmob_contributor_BuildRolesList() {
+  $return = array();
+  $result = db_query("SELECT * FROM {am_roles}
+                      ORDER BY role_description");
+
+  while ( $data = db_fetch_object($result)) {
+    $return[$data->role_id] = $data->role_description;
+  }
+  return $return;
+}
+
+function artmob_contributor_get_role_default( $default ) {
+  if ( $default ) {
+    return $default;
+  } 
+  else {
+    return 'A01';
+  }
+}
+
+function artmob_contributor_ArticlesFromThisContributor( $contributor_nid ) {
+  $return = array();
+  $result = pcnodelink_full_to_node_linked_list( $contributor_nid, 'Articles', '');
+  while ($row = db_fetch_object( $result )) {
+    $return[] = $row;
+  }
+  return $return;
+}
+
+function artmob_contributor_digital_objects_by_contributor( $contributor_nid ) {
+//This function is a wrapper for artmob_contributor_WorksFromThisContributor
+//that removes the duplication and only returns an array with nids
+  $contributor_list = artmob_contributor_WorksFromThisContributor( $contributor_nid );
+  $contributors = array();
+  foreach ( $contributor_list as $contributor ) {
+    if ( !in_array( $contributor->parent_nid, $contributors ) ) {
+      $contributors[] = $contributor->parent_nid;
+    }
+  }
+  return $contributors;
+}
+
+function artmob_contributor_WorksFromThisContributor( $contributor_nid ) {
+
+  $return = array();
+  //$result = PCNodeLink_full_to_node_linked_list( $contributor_nid, '', '');
+
+  if (ARTMOB_FAIR_DEALING_ACTIVE) {
+    /* JOE'S UPDATED QUERY */
+    $sql = sprintf( '
+    SELECT c.contributor_id, first_name, last_name, t.citation_id, t.work_type, t.nid as citation_nid, t.link_nid as parent_nid, t.citation_title, n.title as parent_title, n.*
+    FROM {am_contributor} c
+    inner join {am_citation_roles} l on c.contributor_id = l.contributor_id
+    left join {am_citation} t on l.citation_id = t.citation_id
+    left join {node} n on n.nid = t.link_nid
+    where !(IsNull(t.citation_id))
+    and n.status = 1
+    and c.nid = %d', $contributor_nid );
+    //drupal_set_message( 'WorksFromThisContributor sql = '.$sql );
+
+    /* BILL'S ORIGINAL QUERY
+    $sql = sprintf('
+    SELECT n. *
+    FROM {node} n
+    LEFT JOIN {am_encapsulated_works} e ON n.nid = e.nid
+    LEFT JOIN {am_citation_roles} r ON e.citation_id = r.citation_id
+    LEFT JOIN {am_contributor} cnt ON r.contributor_id = cnt.contributor_id
+    WHERE cnt.nid = %d AND n.status = 1   ', $contributor_nid) ;
+    */
+    $result = db_query($sql);
+
+    while ($row = db_fetch_object($result)) {
+      $return[] = $row;
+    }
+
+  //  while ($row = db_fetch_object(db_query($sql))) {
+    //  $return[] = $row;
+      //drupal_set_message(devtools_dump($row));
+    //}
+
+  } 
+  else {
+    $sql = 'SELECT p.*, n.*, n.nid as parent_nid FROM {am_contributor_widget} p left join {node} n on p.nid = n.nid ';
+    $where .= ' WHERE p.contributor_nid = %d AND n.status = 1 ORDER BY n.changed DESC ';
+    $result= db_query( $sql . $where, $contributor_nid );
+    while ($row = db_fetch_object( $result )) {
+      $return[] = $row;
+    }
+
+  }
+  return $return;
+}
+
+
+function artmob_contributor_CopyrightsHeldByThisContributor( $contributor_nid ) {
+  $return = array();
+  $result = db_query( "SELECT * FROM {am_copyrightholder} c
+                       left join {node} n on c.nid = n.nid
+                       where contributor_nid = %d and n.status = 1", $contributor_nid );
+  while ($row = db_fetch_object( $result )) {
+    $return[] = $row;
+  }
+  return $return;
+}
+
+function artmob_contributor_ContributorsFromThisArticle( $article_nid ) {
+  $return = array();
+  $result = pcnodelink_get_full_associated_items_by_node( $article_nid, 'artmob_contributor', '');
+  while ($row = db_fetch_object( $result )) {
+    $node = node_load( $row->nid );
+    $return[] = $node;
+  }
+  return $return;
+}
+
+function artmob_contributor_views_default_views() {
+  $views = array();
+  $path = drupal_get_path('module', 'artmob_contributor') .'/views';
+  $files = drupal_system_listing('.inc$', $path, 'name', 0);
+  foreach ($files as $file) {
+    include_once $file->filename;
+  }
+  return $views;
+}
+
+//----------------------------------------------
+// Implementation of hook_views_tables()
+function artmob_contributor_views_tables() {
+  $tables['Contributor'] = array(
+    "name" => "am_contributor",
+    "join" => array(
+      "left" => array(
+        "table" => "node",
+        "field" => "nid"
+      ),
+      "right" => array(
+        "field" => "nid"
+      ),
+    ),
+    "fields" => array(
+      "last_name" => array(
+        'name' => "Contributor: Last Name",
+        'handler' => '',
+        'sortable' => TRUE
+      ),
+      "first_name" => array(
+        'name' => "Contributor: First Name",
+        'handler' => '',
+        'sortable' => TRUE
+      ),
+    ),
+
+    "sorts" => array(
+      'last_name' => array(
+        'name' => t('Contributor: Last Name'),
+       ),
+      'first_name' => array(
+        'name' => t('Contributor: First Name'),
+       ),
+    ),
+    "filters" => array(
+      "last_name" => array(
+        'name' => "Contributor: Last Name",
+        'operator' => 'views_handler_operator_eqneq',
+        'option' => 'string',
+      ),
+      "first_name" => array(
+        'name' => "Contributor: First Name",
+        'operator' => 'views_handler_operator_eqneq',
+        'option' => 'string',
+      ),
+    )
+  );
+  return $tables;
+}
+
+function artmob_contributor_make_type_list() {
+  $result = array();
+  $result[CONTRIBUTOR_TYPE_PERSON] = 'Person';
+  $result[CONTRIBUTOR_TYPE_CORPORATION] = 'Corporation';
+  return $result;
+}
+
+function artmob_contributor_get_id_from_nid( $nid ) {
+  $result = db_result( db_query( "SELECT contributor_id from {am_contributor}
+                                  WHERE nid = %d", $nid ));
+  return $result;
+}
+
+function artmob_contributor_get_id_from_name( $full_name ) {
+  $query = db_query( "select contributor_id,
+                      concat(first_name, ' ', last_name) AS name
+                      from {am_contributor} having name = '%s'",
+                      $full_name );
+  while ($row = db_fetch_object($query)) {
+    $result = $row->contributor_id;
+    break;
+  }
+  return $result;
+}
+
+function artmob_contributor_add_contributor( ) {
+  global $user;
+  $contributor = $_POST['contributor'];
+  //assume
+  watchdog( 'add contributor', 'input report from jquery = '.$contributor );
+  $contributor_array = json_decode($contributor, TRUE);   // TRUE forces it to convert objects associative arrays
+  watchdog( 'add contributor', 'decoded report array from jquery = '.print_r( $contributor_array, True ) );
+  //$contributor_array['first_name'];
+  //$contributor_array['last_name'];
+  //$contributor_array['is_corporate_contributor'];
+  //$contributor_array['is_unknown'];
+  $first_name = $contributor_array['first_name'];
+  $last_name = $contributor_array['last_name'];
+
+  $count = db_result( db_query( "SELECT count(*) from {am_contributor} where first_name = '%s' and last_name = '%s'", $first_name, $last_name ));
+
+  if ( $count == 0 ){
+    if ( $contributor_array['is_corporate_contributor'] ){
+      $contributor_type = CONTRIBUTOR_TYPE_CORPORATION;
+    } else {
+      $contributor_type = CONTRIBUTOR_TYPE_PERSON;
+    }
+
+    global $user;
+    $contributor_node->nid = '';
+    $contributor_node->uid = $user->uid;
+    $contributor_node->type = 'Contributor';
+    $contributor_node->status = 1;
+    if ($contributor_type != CONTRIBUTOR_TYPE_CORPORATION) {
+      $contributor_node->first_name = $first_name;
+    }
+    $contributor_node->last_name = $last_name;
+    $contributor_node->title = $first_name .' '. $last_name;
+    $contributor_node->contributor_type = $contributor_type;
+    node_save( $contributor_node);
+    
+   // $cid = artmob_contributor_get_id_from_name($first_name .' '. $last_name);
+
+    drupal_set_header('Content-Type: text/javascript; charset=utf-8');
+    echo json_encode(array('nid'=>$contributor_node->nid));
+    exit();
+    
+  }
+}
+
+function artmob_contributor_get_contributors_by_id($nid=NULL) {
+  drupal_set_header('Content-Type: text/javascript; charset=utf-8');
+  echo json_encode(artmob_contributor_BuildContributorListByID(FALSE));
+  exit();
+}
+

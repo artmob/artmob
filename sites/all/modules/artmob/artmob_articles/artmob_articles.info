@@ -1,0 +1,7 @@
+; $Id: artmob_articles.info,v 1.0 2010/04/26 20:55:33 stop14 Exp $
+name = Articles
+description = A simple content type to allow articles to be uploaded.
+dependencies = content upload
+version = 3.1
+
+

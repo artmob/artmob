@@ -1,0 +1,289 @@
+<?php
+ // $Id: dynamic_subform.module,v 1.0 2011/09/15 17:10:33 ramani Exp $
+
+/* @file ****************************************************************************************
+* DYNAMIC SUBFORM HANDLING ****************************************************************
+*****************************************************************************************/
+
+/**
+ * @param $form_id
+ * @param $subform_id
+ * @param ... - all of the extra args passed in to this subform
+*/
+function dynamic_subform_get_embedded($form_id, $subform_id) {
+  if ( empty($subform_id) ) {
+    drupal_set_message( "dynamic_subform_get_subform_embedded: Empty subform_id", 'error' );
+    return;
+  }
+  if ( empty($form_id) ) {
+    drupal_set_message( "dynamic_subform_get_subform_embedded: Empty form_id", 'error' );
+    return;
+  }
+  $old_subform_build_id = _dynamic_subform_get_old_cache_key($subform_id);
+  $old_args = _dynamic_subform_get_cached_args( $old_subform_build_id );    
+  $new_args = func_get_args(); // get all the args
+  array_shift( $new_args ); // pull the $form_id off the front of the args
+  
+  if ( empty( $old_args ) ) { // We're coming in fresh;
+    // Build the subform and cache arguments in the session so it can be rebuilt
+    // Ignore values in $_POST entirely
+    _dynamic_subform_clean_subform_cache(); // tidy up session
+    $subform_build_id = _dynamic_subform_get_new_cache_key();  // next build_id    
+    $subform = call_user_func_array('drupal_retrieve_form', $new_args); // generate new subform
+    $new_args[] = array(); // no form values, but put this here to keep the arg count consistant
+  }
+  else { // There are cached args for this subform, so let's do a sanitization/validation pass
+    // Step #0 - check for valid arguments and state
+    if ( $errors = dynamic_subform_find_errors($form_id, $subform_id) ) {
+      return $errors;
+    }    
+    // Step #1 - rebuild old subform, so we can sanititze the $_POST
+    $subform_build_id = $old_subform_build_id;
+    $old_args[] = 'validation_pass'; // add in pass param
+    $old_subform = call_user_func_array('drupal_retrieve_form', $old_args); // regenerate old subform
+    global $form_values;
+    $saved_form_values = $form_values; // let's be tidy and put the form_values back when we are done using them
+    $form_values = array(); // clear them out
+    drupal_prepare_form($form_id, $old_subform); // this puts sanitized $_POST values into $form_values
+    drupal_validate_form($form_id, $old_subform);  // run form_values through validation checks
+
+    //TODO - probably should bomb out if validate sets form_error
+    
+    // Step #2 - build the new form that was actually requested, using sanitized $form_values
+    $new_args[] = $form_values;
+    $form_values = $saved_form_values; // leave the global $form_values as we found them
+  }
+  $new_args[] = 'render_pass';   // Add in pass param (ok to use #values on render_pass)
+  $subform = call_user_func_array('drupal_retrieve_form', $new_args); // generate new subform
+
+  //TODO??? - generate form_token for anonymous users (weird that I need to do this)
+  
+  array_pop( $new_args ); // pull pass number back out of args before caching them.
+  // cache subform in session, and put subform_id in the form.
+  $subform = _dynamic_subform_cache_subform($subform_id, $subform_build_id, $subform, $new_args);
+  return $subform;
+}
+
+/**
+ * @param $form_id
+ * @param $subform_id
+ * @param ... - all the rest of the args are packaged and sent to dynamic_subform_get_subform_embedded
+ */
+function dynamic_subform_get_prepped($form_id, $subform_id) {
+  // Agressively check all the variables and state
+  if ( $errors = dynamic_subform_find_errors($form_id, $subform_id) ) {
+    return $errors;
+  }
+  // OK - passed validation so call out to dynamic_subform_get_embedded
+  $args = func_get_args();
+  $subform = call_user_func_array('dynamic_subform_get_embedded', $args);
+   // containing form with not be processed, so we need to prep subform for rendering
+  $subform['#ahah_embed'] = TRUE; // set flag to skip processing #ahah_bindings
+  // prep arrays for rendering & call form_builder to weave in $_post params
+  // send in $form_id to get past validation on $_post values
+  drupal_prepare_form($form_id, $subform);
+  drupal_validate_form($subform_id, $subform); // prep for reporting any validation errors
+
+  // Todo - probably should bomb out if validate sets form_error
+  
+  unset( $subform['form_token'] ); // don't change form_token
+  unset( $subform['form_id'] ); // don't change form_id
+  unset( $subform['form_build_id'] ); // don't change form_build_id
+  
+  $subform['#type'] = 'dynamic_subform'; // change to custom type for rendering
+  return $subform;
+}
+
+/**
+ * Agressively check the state and the arguments coming back from the client
+ */
+function dynamic_subform_find_errors( $form_id, $subform_id ) {
+  $errors = array();
+  if ( empty($subform_id) ) {
+    $errors[] = "Empty subform_id";
+  }
+  if ( empty($form_id) ) {
+    $errors[] = "Empty form_id";
+  }
+  if ( $form_id != $_POST['form_id'] ) {
+//    $errors[] = "form_id mismatch";       
+    $errors[] = "form_id mismatch: $form_id vs ". $_POST['form_id'];       
+  }
+  $old_subform_build_id = _dynamic_subform_get_old_cache_key( $subform_id );
+  if ( empty( $old_subform_build_id ) ) {
+    $errors[] = 'No cached subform_build_id!';       
+  }
+  $old_args = _dynamic_subform_get_cached_args( $old_subform_build_id );    
+  if ( empty( $old_args ) ) {
+    $errors[] = 'Can not find old cached args';       
+  } 
+  if ( $old_args[0] != $subform_id ) {
+//    $errors[] = "Bad subform_id in args";
+    $errors[] = "Bad subform_id in args - $old_args[0] vs $subform_id";
+  }
+  // check the form_token
+  if ( $user->uid != 0 ) { // for some reason, form_tokens are not generated for anonymous users
+    if ( $_POST['form_token'] != drupal_get_token($form_id) ) {
+      $errors[] = "Bad Token";
+    }
+  }
+  if ( count( $errors ) > 0 ) { // bail out if there are critical errors
+    $message = implode( ' : ', $errors );
+    form_set_error( 'form_id', $message );
+    $subform['error'] = array( 
+      '#type' => 'item', 
+      '#value' => $message,
+    );
+    return $subform;
+  }
+  else { 
+    return FALSE; // FALSE means no errors
+  }
+}
+
+
+// CACHE/SESSION HELPER FUNCTIONS *****************************************************
+
+// Put the args of the subform in the session, keyed by the build_id
+// Put the build_id of the subforms in the form
+function _dynamic_subform_cache_subform($subform_id, $subform_build_id, $subform, $args) {
+  if ( empty($subform_id) ) drupal_set_message( "_dynamic_subform_cache_subform: Empty subform_id", 'error' );
+  if ( empty($subform_build_id) ) drupal_set_message( "_dynamic_subform_cache_subform: Empty subform_build_id", 'error' );
+  // cache subform arguments in the session
+  $_SESSION['subforms'][$subform_build_id] = array('timestamp' => time(), 'args' => $args);
+  $subform['subform_build_ids'] = array(
+     '#tree' => TRUE,
+  );
+  $subform['subform_build_ids'][$subform_id] = array(
+     '#type' => 'hidden',
+     '#value' => $subform_build_id,
+  );
+//  // cache entire subform in the cache table
+//  $time_to_live = time() + (2 * 60 * 60); // now + 2 hours;
+//  cache_set( $subform_build_id, 'cache', serialize($subform), $time_to_live );
+  return $subform;
+} 
+
+function _dynamic_subform_get_new_cache_key() {
+  return 'dynamic_subform:'. md5(mt_rand());  // next build_id    
+}
+
+function _dynamic_subform_get_old_cache_key($subform_id) {
+  return $_POST['subform_build_ids'][$subform_id];
+}
+
+function _dynamic_subform_get_cached_args($cache_key) {
+    return $_SESSION['subforms'][$cache_key]['args'];    
+}
+
+/**
+ * Remove form information that's at least a day old from the
+ * $_SESSION['subforms'] array.
+ */
+function _dynamic_subform_clean_subform_cache() {
+  if (isset($_SESSION['subforms'])) {
+    foreach ($_SESSION['subforms'] as $build_id => $data) {
+      if ($data['timestamp'] < (time() - 84600)) {
+        unset($_SESSION['subforms'][$build_id]);
+      }
+    }
+  }
+}
+
+///**
+// * hook_cron: clean up the expired cache entries (not sure if this is done anywhere else
+// */
+//function dynamic_subform_cron() {
+//  watchdog( WATCHDOG_NOTICE, 'Dynamic Subform Cron: clearning expired cache items');
+//  cache_clear_all( NULL, 'cache' );
+//}
+
+
+// SUBFORM THEME FUNCTIONS *********************************************************************
+
+/**
+ * hook_elements - define the subform type
+ */
+function dynamic_subform_elements() {
+  $type = array();
+  $type['dynamic_subform'] = array();
+  return $type;
+}
+/**
+ * Make sure the subform acutally shows up on the form
+ */
+function theme_dynamic_subform($element) {
+  $output .= theme('form_element', $element, $element['#children']);
+  return $output;
+}
+
+// *****************************************************************************************
+// UNIT TESTING ****************************************************************************
+// *****************************************************************************************
+
+function dynamic_subform_menu($may_cache) {
+  if ($may_cache) {
+    $items[] = array('path' => 'dynamic_subform/test',
+      'callback' => 'dynamic_subform_test',
+      'access' => TRUE,
+      'type' => MENU_CALLBACK);
+  }
+  return $items;
+}
+
+function dynamic_subform_test() {
+  simpletest_load();
+  $output = simpletest_run_tests( array('SubformTest') );
+  print theme('page', $output);  
+}
+/**
+ * Implementation of hook_simpletest().
+ */
+function dynamic_subform_simpletest() {
+  $dir = drupal_get_path('module', 'dynamic_subform') . DIRECTORY_SEPARATOR .'tests';
+  $tests = file_scan_directory($dir, '\.test');
+  return array_keys($tests);
+}
+
+function dynamic_subform_test_subform($foo, $form_values=NULL) {
+  if ( is_array( $foo ) ) { 
+    drupal_set_message( "dynamic_subform_test_subform: sent form_values in foo"); 
+  }
+//drupal_set_message( "multistep = $multistep" );
+  $form = array();
+  $form['foo'] = array( 
+    '#type' => 'item', 
+    '#value' => $foo );
+  $form['setme'] = array( // step 1
+    '#type' => 'textfield', 
+    '#default_value' => 'one' );
+  if ( $form_values['setme'] == 'two' ) { // step 2
+    $form['added'] = array( 
+      '#type' => 'textfield', 
+      '#default_value' => 'dynamic' );
+  }
+  if ( $form_values['added'] == 'three' ) { // step 3
+    $form['last'] = array( 
+      '#type' => 'textfield', 
+      '#default_value' => 'yay' );
+  }
+  if ( $form_values['poison'] == 'toxic' ) { // bad path
+    $form['poison'] = array( 
+      '#type' => 'item', 
+      '#value' => 'bad' );
+  }
+  return $form;
+}
+
+function dynamic_subform_test_form($foo='bar') {
+  $form['one'] = array( 
+    '#type' => 'item', 
+    '#value' => 'ONE' );
+  $form['sub'] = array(
+    '#type' => 'item',
+    '#prefix' => '<div id="test_wrapper">',
+    '#suffix' => '</div>',
+  );
+  $form['sub'] += dynamic_subform_get_embedded('dynamic_subform_test_form', 'dynamic_subform_test_subform', $foo);
+  return $form;
+}

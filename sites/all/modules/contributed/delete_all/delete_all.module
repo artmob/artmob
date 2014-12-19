@@ -1,0 +1,451 @@
+<?php
+// $Id: delete_all.module,v 1.1.2.10 2009/01/17 01:06:14 kbahey Exp $
+
+function delete_all_menu($maycache) {
+  $items = array();
+
+  $items[] = array(
+    'path'               => 'admin/content/delete_content',
+    'title'              => t('Delete all content'),
+    'description'        => t('Delete all nodes and comments on this site. This is useful for development sites, or prior to launching the site. Otherwise it destroys all data on a site.'),
+    'callback'           => 'drupal_get_form',
+    'callback arguments' => array('delete_all_content'),
+    'access'             => user_access('administer nodes'),
+    'type'               => MENU_NORMAL_ITEM);
+
+  $items[] = array(
+    'path'               => 'admin/user/delete_users',
+    'title'              => t('Delete all users'),
+    'description'        => t('Delete all users on this site. This is useful for development sites, or prior to launching the site. Otherwise it destroys all data on a site.'),
+    'callback'           => 'drupal_get_form',
+    'callback arguments' => array('delete_all_users'),
+    'access'             => user_access('administer users'),
+    'type'               => MENU_NORMAL_ITEM);
+    
+  // Bulk Delete Form
+  $items[] = array(
+    'path'                =>  'admin/settings/bulk_delete',
+    'title'               => t('Bulk delete'),
+    'description'         => t('Bulk deletes nodes, taxonomy terms and users based on the their types.'),
+    'callback'            => 'drupal_get_form',
+    'callback arguments'  => array('delete_all_bulk_delete_content'),
+    'access'              => user_access('administer content'),
+    'type'                => MENU_NORMAL_ITEM
+  );
+  
+  // Bulk Delete Complete
+  $items[] = array(
+    'title'             =>  t('Items Deleted'),
+    'path'              =>  'admin/settings/bulk_delete/complete',
+    'callback'          =>  'delete_all_bulk_delete_content_complete',
+    'type'              =>  MENU_CALLBACK,
+    'access'            =>  user_access('administer content')
+  );  
+  return $items;
+}
+
+/**
+* Form function for bulk delete content page
+**/
+function delete_all_bulk_delete_content($form_values = array()) {
+  $form_id = 'delete_all_bulk_delete_content';
+  $form = array();
+  //Fieldset for deleting taxonomy forms
+  $form['taxonomy'] = array(
+    '#type'             => 'fieldset',
+    '#access'           => user_access('administer content'),
+    '#title'            => t('Delete Taxonomy Terms'),
+    '#collapsible'      =>  FALSE
+  );
+  $form['taxonomy']['vocabulary'] = array(
+    '#title'          => t('Taxonomy Vocabulary'),
+    '#type'           => 'checkboxes',
+    '#description'    => t('Select which taxonomy vocabulary terms you wish to delete. This will not delete the vocabulary, only the terms within the vocabulary.'),
+    '#options'        => _delete_all_get_vocabulary()
+  );
+  //Fieldset for deleting nodes
+  $form['nodes'] = array(
+    '#type'           =>  'fieldset',
+    '#access'         =>  user_access('administer content'),
+    '#title'          =>  t('Delete Nodes'),
+    '#collapsible'    =>  FALSE
+  );
+  $form['nodes']['node_types'] = array(
+    '#type'           =>  'checkboxes',
+    '#title'          =>  t('Node types to delete'),
+    '#description'    =>  t('Select which node types you wish to delete'),
+    '#options'        =>  _delete_all_get_node_types()
+  );
+  return confirm_form(
+    $form,
+    t('Are you sure you wish to delete the content?'),
+    'admin/settings/bulk_delete',
+    'Are you sure you wish to delete the items?',
+    t('Delete'),
+    t('Cancel'),
+    'delete_all_bulk_delete_content_confirm'
+  );
+}
+
+/**
+* Implementation of hook_submit for bulk_delete_content form
+**/
+function delete_all_bulk_delete_content_submit($form_id,$form_values) {
+  //TODO: Display message with deletion statistics
+  //Iterate and delete any taxonomy terms if present
+  if(isset($form_values['vocabulary'])) {
+    $vocabulary = $form_values['vocabulary'];
+    foreach($vocabulary as $v) {
+      if($v > 0) {
+        //Get Vocabulary Info for message. 
+        $vocabulary_info = taxonomy_get_vocabulary($v);
+        //Get Array of terms to delete
+        $terms = _delete_all_get_terms_by_vid($v);
+        //Iterate through terms and delete them
+        foreach($terms as $term) {
+          taxonomy_del_term($term);
+        }
+        drupal_set_message("You have deleted " . count($terms) . ' terms of type ' . $vocabulary_info->name . '.');
+      }
+    }
+  }
+  //Iterate and delete nodes by type
+  if(isset($form_values['node_types'])) {
+    $node_types = $form_values['node_types'];
+    //$nodes = array();
+    foreach($node_types as $t) {
+      if(gettype($t) == 'string') {       
+        $nodes = _delete_all_get_nodes_by_type($t);
+        foreach($nodes as $n) {
+          node_delete($n);
+        }        
+      }
+    }
+  }
+  return "admin/settings/bulk_delete/complete";
+}
+
+/**
+* Function to display deletion complete message
+**/
+function delete_all_bulk_delete_content_complete() {
+ return t("Request has successfully been completed!"); 
+}
+
+/**
+* Function to get an array of terms by vocabulary
+* 
+* TODO: Is this an API function I couldn't find?
+**/
+function _delete_all_get_terms_by_vid($vid) {
+  $terms = array();
+  $result = db_query('SELECT t.tid from {term_data} t WHERE t.vid = %d',$vid);
+  while($term = db_fetch_object($result)) {
+    $terms[] = $term->tid;
+  }
+  return $terms;
+}
+
+/**
+* Function to get an array of nodes by type
+* 
+* TODO: Is this an API function I couldn't find?
+**/
+function _delete_all_get_nodes_by_type($type) {
+  $nodes = array();
+  $result = db_query("SELECT n.nid from {node} n WHERE n.type = '%s'",$type);
+  while($node = db_fetch_object($result)) {
+    $nodes[] = $node->nid;
+  }
+  return $nodes;
+}
+
+/**
+* Function to get array of taxonomy terms
+**/
+function _delete_all_get_vocabulary() {
+  $terms = taxonomy_get_vocabularies();
+  $options = array();
+  foreach($terms as $term) {
+    $options[$term->vid] = $term->name;   
+  }
+  return $options;
+}
+
+/**
+* Function to get an array of node types
+**/
+function _delete_all_get_node_types() {
+  $node_types = node_get_types();
+  $options = array();
+  foreach($node_types as $nt) {
+      $options[$nt->type] = $nt->name;
+  }
+  return $options;
+}
+
+
+/** Original delete_all functions **/
+function delete_all_content() {
+  drupal_add_js(drupal_get_path('module', 'delete_all') .'/delete_all.js');
+  $form = array();
+  $form['all'] = array(
+    '#type' => 'checkbox',
+    '#default_value' => TRUE,
+    '#title' => t('Delete All Content'),
+    '#description' => t('Select to delete all content'),
+    '#attributes' => array('class' => 'delete-all'),
+  );
+
+  // count how many nodes we have of each type
+  $result = db_query("SELECT type, COUNT(*) AS num FROM {node} GROUP BY type");
+  $count = array();
+  while ($data = db_fetch_object($result)) {
+    $count[$data->type] = $data->num;
+  }
+
+  // add the types to the form
+  $types = array();
+  foreach (node_get_types() as $type => $info) {
+    if ($count[$type] > 0) {
+      $types[$type] = $info->name .' ('. $count[$type] .')';
+    }
+  }
+  asort($types);
+  $form['type-fieldset'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Types'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    'types' => array(
+      '#type' => 'checkboxes',
+      '#options' => $types,
+      '#description' => t('Select the types of content to delete'),
+      '#theme' => 'delete_all_checkboxes',
+    ),
+  );
+  $form['method-fieldset'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Method'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    'method' => array(
+      '#type' => 'radios',
+      '#title' => t('Method'),
+      '#options' => array('normal' => t('Normal'), 'quick' => t('Quick')),
+      '#default_value' => 'normal',
+      '#description' => t('Normal node delete calls node_delete() on every node in the database.  If you have only a few hundred nodes, this can take a very long time.  Use the quick node delete method to get around this problem.  This method deletes directly from the database, skipping the extra php processing.  The downside is that it can miss related tables that are normally handled by module hook_delete\'s.'),
+    ),
+  );
+  $form['confirm'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Delete Confirmation'),
+    '#description' => t('Please check this box to confirm that you understand you are deleting node content.  This should only be done in a development environment.'),
+    '#required' => TRUE,
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Delete'),
+  );
+  $form['#submit'] = array('delete_all_content_submit' => array());
+  return $form;
+}
+
+function theme_delete_all_checkboxes($form) {
+  $total = 0;
+  foreach ($form as $element_id => $element) {
+    if ($element_id[0] != '#') {
+      $total ++;
+    }
+  }
+  $total = (int) (($total % 3) ? (($total + 2) / 3) : ($total / 3));
+  $pos = 0;
+  $rows = array();
+  foreach ($form as $element_id => $element) {
+    if ($element_id[0] != '#') {
+      $pos ++;
+      $row = $pos % $total;
+      $col = $pos / $total;
+      if (!isset($rows[$row])) {
+        $rows[$row] = array();
+      }
+      $rows[$row][$col] = drupal_render($element);
+    }
+  }
+  return theme('table', array(), $rows);
+}
+
+function delete_all_content_submit($form_id, &$form) {
+  $types = array();
+  if (!$form['all']) {
+    foreach ($form['types'] as $type => $checked) {
+      if ($checked) {
+        $types[] = $type;
+      }
+    }
+  }
+  switch ($form['method']) {
+    case 'normal':
+      $count = _delete_all_normal($form['all'], $types);
+      break;
+
+    case 'quick':
+      // the quick method doesn't support an all option,
+      // so just get all the content types and delete all of those
+      if ($form['all']) {
+        $result = db_query("SELECT DISTINCT type FROM {node}");
+        while ($data = db_fetch_object($result)) {
+          $types[] = $type;
+        }
+      }
+      $count = _delete_all_quick($types);
+      break;
+  }
+
+  if ($form['all']) {
+    // Delete the URL aliases
+    db_query("DELETE FROM {url_alias} WHERE src LIKE 'node/%%'");
+
+    // Reset the sequences
+    db_query("UPDATE {sequences} SET id = 1 WHERE name = 'node_nid'");
+    db_query("UPDATE {sequences} SET id = 1 WHERE name = 'comment_cid'");
+
+    drupal_set_message(t('All nodes, comments and URL aliases have been deleted. Number of nodes deleted: !count.', array('!count' => $count)));
+  }
+  else {
+    drupal_set_message(t('Nodes and comments of type @type have been deleted. Number of nodes deleted: !count.', array('!count' => $count, '@type' => implode(', ', $types))));
+  }
+
+  drupal_goto('admin');
+}
+
+function _delete_all_normal($all, $types) {
+  if ($form['all']) {
+    $result = db_query('SELECT nid FROM {node}'. $where);
+  }
+  else {
+    $placeholders = implode(',', array_fill(0, count($types), "'%s'"));
+    $result = db_query('SELECT nid FROM {node} WHERE type IN ('. $placeholders .')', $types);
+  }
+
+  $deleted = 0;
+  while ($data = db_fetch_object($result)) {
+    set_time_limit(30);
+    node_delete($data->nid);
+    $deleted ++;
+  }
+  return $deleted;
+}
+
+function _delete_all_quick($types) {
+  $deleted = 0;
+  foreach ($types as $type) {
+    // keep this alive
+    set_time_limit(240);
+
+    // determine how many items will be deleted
+    $count = db_result(db_query("SELECT COUNT(*) FROM {node} WHERE type = '%s'", $type));
+    if ($count) { // should always be positive
+      /**
+       * build a list of tables that need to be deleted from
+       *
+       * The tables array is of the format table_name => array('col1', 'col2', ...)
+       * where "col1, col2" are using "nid, vid", but could simply be "nid".
+       */
+
+      $nid_vid = array('nid', 'vid');
+      $nid = array('nid');
+      $tables = array('node_revisions' => $nid_vid, 'comments' => $nid);
+      $tables[_content_tablename($type, CONTENT_DB_STORAGE_PER_CONTENT_TYPE)] = $nid_vid;
+      $content = content_types($type);
+      if (count($content['fields'])) {
+        foreach ($content['fields'] as $field) {
+          $field_info = content_database_info($field);
+          $tables[$field_info['table']] = $nid_vid;
+        }
+      }
+
+      // find all other tables that might be related
+      switch ($GLOBALS['db_type']) {
+        case 'mysql':
+        case 'mysqli':
+          $result_tables = db_query("SHOW TABLES");
+          while ($data = db_fetch_array($result_tables)) {
+            $table = array_pop($data);
+            if (isset($tables[$table]) || substr($table, 0, 8) == 'content_') {
+              continue;
+            }
+            $result_cols = db_query("SHOW COLUMNS FROM %s", $table);
+            $cols = array();
+            while ($data = db_fetch_array($result_cols)) {
+              $cols[$data['Field']] = $data;
+            }
+            if (isset($cols['nid'])) {
+              $tables[$table] = isset($cols['vid']) ? $nid_vid : $nid;
+            }
+          }
+          break;
+
+        case 'pgsql':
+          // @TODO: inspect the database and look for nid fields
+          break;
+      }
+
+      // @todo: update all node related nid references
+
+      // delete from all of the content tables in one sql statement
+      $sql = array('delete' => array(), 'from' => array(), 'where' => array());
+      $index = 0;
+      foreach ($tables as $table => $cols) {
+        $table = '{'. $table .'}';
+        $sql['cols'][] = "t$index.*";
+
+        // build the ON clause
+        $on = array();
+        foreach ($cols as $col) {
+          $on[] = "t$index.$col = n.$col";
+        }
+
+        // now that we have the ON clause, build the join clause
+        $sql['join'][] = " LEFT JOIN $table t$index ON ". implode(' AND ', $on);
+        $index ++;
+      }
+      $delete_sql = "DELETE n.*, ". implode(', ', $sql['cols']) ." FROM {node} n ". implode(' ', $sql['join']);
+      db_query($delete_sql ." WHERE n.type = '%s'", $type);
+
+      $deleted += $count;
+    }
+  }
+  return $deleted;
+}
+
+function delete_all_users() {
+  return confirm_form(
+    $form,
+    t('Are you sure you want to delete all users?'),
+    'admin',
+    '',
+    t('Delete'),
+    t('Cancel'),
+    'delete_all_content');
+}
+
+function delete_all_users_submit($form_id, &$form) {
+  $result = db_query('SELECT uid FROM {users} WHERE uid > 1');
+
+  $count = 0;
+  while ($data = db_fetch_object($result)) {
+    user_delete(array(), $data->uid);
+    $count++;
+  }
+
+  // Delete the URL aliases
+  db_query("DELETE FROM {url_alias} WHERE src LIKE 'user/%%'");
+
+  db_query("UPDATE {sequences} SET id = 1 WHERE name = 'users_uid'");
+
+  drupal_set_message(t('All users have been deleted. Number of users deleted: !count.', array('!count' => $count)));
+
+  drupal_goto('admin');
+}
+

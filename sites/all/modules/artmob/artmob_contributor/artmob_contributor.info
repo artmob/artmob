@@ -1,0 +1,6 @@
+; $Id: artmob_contributor.info,v 3.1 2010/04/29 20:55:33 stop14 Exp $
+name = Artmob Contributor
+description = Provides a method of handling contributors and creators as part of the Artmob Fair Dealing suite.
+package = Artmob
+dependecies = artmob_citation artmob_contributor_widget
+version = 3.1

@@ -1,0 +1,1426 @@
+<?php
+// $Id: artmob_main.info,v 1.0 2008/03/07 20:55:33 stop14 Exp $
+
+//----------------------------------------------
+// CONSTANTS
+//----------------------------------------------
+
+define (PAGERCOUNT_THUMBNAILS, 6 );
+define (PAGERCOUNT_LIST, 30 );
+define (ARTMOB_MAIN_MODULE_PATH,drupal_get_path('module','artmob_main'));
+
+include (ARTMOB_MAIN_MODULE_PATH .'/artmob_main_deprecated_functions.inc');
+
+function artmob_main_views_style_plugins() {
+  $plugins = array();
+
+  $plugins['am_alphabet'] = array(
+    'name' => t('Artmob: Browser'),
+    'theme' => 'artmob_main_browser_display',
+    'validate' => 'artmob_main_browser_validate',
+    'needs_fields' => FALSE,
+    'needs_table_header' => FALSE,
+  );
+
+  return $plugins;
+}
+
+function artmob_main_init() {
+   global $base_url;
+   $js_path = ARTMOB_MAIN_MODULE_PATH. '/js';
+
+   $scripts = array(
+      'jquery-min-14.js','artmob.js'
+   );
+   
+   foreach ($scripts as $js) {
+      drupal_add_js( $js_path . "/" . $js);
+   }
+
+  $settings = array(
+    'sitepathurl' => $base_url . '/' . path_to_theme(),
+  );
+  
+  drupal_add_js(array('pngfix'=>$settings),"setting");
+  drupal_add_css(ARTMOB_MAIN_MODULE_PATH . '/css/artmob_main.css');
+}
+
+function artmob_main_browser_validate( $type, $view, $form ){
+
+  if ( $view['sort']['count'] < 2 ){
+    form_error($form['sort']['add']['id'], t('The Artmob Browser requires two sort fields - Node Title [ascending] and Created Date [descending].'));
+  }
+
+  if ( $view['sort']['count'] >= 2 ){
+    $isdate = False;
+    $istitle = False;
+    for ($i = 0; $i < $view['sort']['count']; $i++) {
+      $sorts = $view['sort'][$i];
+      $field_name = $sorts['field'];
+      if ( $field_name == 'node.title' ){
+        $istitle = True;
+      }
+      if ( $field_name == 'node.created' ){
+        $isdate = True;
+      }
+    }
+    if ( $istitle and $isdate ){
+      //do nothing since we are good
+    } else {
+      form_error($form['sort']['add']['id'], t('The first and second sort fields should be title [ascending] and created date [descending]'));
+    }
+  }
+}
+
+
+function artmob_main_views_pre_view(&$view, $items){
+  //watchdog( 'joe browser debug', '_pre_view - $server = '.print_r( $_SERVER, true ) );
+  //watchdog( 'joe browser debug', '_pre_view - $view = '.print_r( $view, true ) );
+  //$_SERVER["HTTP_REFERER"]
+  switch ($view->type) {
+    case 'am_alphabet':
+      $view_css = views_css_safe("browser-view-block-$view->name");
+      $content .= "<div class='$view_css'>";
+      $content .= theme( "artmob_main_pagers", $view, $_GET['q'] );
+      break;
+    case 'am_teaser': /* Deprecated */
+    case 'am_node': /* Deprecated */
+      if ( variable_get('use_tabs_'.$view->vid, 1 ) ){
+        $content = theme( 'artmob_main_nodetype_tabs', $view );
+      }
+      break;
+    case 'am_teaser_no_tab':  // added. /bk
+      break;
+      
+  }
+
+  switch ($view->type) {
+    case 'am_alphabet':
+    case 'am_teaser': /* Deprecated */
+    case 'am_node': /* Deprecated */
+    if ($view->page) {
+      if ( count( $items ) == 0 ){
+        artmob_main_get_last_2_args( $alphabet, $type );
+        //If we don't find any nodes then instead have an explanatory message
+        if ( count( $nodes ) == 0 ){
+          if (( $alphabet == 'all' ) and ( $type == 'all' )){
+            $content .= theme('artmob_main_results_browser_no_results');
+          } else if ( $alphabet == 'all' ) {
+            $content .= theme('artmob_main_results_browser_no_results');
+          } else if ( $type == 'all' ) {
+            $content .= theme('artmob_main_results_browser_no_results',"There are no items in the archive that begin with '".$alphabet."' available at this time.");
+          } else {
+            $content .= theme('artmob_main_results_browser_no_results');
+          }
+        }
+      }
+    }
+    break;
+  }
+
+  return $content;
+}
+
+/* Post View Hook
+*/
+function artmob_main_views_post_view(&$view, &$items, &$output){
+
+  switch ($view->type) {
+    case 'am_alphabet':
+      $content = '';
+      $view_items = array();
+      $meta = artmob_main_build_meta( $view );
+      $content = theme( 'artmob_main_results_browser_bottom_tier', $view_items, $meta, 'views');
+      $content .= "</div>"; //This closes the tag from theme_artmob_main_pagers
+      return $content;
+ }
+}
+
+
+function artmob_main_views_query_alter(&$query, &$view, $summary, $level){
+  switch ($view->type) {
+    case 'am_alphabet':
+      $numeric = '0123456789';
+      if ( $view->page ){
+        $argarray = artmob_main_get_last_2_args( $alphabet, $type, $view->args[0].'/'.$view->args[1] );
+        $argarray = array();
+
+        if (strtolower($type) == 'all'){
+          $query->add_where( 'node.type in ('.artmob_main_get_view_type_nodes_filter().')');
+          if ( strstr( $numeric, $alphabet)){
+            //$query->add_where( 'LEFT(node.title, 1) in ("0","1","2","3","4","6","7","8","9")');
+            $query->where[0] = 'LEFT(node.title, 1) in ("0","1","2","3","4","6","7","8","9")';
+          }
+        } else {
+          if ($numeric && $alphabet && strstr( $numeric, $alphabet)){  // additional tests added by bk
+            $query->where[1] = 'LEFT(node.title, 1) in ("0","1","2","3","4","6","7","8","9")';
+          }
+        }
+      }
+      break;
+  }
+}
+
+function artmob_main_get_last_2_args( &$arg1, &$arg2, $in_args = '' ){
+  if ( $in_args == '' ){
+    $args = $_GET['q'];
+  } else {
+    $args = $in_args;
+  }
+  $arguments = explode('/', $args);
+  $arg1 = $arguments[ count($arguments) - 1 ];
+  array_pop( $arguments );
+  $arg2 = $arguments[ count($arguments) - 1 ];
+  array_pop( $arguments );
+  return $arguments;
+}
+
+function theme_artmob_main_pagers($view, $args) {
+  switch ($view->type) {
+    case 'am_alphabet':
+      $view_items = array();
+      $meta = artmob_main_build_meta( $view );
+      $content = "<div class='results-browser'>"; //This starts the div tag closed in amMain_views_post_view
+      $content .= theme( 'artmob_main_results_browser_top_tier', $view_items, $meta, $view, 'views');
+      return $content;
+  }
+}
+
+//----------------------------------------------
+/**
+ * Implementation of hook_help().
+ */
+function artmob_main_help($section) {
+  switch ($section) {
+    case 'admin/help#artmob_main':
+      $output = '<p>'. t('The artmob_main module contains general global functions') .'</p>';
+      return $output;
+    case 'admin/modules#description':
+    case 'admin/settings/amMain':
+      return (t('Contains general global functions.'));
+  }
+}
+
+//----------------------------------------------
+/**
+ * Implementation of hook_menu().
+ */
+function artmob_main_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+  } else {
+    $items[] = array(
+      'path' => 'artmob_main/views',
+      'type' => MENU_CALLBACK,
+      'access' => TRUE,
+      'callback' => 'artmob_main_views_view',
+    );
+
+    $items[] = array(
+      'path'              => 'admin/artmob/citation_title_convert',
+      'title'             => t('Convert citation titles'),
+      'description'       => t('Convert citation titles'),
+      'weight'            => -7,
+      'callback'          => 'drupal_get_form',
+      'callback arguments' => array( 'artmob_main_admin_title_convert'),
+      'access'            => user_access('administer site configuration')
+    );
+
+  }
+  return $items;
+}
+
+function artmob_main_admin_title_convert() {
+  $form['citation_convert'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Citation Convert'),
+    '#weight' => -2
+    );
+
+  $form['citation_convert']['Convert'] = array(
+    '#type'     => 'submit',
+    '#value'    => t('convert citation titles'),
+    '#submit'   => True,
+    '#weight'   => 2
+  );
+
+  return system_settings_form($form);
+}
+
+function artmob_main_admin_title_convert_submit($form_id, $form_values) {
+  global $user;
+  if ( $form_values['op'] == 'convert citation titles' ) {
+    artmob_main_convert_citation_titles();
+    drupal_set_message( t('The information has been converted'));
+  }
+}
+
+function artmob_main_convert_citation_titles(){
+
+  $result = db_query( "SELECT e.citation_id, n.nid,c.nid as citation_nid, n.title, t.name
+  FROM {am_encapsulated_works} e
+  left join {am_citation} c on e.citation_id = c.citation_id
+  left join {node} n on n.nid = e.nid
+  left join {node_type} t on t.type=n.type
+  WHERE e.parent_eid = 0 and not isnull(n.nid)" );
+  $i=0;
+  while ($row = db_fetch_object($result)) {
+    $citation_title = $row->name.' Citation: '.$row->title;
+    db_query( "Update {am_citation} set citation_title = '%s', title_without_prefix = '%s' where citation_id = %d", $citation_title, $citation_title, $row->citation_id );
+    db_query( "Update {node} set title = '%s' where nid = %d", $citation_title, $row->citation_nid );
+    $i++;
+    watchdog( 'main citation title convert', 'cid = '.$row->citation_id.'  --  nid = '.$row->citation_nid );
+  }
+  watchdog( 'main citation title convert', 'count = '.$i );
+  drupal_set_message( $i.' records have been converted' );
+  return True;
+}
+
+/**
+ * Menu Callback: Create a dynamic view
+ */
+function artmob_main_views_view($arg1,$arg2,$page=0,$sort='title',$sortorder_date = 'DESC', $sortorder_title = 'ASC',$view_by='thumbnails',$view_name, $nid = NULL, $place = NULL ) {
+  global $dynamic_view_updating;
+  global $current_view;
+  global $current_page;
+
+  $dynamic_view_updating = TRUE;
+  //$type = 'node';
+  $name = 'browse_all_content_ajax';
+  $name= $view_name;
+  //watchdog( 'joe browser debug', 'main_views_view - $view_name = '.$view_name );
+  //watchdog( 'joe browser debug', 'main_views_view - $page = '.$page );
+  //watchdog( 'joe browser debug', 'main_views_view - $current_view = '.$current_view );
+
+  $view = views_get_view($name);
+  $view_css = views_css_safe("browser-view-block-$view->name");
+  //$view = $current_view;
+  $temp_args = $_GET['q'];
+
+  $_GET['q'] = $view->url.'/'.$arg1.'/'.$arg2;
+
+    $browser_arg1 = $arg1;
+    $browser_arg2 = $arg2;
+    $current_page = $page;
+
+    $_GET['page'] = $current_page;
+
+    $view->query = '';
+    $view->is_cacheable = False;
+
+    if ( $view->page ){
+      $arg_result = artmob_main_get_last_2_args( $arg2,$arg1);
+    } else {
+      $arg1 = 'all';
+      $arg2 = 'all';
+    }
+
+    $args = array();
+    $args[0] = $arg1;
+    $args[1] = $arg2;
+    /* If the sort is by date then we flip the first and second sort criteria
+     * because we assume that the view was created with the first sort being
+     * title and the second being archive date */
+
+    if ( $sort == 'date' ){
+      $view_temp_sort = array();
+      $view_temp_sort[0] = $view->sort[0];
+      $view->sort[0] = $view->sort[1];
+      $view->sort[1] = $view_temp_sort[0];
+      $view->sort[0]['sortorder'] = $sortorder_date;
+      $view->sort[1]['sortorder'] = $sortorder_title;
+    } else {
+      $view->sort[0]['sortorder'] = $sortorder_title;
+      $view->sort[1]['sortorder'] = $sortorder_date;
+    }
+
+    //watchdog( 'joe browser debug', '$view_by = '.$view_by );
+    $view_info = views_build_view('items', $view, $args, True, artmob_main_get_pager_count( $view_by ));
+    $view_items = $view_info['items'];
+
+  $meta = artmob_main_build_meta( $view, $sort, $sortorder_date, $sortorder_title, $view_by );
+  //watchdog( 'joe browser debug', 'main_views_view - $meta = '.print_r( $meta, true ));
+  $output = $temp . theme( 'artmob_main_results_browser',$view_items ,$meta, $view, 'views');
+  print $output;
+  exit;
+  return $output;
+}
+
+function artmob_main_build_meta ( $view, $sort = 'title', $sortorder_date = 'DESC', $sortorder_title = 'ASC', $view_by = 'thumbnails' ){
+  $view_css = views_css_safe("browser-view-block-$view->name");
+  if ( $view->page ){
+    $arg_result = artmob_main_get_last_2_args( $arg2,$arg1);
+  } else {
+    $arg1 = 'all';
+    $arg2 = 'all';
+  }
+  $args = array();
+  $args[0] = $arg1;
+  $args[1] = $arg2;
+  $pager_limit = artmob_main_get_pager_count( $view_by );
+
+  $view_type= $view->type;
+  $view_info = views_build_view('items', $view, $args, True, $pager_limit );
+  $view_items = $view_info['items'];
+
+  $view_name = $view->name;
+  $total_pages = ceil($view->total_rows / $pager_limit );
+
+  $current_page = isset($_GET['page']) ? $_GET['page'] : 0;
+  $browser_url = '/artmob_main/views/'.$arg1.'/'.$arg2;
+  $meta_browser_url = 'artmob_main/views/'.$arg1.'/'.$arg2;
+  $previous_page = $current_page - 1;
+  $next_page = $current_page + 1;
+
+  if ($current_page > 0) {
+    $onclick_previous = artmob_main_build_fetchpage_plus( $view_css, $browser_url, $previous_page, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
+  } else {
+    $onclick_previous = NULL;
+  }
+
+  if ($current_page + 1 < $total_pages) {
+    $onclick_next = artmob_main_build_fetchpage_plus( $view_css, $browser_url, $next_page, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
+  } else {
+    $onclick_next = NULL;
+  }
+  
+  if ( $sort == 'title' ){
+    $sortdate_fordate = $sortorder_date;
+    $sortdate_fortitle = $sortorder_title;
+    $sorttitle_fordate = $sortorder_date;
+    $sorttitle_fortitle = $sortorder_title == 'ASC' ? 'DESC': 'ASC';
+  } else {
+    $sortdate_fordate = $sortorder_date == 'ASC' ? 'DESC': 'ASC';
+    $sortdate_fortitle = $sortorder_title;
+    $sorttitle_fordate = $sortorder_date;
+    $sorttitle_fortitle = $sortorder_title;
+  }
+
+  $onclick_date = artmob_main_build_fetchpage_plus( $view_css, $browser_url, $current_page, 'date', $sortdate_fordate, $sortdate_fortitle, $view_by, $view_name );
+  $onclick_title = artmob_main_build_fetchpage_plus( $view_css, $browser_url, $current_page, 'title', $sorttitle_fordate, $sorttitle_fortitle, $view_by, $view_name );
+  $onclick_thumbnails = artmob_main_build_fetchpage_plus( $view_css, $browser_url, $current_page, $sort, $sortorder_date, $sortorder_title, 'thumbnails', $view_name );
+  $onclick_list = artmob_main_build_fetchpage_plus( $view_css, $browser_url, $current_page, $sort, $sortorder_date, $sortorder_title, 'list', $view_name );
+
+  $meta = array();
+  $meta['items_per_page'] = $pager_limit;
+  $meta['total_items'] = $view->total_rows;
+  $meta['current_page'] = $current_page;
+  $meta['link'] = $meta_browser_url;
+  $meta['previous_onclick'] = $onclick_previous;
+  $meta['next_onclick'] = $onclick_next;
+  $meta['sort_by'] = $sort;
+  $meta['sort_by_date_onclick'] = $onclick_date;
+  $meta['sort_by_title_onclick'] = $onclick_title;
+  $meta['view_by'] = $view_by;
+  $meta['thumbnails_onclick'] = $onclick_thumbnails;
+  $meta['list_onclick'] = $onclick_list;
+  $meta['nav_link'] = '';
+  $meta['sortorder_date'] = $sortorder_date;
+  $meta['sortorder_title'] = $sortorder_title;
+  $pagination_array = array();
+
+  //$total_pages = ceil($view->total_rows / $view->pager_limit);
+  $total_pages = ceil($view->total_rows / $pager_limit);
+  $current_page = isset($_GET['page']) ? $_GET['page'] : 0;
+  
+  //*********************//
+  //NEW - August 10, 2012//
+  //Change is to show all pages all of the time
+  //*********************//
+
+  //If we have 3 or less pages then we show all of the pages
+  //if (( $total_pages <= 3 ) and ( $total_pages > 0 )){
+      //Create the first page link
+    $index_array = array();
+    $index_array['page_onclick'] = artmob_main_build_fetchpage_plus( $view_css, $browser_url, 0, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
+    $index_array['active'] = False;
+    $pagination_array['first '] = $index_array;
+
+    //create a link for all pages
+    for ( $page_index = 0; $page_index < $total_pages; $page_index += 1) {
+      //Now that we are jumping with Ajax calls, do not set the active page
+      //$index_array = artmob_main_build_index_array ($page_index, $page_index == current_page, $total_pages, $pager_limit, $view->total_rows, $index_text, $view_css, $browser_url, $sort, $sortorder_date, $sortorder_title, $view_by, $view->name );
+      $index_array = artmob_main_build_index_array ($page_index, False, $total_pages, $pager_limit, $view->total_rows, $index_text, $view_css, $browser_url, $sort, $sortorder_date, $sortorder_title, $view_by, $view->name );
+      $pagination_array[ $index_text] = $index_array;
+    }
+
+    //Create last page link
+    $index_array = array();
+    $index_array['page_onclick'] = artmob_main_build_fetchpage_plus( $view_css, $browser_url, $total_pages - 1, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
+    $index_array['active'] = False;
+    $pagination_array[' last'] = $index_array;
+  /*
+  } else {
+
+    if ( $total_pages > 0 ){
+      //Create the first page link
+      $index_array = array();
+      $index_array['page_onclick'] = artmob_main_build_fetchpage_plus( $view_css, $browser_url, 0, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
+      $index_array['active'] = False;
+      $pagination_array['first '] = $index_array;
+
+      if ( $current_page == 0 ){
+        //We are on the first page so only create the first page and the next one
+        $index_array = artmob_main_build_index_array ($current_page, True, $total_pages, $pager_limit, $view->total_rows, $index_text, $view_css, $browser_url, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
+        $pagination_array[$index_text] = $index_array;
+        $index_array = artmob_main_build_index_array ($current_page + 1, False, $total_pages, $pager_limit, $view->total_rows, $index_text, $view_css, $browser_url, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
+        $pagination_array[$index_text] = $index_array;
+      } else if ( $current_page == ( $total_pages - 1 ) ){
+        //We are on the last page so only create the previous page and the last one
+        $index_array = artmob_main_build_index_array ($current_page - 1, False, $total_pages, $pager_limit, $view->total_rows, $index_text, $view_css, $browser_url, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
+        $pagination_array[$index_text] = $index_array;
+        $index_array = artmob_main_build_index_array ($current_page, True, $total_pages, $pager_limit, $view->total_rows, $index_text, $view_css, $browser_url, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
+        $pagination_array[$index_text] = $index_array;
+      } else {
+        //create a link for the previous page, the current page and the next page.
+        $index_array = artmob_main_build_index_array ($current_page - 1, False, $total_pages, $pager_limit, $view->total_rows, $index_text, $view_css, $browser_url, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
+        $pagination_array[$index_text] = $index_array;
+        $index_array = artmob_main_build_index_array ($current_page, True, $total_pages, $pager_limit, $view->total_rows, $index_text, $view_css, $browser_url, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
+        $pagination_array[$index_text] = $index_array;
+        $index_array = artmob_main_build_index_array ($current_page + 1, False, $total_pages, $pager_limit, $view->total_rows, $index_text, $view_css, $browser_url, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
+        $pagination_array[$index_text] = $index_array;
+      }
+      //Create last page link
+      $index_array = array();
+      $index_array['page_onclick'] = artmob_main_build_fetchpage_plus( $view_css, $browser_url, ($total_pages - 1), $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
+      $index_array['active'] = False;
+      $pagination_array[' last'] = $index_array;
+
+    }
+  }
+  */
+  $meta['pagination_array'] = $pagination_array;
+  //this seems stupid but we must re-run the view with pager false so that the views pager
+  //does not show up at the bottom of the page.
+  $view_info = views_build_view('items', $view, $args, False, $pager_limit );
+  //reset the view->type back.  For some reason it gets reset to node when we run views_build_view
+  $view->type = $view_type;
+  return $meta;
+}
+
+function artmob_main_build_index_array ($index, $active, $total_pages, $nodes_per_page, $total_nodes, &$index_text, $view_css, $browser_url, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name ){
+  $index_array = array();
+  //$index_array['page_onclick'] = "return am_fetchPage_plus('.$view_css', '$browser_url', " . ($index) . ", '".$sort."','".$view_by."')";
+  $index_array['page_onclick'] = artmob_main_build_fetchpage_plus( $view_css, $browser_url, $index, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name );
+  $index_array['active'] = $active;
+  $start = (( $index) * $nodes_per_page) + 1;
+  $end = ( $index + 1 ) * $nodes_per_page;
+  if ( $end > $total_nodes){
+    $end = $total_nodes;
+  }
+  $index_text = ' ['.$start.' - '.$end.'] ';
+  return $index_array;
+}
+
+function artmob_main_build_fetchpage_plus( $view_css, $browser_url, $index, $sort, $sortorder_date, $sortorder_title, $view_by, $view_name ){
+  return "return am_fetchPage_plus('.$view_css', '$browser_url', " . ($index) . ", '".$sort."','".$sortorder_date."','".$sortorder_title."','".$view_by."','".$view_name."')";
+}
+//--------------------------------------------------------------------
+//This hook is used to add form fields to the forms
+//of other module's add node screens.  The fields
+//are defined here just as they were in the hook_form hook.
+function artmob_main_form_alter($form_id, &$form) {
+  // boilerplate code to determine the node type of the form
+  if (isset($form['type'])) {
+      $type = $form['type']['#value'];
+    }
+  elseif (isset($form['orig_type'])) {
+      $type = $form['orig_type']['#value'];
+    }
+  else {
+//    return;
+  }
+
+
+    $browser_enabled = variable_get('IsBrowserView_'. $type, 0);
+
+  switch ($form_id) {
+    //can't get this field to insert after the View Type
+    //it either ends up at the top or bottom.
+    
+    case 'views_edit_view':
+      $form['page-info']['view_use_tabs'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Show tabs in alpha browser view'),
+        '#default_value' => variable_get('use_tabs_'.$form['vid']['#value'], 1),
+        '#weight' => 1,
+      );
+
+    //attach our own submit function to save the use_tabs setting
+    
+    $form['#submit']['artmob_main_view_submit'] = array();
+      break;
+      // Form addition to all Enabled node types.
+      
+    case 'node_type_form':
+    
+      $form['artmob'] = array(
+        '#type'          => 'fieldset',
+        '#title'         => t('Artmob Content Settings'),
+        '#weight'        => 0,
+        '#collapsible'   => TRUE,
+        '#collapsed'     => FALSE
+       );
+       
+       $astype = "display_artmob_summary_{$type}";
+       $asoptions = array(
+        '0' => t('Do not display'),
+        /*'1' => t('Display vertical summary'),*/  // Vertical summary deprecated in Phase 3 build
+        '2' => t('Display summary')  
+       );
+               
+      //$asdefault = artmob_main_display_artmob_summary($type);
+
+      $form['artmob']['display_artmob_summary'] = array(
+        '#title' => t('Display Artmob Summary'),
+        '#type' => 'select',
+        '#options' => $asoptions,
+        '#default_value' => artmob_main_display_artmob_summary($type),
+        //'#default_value' => 'vertical',
+        '#description' => t('The Artmob Summary displays key citation and copyright information on the content page proper.'),
+        '#weight'        => -10,
+      );
+
+
+$form['artmob']['frame'] = array(
+      '#type'          => 'fieldset',
+      '#title'         => t('Browser View'),
+      '#weight'        => -8,
+      '#collapsible'   => TRUE,
+      '#collapsed'     => FALSE
+       );
+  
+      $form['artmob']['frame']['IsBrowserView'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Include in Browse All'),
+        '#default_value' => $browser_enabled,
+        '#description' => t('Include this content type in the <a href="/browse/content/all/all">main archive browser</a>.'),
+       );
+
+      $form['artmob']['frame']['BrowserWeight'] = array(
+      '#type' => 'weight',
+      '#title' => t('Browser Weight'),
+      '#default_value' => variable_get('BrowserWeight_'. $type, 0),
+      '#delta' => 10,
+      '#description' => t('Optional. This dictates the order in which the tabs occur.  The lighter items appear more to the left. '),      );
+
+    break;
+        
+    case $type .'_node_form':
+      break;
+  }
+}
+
+function artmob_main_view_submit($form_id, &$form){
+  $view = (object) $form; //converts all the variables into an object.
+  //Save our use_tabs setting
+  variable_set('use_tabs_'.$view->vid, $view->view_use_tabs);
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ *
+*/
+function artmob_main_nodeapi(&$node, $op, $teaser=NULL,$page=NULL) {
+  switch ($op) {
+    case 'update':
+      $update = TRUE;
+      //Fall through, with flag.  Therefore with every update we delete
+      //the old associated records and then resave the new ones
+
+    case 'delete':
+      if (!$update) {
+        break;
+      }
+
+    case 'insert':
+      artmob_main_clear_cache( $node, $page );
+      break;
+    case 'load':
+      break;
+    case 'prepare':
+      break;
+    case 'view':
+  
+    if ($page) {
+      $node->content['artmob_summary']['#value'] = theme('artmob_main_artmob_summary',$node,'asset-sidebar');
+  
+      if ($node->content['artmob_summary']['#value']) {
+        $weight = artmob_main_display_artmob_summary($node->type) == 2 ? 2 : -2;  // horizontal sidebars (value '2' should go below content);
+        $node->content['artmob_summary']['#weight'] = $weight;
+  
+        unset($node->content['image_attach']); // thumbnail illustration suppied by artmob summary theme.
+      }
+    }
+     break;
+    case 'delete revision':
+      break;
+    case 'submit':
+
+      break;
+  }
+}
+
+//----------------------------------------------
+function artmob_main_user($op, &$edit, &$account) {
+  global $user;
+  switch ($op) {
+    case 'load':
+      if ($account->profile_firstname || $account->profile_lastname) {
+        $account->screen_name = trim($account->profile_first_name . ' ' . $account->profile_last_name);
+      } else {
+        $account->screen_name = $account->name;
+      }
+    case 'view':
+    case 'form':
+  };
+}
+
+function artmob_main_get_view_type_nodes_filter (){
+  $result = db_query( "SELECT type, name from {node_type}" );
+  $i = 0;
+  while ($row = db_fetch_object($result)) {
+    if ( variable_get('IsBrowserView_'. $row->type, 0) ){
+      $return .= '"'.$row->type.'",';
+    }
+  }
+
+  //Trim off the last comma
+  if ( $return <> '' ){
+    $return = substr( $return, 0, strlen( $return ) - 1 );
+  }
+  return $return;
+}
+//----------------------------------------------
+function artmob_main_get_view_type_nodes( $IsAddAll = true ){
+  $TypeArray = array();
+  if ( $IsAddAll ) {
+    $TypeArray['all'] = 'Main';
+  }
+  //Load up our sort array as an array of objects.
+  $result = db_query( "SELECT type, name from {node_type}" );
+  $i = 0;
+  while ($row = db_fetch_object($result)) {
+    if ( variable_get('IsBrowserView_'. $row->type, 0) ){
+      $object->weight = variable_get('BrowserWeight_'. $row->type, 0);
+      $object->type = $row->type;
+      $object->name = $row->name;
+      $SortArray[] = $object;
+    }
+  }
+  artmob_main_objectSort( $SortArray, 'weight' );
+  
+  if ( count( $SortArray) > 0 ){
+    //Fill in our output array
+    foreach ($SortArray as $value ){
+      $TypeArray[ $value->type ] = $value->name;
+    }
+  }
+  return $TypeArray;
+}
+
+function artmob_main_objectSort(&$data, $key)
+{
+    for ($i = count($data) - 1; $i >= 0; $i--)
+    {
+      $swapped = false;
+      for ($j = 0; $j < $i; $j++)
+      {
+           if ($data[$j]->$key > $data[$j + 1]->$key)
+           {
+                $tmp = $data[$j];
+                $data[$j] = $data[$j + 1];
+                $data[$j + 1] = $tmp;
+                $swapped = true;
+           }
+      }
+      if (!$swapped) return;
+    }
+}
+
+
+function theme_artmob_main_menu_links_block ($links){
+  $content = '';
+  foreach( $links as $key=>$value ){
+    $content .= l($key, $value );
+    $content .= '<br />';
+  }
+  return $content;
+}
+
+//--------------------------------------------------------------------
+// This is used to return a specific menu.  If a named theme function
+// exists (theme_menu_[menu_name]) then it passes a standardized links array
+// to the named theme.  Otherwise, it returns the unthemed links array.
+
+function artmob_main_get_menu_by_pid($pid,$title=NULL) {
+  $menu = menu_get_menu();
+  $links = array();
+  if ($pid && is_array($menu['visible'][$pid]) && isset($menu['visible'][$pid]['children'])) {
+    $count = 1;
+    foreach ($menu['visible'][$pid]['children'] as $cid) {
+      $index = "menu-$start_level-$count-$pid";
+      if (menu_in_active_trail_in_submenu($cid, $pid)) {
+        $index .= "-active";
+      }
+      $links[$index] = menu_item_link($cid, FALSE);
+      $count++;
+    }
+  }
+  
+  
+  $title = $title ? $title : strtolower(str_replace(' ','_',$menu['visible'][$pid]['title']));
+  
+  if (function_exists('phptemplate_menu_' . $title)) { // dynamically reproduce theme system functionality based on menu title
+  $func = "phptemplate_menu_$title";
+  return $func($links);
+   } else if (function_exists('theme_menu_' . $title)) {
+    return theme('menu_' . $title, $links);
+  } else {
+    return $links; 
+  }
+}
+
+
+function artmob_main_get_pager_count($view_by = 'thumbnails'){
+  if ( $view_by == 'list' ){
+    return PAGERCOUNT_LIST;
+  } else {
+    return PAGERCOUNT_THUMBNAILS;
+  }
+}
+
+//----------------------------------------------
+//converts a time stamp to a string of a full date (ie January 31, 2007)
+function artmob_main_TimeStampToDisplay($timestamp){
+  return format_date( $timestamp, 'custom', 'F j, Y' );
+}
+
+function artmob_main_display_artmob_summary($type=NULL) {
+  
+  // determines whether to display artmob summary bar.
+  // the default values array is included for backwards compatibility with Artmob Phase 1
+  
+  $default_types = array(
+    'amPicture',
+    'amAudio',
+    'amVideo',
+    'DigitizedWorks'
+  );
+  
+  $default = in_array($type,$default_types) ? 1 : 0;
+    
+  if (!$type || !is_string($type)) {
+    $arg0 = arg(0);
+    $arg1 = arg(1);
+    
+    if ($arg0 == 'node' && is_numeric($arg1)) {
+      $db_query = db_query("SELECT type FROM {node} WHERE nid=%d",$arg1);
+      $nobj = db_fetch_object($db_query);
+      
+      $type = $nobj->type;
+    
+    } else {
+      return 0; // not a node page
+    }
+  }
+    
+  $typevar = "display_artmob_summary_{$type}";
+  
+  return variable_get($typevar,$default) != 0 ? 2 : 0;// PHASE 3 has deprecated the vertical summary.
+
+}
+
+function artmob_main_load_illustration(&$arg,$size=NULL,$lightbox=FALSE) {
+
+  if (is_array($arg->field_illustration[0])) {
+      if (strtolower($size) == "results browser width") {
+        $size = "Results_Browser_Width";
+      }
+    $namespace = $size ? $size : "Thumbnail";
+    $path = $arg->field_illustration[0]['filepath'];
+    $image = theme('imagecache',$namespace,$path);
+  
+  } else if (function_exists('image_display')) {   // presume image module
+  
+    if (is_object($arg) && ($arg->iid )) { // content node provided
+      $node = node_load($arg->iid); 
+    } else if (is_integer($arg)) {  // iid provided
+      $node = node_load($arg);
+    } else {
+      return NULL;
+    }
+
+  
+    $size = $size ? $size : IMAGE_THUMBNAIL;
+    
+    $image = image_display($node,$size);
+  
+  }
+  
+    if ($lightbox === TRUE && $image) {   
+      return l($image, file_create_url($node->images['_original']), array('title' => $title, 'class' => 'thickbox lightbox', 'rel' => $node->type), NULL, NULL, FALSE, TRUE);
+      
+    }
+
+  
+  return $image;
+}
+
+
+/* Artmob Summary
+--------------------------------------------------------------
+   stub function. will soon summarize artmob metadata and fair 
+   dealing information. 
+    
+*/
+
+function theme_artmob_main_artmob_summary(&$node,$additional_classes='') {
+
+/* DEVELOPMENT NOTE: This function may be overriden in individual themes. 
+   When we revisit the citation architecture, we'll need to refactor this to reduce the programmatic content,
+   which is heavy for a core theme.  We'll also need to ensure that overriden versions in individual theme 
+   files are adjusted accordingly.
+*/
+
+  $summary = artmob_main_display_artmob_summary($node->type);
+
+  if (!$summary) {
+    return (''); 
+  }
+    
+  if (arg(0) != "node" || !is_numeric(arg(1))) { return; }
+  
+  $description = check_markup($node->body,$node->format,false);
+  
+  $node = node_load(arg(1));
+  
+  $no_license = "<p>" .ARTMOB_LICENSE_NO_LICENSE_TEXT ."</p>";
+  $no_contrib = "<p>There are no contributors currently associated with this item.</p>";
+  $no_details = "<p>We currently have no details about the creation of this item.</p>";
+  $types = artmob_citation_build_work_types(false,'',true);
+  
+  $citations = artmob_citation_get_citation_array_for_node_2(arg(1), True);
+
+  /* Shift out first one as it is the citation for the filetype */
+  $initial_citation = array_shift( $citations );
+  $first;
+
+  if (is_array($citations) && count($citations) > 0) {
+    $first = array_shift($citations);
+    $first_contribs = artmob_citation_get_contributors($first->citation_id, TRUE);
+
+    if (count($first_contribs)>0) {
+      
+      foreach ($first_contribs as $contributor) {
+        $role = artmob_citation_get_role_description($contributor[0]['role']);
+        $nid = $contributor[0]['existing'];
+        $name = $contributor[0]['name'];
+        // TO DO: vet by key fields.  Key fields is currently in fair dealing js only.
+        $contributors .= "<li>". l($name,"node/{$nid}",array('title'=>$role)) ."</li>\n";
+      }
+    } else {
+      $contributors = "<li>{$no_contrib}</li>";
+    }
+    
+    $wt_label = $types[$first->work_type];
+    
+    $first_title = $first->citation_title;
+   // $first_worktype = "<span class='worktype-swop'>" . $first->work_type . "</span>";
+
+
+   // $details .= "<h4>Title</h4>";
+   // $details .= $first->citation_title;
+
+    $details .= "<h4>Type of Work</h4>";
+    $details .= "<span class='worktype-swop'>" . $first->work_type . "</span>";
+
+    $details .= "<h4>Posted On</h4>";
+    $details .= format_date($node->created,'custom','F d, Y'); // use node date for now
+
+    $citation=$first;
+    
+    if (count($citation->licenses)>0) {
+        // assume 1 license for now
+        $license = array_shift($citation->licenses);
+        $license_holders = '';
+        $licence_holders_options = '';
+        if (is_array($license['contributors'])) {
+          $license_holders .= sprintf('<h3>License Holder%s</h3>',count($license['contributors'])>1 ? 's' : '');
+          foreach($license['contributors'] as $contributor_id=>$licensor) {
+            $license_holders .= '<p>' . ($licensor['firstname'] ? $licensor['firstname'] . ' ' : '') . $licensor['lastname'] . '</p>';
+          }
+        }
+        $license_title = l($license['name'],'node/' . arg(1) . '/license',array('title'=>'Learn more about this license.'));
+        $license_description = $license['description'] ? check_markup($license['description'],$license['format'] ? $license['format'] : 1,FALSE) : '';
+      
+    } else {
+    $license_description  = sprintf($no_license,$wt_label);
+  }
+    $licenses = $license_description;
+  } else {
+      $licenses = sprintf($no_license,$wt_label);
+      $details = $no_details;
+      $contributors = $no_contrib;
+  }
+  
+  // additional works
+ // drupal_set_message(devtools_dump($first));
+
+  $additional_works = AFD_get_child_works_by_nid_keyed_by_citation_nid(arg(1),FALSE);  //Provides citations in order of appearance.  TO DO: somewhat redundant.
+  if (is_array($additional_works) && count($additional_works) > 1) {
+    $firstwork = array_shift($additional_works); // this has been covered in the summary above.
+    $works = array();
+    foreach ($additional_works as $cnid => $ctitle) {
+      $works[] = l($ctitle,"node/{$node->nid}/citation",array(),NULL,'nameid-' . $cnid);
+    }
+
+    $otherworks = "<div class='other_works'><h3>Works contained:</h3><div class='other-works-list'>";
+    $otherworks .= implode(', ',$works);
+    $otherworks .= "</div></div>";
+  }
+
+  $artmob_summary_row = '';
+
+  if (module_exists('artmob_respond')) {
+    if (artmob_respond_artmob_enabled($node)) {
+      $artmob_summary_row = theme('artmob_respond_summary_icons');
+    }
+  }
+
+  $output .= <<<EOT
+    <div class='artmob-summary'>
+    <div class='summary-body'>
+      <table cellpadding='0' cellspacing='0' border='0'>
+      <tr><td colspan='3'>
+      <h2>{$first_title}</h2>
+      </td></tr>
+      <!--<tr><td colspan='3'>
+      {$description}
+      </td></tr>-->
+      {$artmob_summary_row}
+      <tr>
+      <td class='col-1'>
+        <div class='summary-details'>
+          <h3>Details</h3>
+          {$details}
+        </div>
+      </td>
+      <td class='col-2'>
+        <div class='summary-contributors'>
+          <h3>Contributors</h3>
+          <ul>{$contributors}</ul>
+        </div>
+      </td>
+      <td class='col-3'>
+        <div class='summary-license'>
+          <h3>Licensing Terms</h3>
+          {$license_title}
+          {$licenses}
+          {$license_holders}
+        </div>
+      </td>
+      </tr>
+      </table>
+    </div>
+    </div>
+
+EOT;
+
+  if ($otherworks) {
+    $output .= $otherworks;
+  }
+
+  return $output;
+
+}
+
+function theme_artmob_browse_menu($links=NULL) {  // variant of theme_links
+  // Note: Linked paths are now based on preset views
+
+  if (count($links) > 0) {
+    $output = '<div class="browse_assets_menu">' . "\n"; // change to theme_links
+    $output .= '<ul'. drupal_attributes($attributes) .'>' ."\n";
+
+    $num_links = count($links);
+    $i = 1;
+
+    foreach ($links as $key => $link) {
+      $class = $key;
+
+      // Automatically add a class to each link and also to each LI
+      if (isset($link['attributes']) && isset($link['attributes']['class'])) {
+        $link['attributes']['class'] .= ' ' . $key;
+      }
+      else {
+        $link['attributes']['class'] = $key;
+      }
+
+      // Add first and last classes to the list of links to help out themers.
+      $extra_class = '';
+      if ($i == 1) {
+        $extra_class .= 'first ';
+      }
+      if ($i == $num_links) {
+        $extra_class .= 'last ';
+      }
+      
+      // changes to theme_links begin here
+      
+      $path = base_path() .path_to_theme();
+      $title = check_plain($link['title']);
+      $title_link =  strtolower(str_replace(' ','_',$title));
+
+      $title_link = $title_link == 'browse_all' ? 'all' : $title_link;
+      
+      $output .= '<li '. drupal_attributes(array('class' => $extra_class . $class)) .'>'. "<img class='asset-icon' src='{$path}/images/icons/btn_browse_{$title_link}.gif' alt='{$title}'/>";
+      
+      // change to theme_links end here
+
+      // Is the title HTML?
+      $html = isset($link['html']) && $link['html'];
+
+      // Initialize fragment and query variables.
+      $link['query'] = isset($link['query']) ? $link['query'] : NULL;
+      $link['fragment'] = isset($link['fragment']) ? $link['fragment'] : NULL;
+
+      if (isset($link['href'])) {
+        $output .= l($link['title'], $link['href'], $link['attributes'], $link['query'], $link['fragment'], FALSE, $html);
+      }
+      else if ($link['title']) {
+        //Some links are actually not links, but we wrap these in <span> for adding title and class attributes
+        if (!$html) {
+          $link['title'] = check_plain($link['title']);
+        }
+        $output .= '<span'. drupal_attributes($link['attributes']) .'>'. $link['title'] .'</span>';
+      }
+
+      $i++;
+      $output .= "</li>\n";
+    }
+
+    $output .= "</ul>\n</div>\n\n"; // change from theme_links (close div)
+  }
+
+  return $output;
+}
+
+function theme_artmob_main_results_browser_top_tier($content_array, $meta, $view, $source=NULL) {
+  $content = '';
+
+  if (!is_array($content_array) && is_array($meta)) {  // malformed
+    return FALSE;
+  }
+
+  $results = $meta['total_items'] === 0 ? FALSE : TRUE;
+  
+  if ( $view->name == 'artmob_browse_all' ){
+  // Add in the alpha tabs
+    $content .= theme( 'artmob_main_alphabet_bar_tabs', $view );
+  }
+
+
+  // create sort by links
+  if ($meta['sort_by'] == 'date') {
+    $sorted_by_date_link = l('Sort by Posting Date',$meta['link'],array('class'=>'active '.$meta['sortorder_date'],'onclick'=>$meta['sort_by_date_onclick']),NULL,NULL,FALSE,TRUE).'<span class="arrow"></span>';
+    $sorted_by_title_link = l('Sort by Title',$meta['link'],array('class'=>'inactive '.$meta['sortorder_title'],'onclick'=>$meta['sort_by_title_onclick']),NULL,NULL,FALSE,TRUE).'<span class="arrow"></span>';
+  } else if ($meta['sort_by'] == 'title') {
+    $sorted_by_date_link = l('Sort by Posting Date',$meta['link'],array('class'=>'inactive '.$meta['sortorder_date'],'onclick'=>$meta['sort_by_date_onclick']),NULL,NULL,FALSE,TRUE).'<span class="arrow"></span>';
+    $sorted_by_title_link = l('Sort by Title',$meta['link'],array('class'=>'active '.$meta['sortorder_title'],'onclick'=>$meta['sort_by_title_onclick']),NULL,NULL,FALSE,TRUE).'<span class="arrow"></span>';
+  } else {
+    // no results
+  }
+
+  // create view by links
+  if ($meta['view_by'] == 'thumbnails') {
+    $view_by_thumbnails_link = l('Show as thumbnails',$meta['link'],array('class'=>'inactive','onclick'=>$meta['thumbnails_onclick']),NULL,NULL,FALSE,TRUE);
+    $view_by_list_link = l('Show as list',$meta['link'],array('class'=>'active','onclick'=>$meta['list_onclick']),NULL,NULL,FALSE,TRUE);
+  } else if ($meta['view_by'] == 'list') {
+    $view_by_thumbnails_link = l('Show as thumbnails',$meta['link'],array('class'=>'active','onclick'=>$meta['thumbnails_onclick']),NULL,NULL,FALSE,TRUE);
+    $view_by_list_link = l('Show as list',$meta['link'],array('class'=>'inactive','onclick'=>$meta['list_onclick']),NULL,NULL,FALSE,TRUE);
+  } else {
+    // no results
+  }
+
+  // top tier
+  
+  $path = base_path() .path_to_theme();
+  
+  $content .= "<div class='rb-top-tier'>\n";
+  $content .= "<div class='rb-top-tier-1'>\n";
+  $content .= "<div class='rb-sort-buttons'>";
+
+  if ($results) {
+    $content .= "<span class='rb-sort-date'>";
+    $content .= $sorted_by_date_link;
+    $content .= "</span>";
+    $content .= "<span class='rb-sort-title'>";
+    $content .= $sorted_by_title_link;
+    $content .= "</span>";
+  }
+
+  $content .= "</div>\n";
+
+  $content .= "<span class='rb-items-meta'>";
+  //$content .= "<span>";
+  //We want the 'items_per_page' part to make sense.  (ie if we are showing the last 3 then it should say showing 3 of xxx)
+  if ( count( $content_array ) > 0 ){
+    $items_per_page = min($meta['items_per_page'],$meta['total_items'], count( $content_array ) );
+  } else {
+    $items_per_page = min($meta['items_per_page'],$meta['total_items']  );
+  }
+  $start_item = ( $meta['current_page'] ) * $meta['items_per_page'] + 1;
+  $end_item = $start_item + $items_per_page - 1;
+  
+  $content .= "</span>";
+  $content .= "<span class='rb-nav-buttons'>";
+  $content .= $meta['previous_onclick'] ? l("<img src='{$path}/images/widgets/btn_previous_up.png' alt='Previous'/>",$meta['nav_link'], array('class'=>'rb-previous','onclick'=>$meta['previous_onclick']),NULL,NULL,FALSE,TRUE) : "<img src='{$path}/images/widgets/btn_previous_inactive.png' alt='Previous'/>";
+  $content .= $meta['next_onclick'] ? l("<img src='{$path}/images/widgets/btn_next_up.png' alt='Next'/>",$meta['nav_link'], array('class'=>'rb-next','onclick'=>$meta['next_onclick']),NULL,NULL,FALSE,TRUE) : "<img src='{$path}/images/widgets/btn_next_inactive.png' alt='Next'/>";
+  $content .= "</span>";
+  $content .= "</div>";  //close top tier 1
+
+  $content .= "<div class='rb-top-tier-2'>\n";
+  if ($results) {
+    $content .= "<span class='left-cap'></span>";
+    $content .= "<span class='right-cap'></span>";
+    $content .= "<span class='midsection'>";
+    $content .= $meta['total_items'] > 0 ? "<span class='rb-showing-results'>Showing {$start_item}-{$end_item} of {$meta['total_items']} items</span>" : "<span class='rb-showing-results'>0 items</span>";
+    $content .= "<span class='rb-view-by-thumbnails'>";
+    $content .= $view_by_thumbnails_link;
+    $content .= "</span>";
+    $content .= "<span class='rb-view-by-list'>";
+    $content .= $view_by_list_link;
+    $content .= "</span>";
+    $content .= "</span>";
+  }
+  $content .= "</div>"; // close top tier 2
+  $content .= "</div>"; // close top tier
+
+  return $content;
+}
+
+function theme_artmob_main_results_browser_middle_tier($content_array,$meta,$source=NULL) {
+  if (!is_array($content_array) && is_array($meta)) {  // malformed
+    return FALSE;
+  }
+  // middle tier - results
+  $content = '';
+  $content .= "<div class='rb-middle-tier'>\n";
+  $content .= theme('artmob_main_results_browser_results', $content_array, $source, $meta['view_by']);
+  $content .= "</div>"; // close middle tier
+  return $content;
+}
+
+function theme_artmob_main_results_browser_bottom_tier($content_array,$meta,$source=NULL) {
+  if (!is_array($content_array) && is_array($meta)) {  // malformed
+    return FALSE;
+  }
+  $content = '';
+  $content .= "<div class='rb-bottom-tier'>\n";
+  foreach($meta['pagination_array'] as $label => $item) {
+    $active_class = $item['active'] ? " active" : " inactive";
+    $content .= "<span class='rb-jump-to-link'>";
+    $content .= l($label,$item['page_link'],array('class'=>$active_class,'onclick'=>$item['page_onclick']),NULL,NULL,FALSE,TRUE);
+    $content .= "</span>";
+  }
+    $content .= "</div>"; // close bottom tier
+
+  return $content;
+}
+
+function theme_artmob_main_results_browser($content_array, $meta, $view, $source=NULL) {
+  $content = '';
+  $content .= "<div class='results-browser'>\n";
+  $content.= theme( 'artmob_main_results_browser_top_tier', $content_array, $meta, $view, $source);
+  $content.= theme( 'artmob_main_results_browser_middle_tier', $content_array, $meta, $source);
+  $content.= theme( 'artmob_main_results_browser_bottom_tier', $content_array, $meta, $source);
+  $content .= "</div>\n";
+  return $content;
+}
+
+
+function theme_artmob_main_results_browser_results($nodes,$source=NULL, $view_by = 'thumbnails') {  // $nodes arg called '$content_array' elsewhere, changed for compatibility
+
+  $content = '';
+
+  switch ($source) {
+    case 'views':
+      $nodes = artmob_load_views_nodes($nodes);
+      break;
+    default:
+      break;
+  }
+
+  if (!is_array($nodes)) {
+    return (theme('artmob_main_results_browser_no_results'));
+  }
+
+  $items = array();
+
+
+  if ( $view_by == 'list' ){
+  
+    
+    foreach ($nodes as $nid=>$node) {
+      $items[] = l( $node->title, 'node/'.$node->nid );
+    }
+    
+    $results_content .= display_columnize_items($items);
+
+  } else {
+    foreach ($nodes as $nid=>$node) {
+      $items[] = node_view($node,TRUE,FALSE,FALSE);
+    }
+    
+    $results_content = display_columnize($items);
+  }
+
+  $content .= "<div class='item-page'>\n";
+  $content .= $results_content;
+  $content .= "\n</div>";
+
+
+  return $content;
+
+}
+
+function theme_artmob_main_results_browser_no_results($message=NULL,$type=NULL) {
+
+  $arg0 = arg(0);
+  $arg1 = arg(1);
+
+  $labels = array(
+    'images'      => 'images',
+    'video'       => 'videos',
+    'digitized_works' => ' documents',
+    'articles'      => 'articles',
+    'links'       => 'links',
+    'audio'       => 'audio'
+  );
+  
+  
+  if (!$message) {
+    if ($arg0 == 'media' && array_key_exists($arg1,$labels)) {
+      $message = "There are no " . $labels[$arg1] . " currently in the archive."; 
+    } else {
+      $message = "There are no items of this kind currently in the archive.";
+    }
+  }
+  
+
+  $output = "<div class='rb-middle-tier results-browser-no-results'>\n";
+  $output .= "<table cellspacing='0' cellpadding='0' border='0'>"; // for compatibility with results pages
+  $output .= "<tr><td>";
+  $output .= "<p><span class='message'>";
+  $output .= $message;
+  $output .= "</span></p>";
+  $output .= "</td></tr>";
+  $output .= "</table>";
+  $output .= "</div>";
+  
+  return $output;
+}
+
+function theme_artmob_main_browser_display($view, $nodes, $type) {
+  $view_items = array();
+  $counter = 0;
+  foreach ($nodes as $node) {
+    $node = node_load($node->nid);
+    $view_items[$node->nid] = $node;
+    $counter += 1;
+    if ( $counter == PAGERCOUNT_THUMBNAILS ){
+      break;
+    }
+  }
+  $meta = artmob_main_build_meta( $view );
+  return theme( 'artmob_main_results_browser_middle_tier', $view_items, $meta);
+}
+
+function theme_artmob_main_display($view, $nodes, $type, $teasers = FALSE, $links = TRUE) {
+  $content = '';
+//  $view_css = views_css_safe("browser-view-block-$view->name");
+//  $content .= "<div class='$view_css'>";
+
+  foreach ($nodes as $node) {
+    switch ($view->type) {
+      case 'am_teaser':
+        $teasers = True;
+      case 'am_alphabet':
+      case 'am_node':
+        $node = node_load($node->nid);
+        $content .= node_view($node, $teasers, FALSE, $links);
+        $title = check_plain($node->title);
+        break;
+    }
+  }
+
+  switch ($view->type) {
+    case 'am_alphabet':
+      $content .= "</div>";
+      break;
+  }
+  return $content;
+}
+
+
+/**
+ * Display the nodes of a view on tabs.
+ */
+function theme_artmob_main_alphabet_bar_tabs ( $view ){
+  $result = '';
+
+  if ( variable_get('use_tabs_'.$view->vid, 1 ) ){
+    $result .= theme( 'artmob_main_nodetype_tabs', $view );
+  }
+
+  return $result;
+}
+
+function theme_artmob_main_nodetype_tabs( $view ){
+  //this is being deprecated //Jan 24, 2012
+  $result = '';
+  return $result;
+
+  $holder = '';
+
+  $arguments = artmob_main_get_last_2_args( $last_arg, $type );
+  $TypesArray = array();
+  $TypesArray  = artmob_main_get_view_type_nodes();
+
+// --- Now build the tabs ---
+  $result .= '<div class="tabs"><ul class="tabs primary">';
+  foreach ($TypesArray as $typename=>$typedesc){
+    $href = $view->url.'/'.$typename.'/'.$last_arg;
+    if ($type == $typename){
+      $result .= '<li class="active">'.l( $typedesc,$href, array( 'class' => 'active' ) ).'</li>';
+    } else {
+      $result .= '<li>'.l( $typedesc,$href, array( 'class' => 'active' ) ).'</li>';
+    }
+  }
+  $result .= '</ul></div>';
+
+  return $result;
+}
+
+function artmob_main_views_default_views() {
+  $views = array();
+  $path = drupal_get_path('module', 'artmob_main') . '/views';
+  $files = drupal_system_listing('.inc$', $path, 'name', 0);
+  foreach($files as $file) {
+    include_once $file->filename;
+  }
+  return $views;
+}
+
+function artmob_main_clear_cache( &$node, $page ){
+  drupal_clear_css_cache();
+
+  // clear core tables
+  $core = array('cache', 'cache_filter', 'cache_menu', 'cache_page');
+  $alltables = array_merge($core, module_invoke_all('devel_caches'));
+  foreach ($alltables as $table) {
+    cache_clear_all('*', $table, TRUE);
+  }
+}
+

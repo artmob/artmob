@@ -1,0 +1,25 @@
+<?php
+// $Id: artmob_main install,v 1.0 2008/03/07 01:30:00 drumm Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function artmob_main_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      //We need to set the artmob_main weight back so that
+      //it creates the 'artmob' fieldset in content types
+      //because a number of artmbob modules add fields here.
+      db_query( "UPDATE {system} set weight = -1 where name = 'artmob_main'" );
+      break;
+    case 'pgsql':
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function artmob_main_uninstall() {
+}

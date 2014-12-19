@@ -1,0 +1,18 @@
+INSTALL.txt file
+================
+
+1. Place the weblinks folder in your drupal/modules folder
+   (or if multisite and this module is meant to be available
+   to just one site in drupal/sites/www.YOURSITE.com/modules)
+
+2. Enable the weblinks module at administer > modules
+
+3. Ensure the correct admin users have permissions to administer the
+   weblinks module at administer > access control
+
+4. Set-up the module at administer > settings > weblinks
+
+5. If you want the weblinks block(s) displayed go to 
+   administer > blocks and enable it/them somewhere on the page
+
+

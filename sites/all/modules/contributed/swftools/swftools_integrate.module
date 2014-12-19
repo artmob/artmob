@@ -1,0 +1,136 @@
+<?php
+// $Id: swftools_integrate.module,v 1.1.2.11 2008/08/08 22:37:23 stuartgreenfield Exp $
+
+/**
+ * Implementation of hook_menu().
+ */
+function swftools_integrate_menu($may_cache) {
+  $items = array();
+  if ($may_cache) {
+    $items[] = array(
+      'path' => 'admin/media/swf/integrate',
+      'title' => t('Integration'),
+      'description' => 'Select any of these integration options to output playlists from various sources.',
+      'callback' => 'drupal_get_form',
+      'callback arguments' => 'swftools_integrate_admin_form',
+    );
+  }
+  return $items;
+}
+
+function swftools_integrate_admin_form() {
+  include_once(drupal_get_path('module', 'swftools_integrate') .'/swftools_integrate.admin.inc');
+  return system_settings_form(_swftools_integrate_admin_form());
+}
+
+function swftools_integrate_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  switch ($op) {
+    case 'view':
+      $display_types = variable_get('swftools_integrate_render_upload', array());
+      if (count($display_types) && isset($node->files)) {
+
+        $playlist_data = swftools_prepare_playlist_data($node->files, $title = $node->title, TRUE, $display_types);
+        $swf = swf_list($playlist_data, SWFDEFAULT, SWFDEFAULT, array('class' => 'swftools-upload'), array('action'=>$action));
+        $node->content['swftools_integrate_upload']['#value'] = $swf;
+        $node->swftools_integrate['upload'] = $swf;
+        return;
+      }
+      break;
+  }
+}
+
+/**
+ * upload.module helper
+ *
+ * User-friendly function to convert the files attached to a node into a
+ * structured $playlist_data array ready to pass to swf_list().
+ *
+ * @param $nid
+ *   Pass a specific nid, otherwise the function automatically assumes the
+ *   page is a node display page, and the nid from ?=node/nid.
+ */
+
+function swftools_playlist_from_upload($node = SWFDEFAULT, $type_filter = array(), $only_listed = TRUE) {
+  if (!isset($node->nid)) {
+    if (!$node) {
+      $nid = arg(1);
+    }
+    else {
+      $nid = $node;
+    }
+    $node = node_load(array('nid' => $nid));
+  }
+  $files = $node->files;
+
+  // Remove any files that are not "listed"
+  if ($only_listed) {
+    foreach ($files AS $fid => $details) {
+      if ($details->list == FALSE) {
+        unset($files[$fid]);
+      }
+    }
+  }
+  $playlist_data = swftools_prepare_playlist_data($files, $node->title, TRUE, $type_filter);
+  return $playlist_data;
+}
+
+/**
+ * image_gallery.module helper
+ * This function ported from image_gallery.
+ *
+ * User-friendly function to convert image gallery files into a
+ * structured $playlist_data array ready to pass to swf_list().
+ *
+ * @param $tid
+ *   Pass a specific tid (term id representing an image gallery.
+ */
+
+function swftools_playlist_from_image_gallery($tid, $derivative = 'preview') {
+
+  $galleries = taxonomy_get_tree(_image_gallery_get_vid(), $tid, -1, 1);
+
+  for ($i=0; $i < count($galleries); $i++) {
+    $galleries[$i]->count = taxonomy_term_count_nodes($galleries[$i]->tid, 'image');
+    $tree = taxonomy_get_tree(_image_gallery_get_vid(), $galleries[$i]->tid, -1);
+    $descendant_tids = array_merge(array($galleries[$i]->tid), array_map('_taxonomy_get_tid_from_term', $tree));
+    $last = db_fetch_object(db_query_range(db_rewrite_sql('SELECT n.nid FROM {node} n INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE tn.tid IN (%s) AND n.status = 1 ORDER BY n.sticky DESC, n.created DESC'), implode(',', $descendant_tids), 0, 1));
+    $galleries[$i]->latest = node_load(array('nid' => $last->nid));
+  }
+  $images = array();
+
+  if ($tid) {
+    $result = pager_query(db_rewrite_sql("SELECT n.nid FROM {term_node} t INNER JOIN {node} n ON t.nid=n.nid WHERE n.status=1 AND n.type='image' AND t.tid=%d ORDER BY n.sticky DESC, n.created DESC"), variable_get('image_images_per_page', 6), 0, NULL, $tid);
+    while ($nid = db_fetch_object($result)) {
+      $node = node_load(array('nid' => $nid->nid));
+      foreach ($node->files AS $fid => $file_data) {
+        if ($file_data->filename == $derivative) {
+          $files[$fid] = (array)$file_data;
+          $files[$fid]['title'] = $node->title;
+        }
+      }
+    }
+  }
+
+  $playlist_data = swftools_prepare_playlist_data($files);
+  return $playlist_data;
+}
+
+/**
+ * imagefield.module and filefield module helper
+ *
+ * User-friendly function for nodes that contain files through the good
+ * work of imagefield or filefield..
+ *
+ * @param $nid
+ *   Pass a specific nid, otherwise the function automatically assumes the
+ *   page is a node display page, and the nid from ?=node/nid.
+ *
+ * @param $which
+ *   Pass 'files' for all the files, 'images' for all the images
+ *   or 'all' to process all attached files.
+ */
+
+function swftools_playlist_from_field_module($nid = SWFDEFAULT) {
+
+}
+

@@ -1,0 +1,16 @@
+<?php
+// $Id: jscalendar.install,v 1.2 2006/05/17 20:59:14 m3avrck Exp $
+
+/** 
+  * Implementation of hook_install(). 
+  */
+function jscalendar_install() {  
+  //set a high weight so jscalendar is called after all other hook_form_alters which may add jscalendar to various forms  
+  db_query("UPDATE {system} SET weight = 10 WHERE name = 'jscalendar'");
+}
+
+function jscalendar_update_1() {
+  $ret = array();
+  db_query("UPDATE {system} SET weight = 10 WHERE name = 'jscalendar'");
+  return $ret;
+}

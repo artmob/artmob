@@ -1,0 +1,197 @@
+/*
+-------------------------------------------------------------
+||	Exhibits
+-------------------------------------------------------------
+*/
+/*   Header  ----------------------------------------------*/
+.exhibitHeader{
+	margin-bottom:1px;
+	background-color:#F4F4F4;
+}
+.exhibitHeader h2{
+	margin-bottom:0;
+	margin-top: 0px;
+	padding: 0px 8px 10px 8px;
+	font-size:24px;
+}
+.exhibitHeader .closeBtn{
+	float:right;
+	margin:15px 8px 10px 15px;
+	font-size:11px;
+}
+
+/*   Tools  -----------------------------------------------*/
+.exhibitTools{
+	overflow:hidden;
+	padding:6px 8px 6px 0px;
+	font-size:11px;
+	background-color:#D4D4D4;
+}
+.exhibitTools ul{
+	margin:0;
+	padding:0;
+]	background: none;
+}
+.exhibitTools .status{
+	float:left;
+	text-align:left;
+}
+
+.exhibitTools .status li{
+	padding: 0px 0px 0px 8px;
+	margin: 0px;
+}
+
+.exhibitTools .tools {
+	float:right;
+	text-align:right;
+}
+.exhibitTools li{
+	display:inline;
+	background: none;
+	margin: 0px;
+	padding: 0px;
+}
+/*   Landing Page -----------------------------------------*/
+
+.block-Exhibit #main h2{
+	margin-bottom:10px;
+	font-weight:normal;
+	font-size:24px;
+	/*<mil>*/
+}
+.exhibit-date,
+.exhibit-curated-by{
+	font-weight:bold;
+}
+.block-Exhibit .image-attach-teaser{
+	float:left;
+	margin-left:0;
+	margin-right:1em;
+}
+.block-Exhibit .image-attach-body,
+.block-Exhibit .image-attach-body,
+.block-Exhibit .image-attach-body{
+	float:left;
+	margin-left:0;
+	margin-right:1em;
+}
+#main .content-Exhibit ul,
+#main .content-Exhibit li{
+	margin:0;
+	padding:0;
+	list-style:none;
+}
+.block-Exhibit .exhibitContainer{
+	margin-bottom:20px;
+}
+/*   Curator Note  -----------------------------------------*/
+
+.curator-note {
+	padding: 10px;
+	background-color:#F4F4F4;
+	overflow: hidden;
+}
+
+.curator-individual-note {
+	clear:both;
+	display: block;
+	width: 100%;
+	overflow: visible;
+	padding-bottom: 15px;
+
+}
+
+.exhibitContent h5{
+	font-weight:normal;
+	font-style: italic;
+	color:#A2A2A2;
+}
+
+.curator-note h3 {
+	font-size: 14px;
+}
+
+.exhibit-begin-quote {
+	float:left;
+	text-align: left;
+	position: relative;
+	width: 5%;
+}
+
+.exhibit-end-quote {
+	float:right;
+	text-align: right;
+	position: relative;
+	width: 5%
+}
+
+.curator-note-content {
+	display: block;
+	width: 90%;
+	float: left;
+	position: relative;
+	margin-bottom: 15px;
+}
+
+.curator-note-content p {
+	margin: 0px 0px 8px 0px;
+}
+
+.curator-byline {
+	width: 100%;
+	/*text-align: right;*/
+	font-weight: bold;
+}
+
+.exhibit-surtitle {
+	font-size: .9em;
+	font-family: Arial, Helvetica, sans-serif;
+	text-transform: uppercase;
+	color: #000000;
+	padding: 8px 0px 0px 8px;
+}
+
+/*
+-------------------------------------------------------------
+||	Exhibits [ FROM LOCAL]
+-------------------------------------------------------------
+*/
+
+/*   Landing Page -----------------------------------------*/
+.block-Exhibit #main h2{
+	color:#265F97;
+}
+/*   Header  ----------------------------------------------*/
+
+.exhibitHeader .closeBtn a,
+.exhibitHeader .closeBtn a:active,
+.exhibitHeader .closeBtn a:visited,
+.exhibitHeader .closeBtn a:link {
+	color:#000000;
+}
+.exhibitHeader .closeBtn a:hover{
+	color:#DEDEDE;
+}
+/*   Tools  -----------------------------------------------*/
+.exhibitTools{
+	background-color:#487EB3;
+}
+/*   Body  ------------------------------------------------*/
+.exhibitBody{
+	background-color:#487EB3;
+	color:#FFF;
+}
+.exhibitContainer a, 
+.exhibitContainer a:visited, 
+.exhibitContainer a:active, 
+.exhibitContainer a.active,
+.exhibitContainer a:link {
+	text-decoration:none;
+	text-transform:uppercase;
+	font-weight:bold;
+	color:#FFF;
+}
+.exhibitContainer a:hover{
+	color:#DEDEDE;
+}

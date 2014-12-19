@@ -1,0 +1,10 @@
+; $Id: PCLookup.info,v 1.0 2007/05/26 20:55:33 dries Exp $
+name = PC Lookup
+description = PC Lookup
+package = PC Tools
+version = VERSION
+
+; Information added by drupal.org packaging script on 2007-01-30
+version = "5.1"
+project = "drupal"
+

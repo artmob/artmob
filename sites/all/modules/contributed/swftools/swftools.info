@@ -1,0 +1,10 @@
+; $Id: swftools.info,v 1.1.2.3 2007/06/18 23:07:05 dww Exp $
+name =  SWF Tools
+description = Provides a generic API for Macromedia Flash related tasks
+package = SWF Tools
+
+; Information added by drupal.org packaging script on 2009-03-09
+version = "5.x-2.4"
+project = "swftools"
+datestamp = "1236624056"
+

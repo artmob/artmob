@@ -1,0 +1,1595 @@
+<?php
+// $Id: artmob_fair_dealing.info,v 1.0 2010/11/04 20:55:33 stop14 Exp $
+
+/* @file
+ * ADDDOCUMENTATION
+ **/
+
+define('ARTMOB_FD_MEDIA_TYPE_NONE', 0);
+define('ARTMOB_FD_MEDIA_TYPE_DOCUMENT', 1);
+define('ARTMOB_FD_MEDIA_TYPE_VIDEO', 2);
+define('ARTMOB_FD_MEDIA_TYPE_AUDIO', 4 );
+define('ARTMOB_FD_MEDIA_TYPE_IMAGE', 3 );
+
+define('ARTMOB_FAIR_DEALING_ACTIVE', TRUE);
+
+define('ARTMOB_FAIR_DEALING_UNKNOWN_ROLE', -1);
+define('ARTMOB_EMPTY_TITLE_PLACEHOLDER', 'Enter the title of the work');
+
+
+//----------------------------------------------
+// CONSTANTS
+//----------------------------------------------
+function artmob_fair_dealing_init() {
+   $module_path = drupal_get_path('module', 'artmob_fair_dealing');
+   define('ARTMOB_FD_MODULE_PATH',base_path() .$module_path);
+   define('ARTMOB_FD_IMAGE_PATH', ARTMOB_FD_MODULE_PATH ."/images"); 
+
+   $js_path = $module_path .'/js';
+   $css_path = $module_path .'/css';
+   $fd_scripts = array(
+      'jquery-min-14.js', 'artmob_compat.js', 'fairdealing_var.js', 'fairdealing_menu.js', 'fairdealing_collect.js', 'fairdealing_ui.js', 'fairdealing_init.js', 'jquery.fastconfirm.js'
+   );
+
+   $arg0 = arg(0);
+   $arg1 = arg(1);
+   $arg2 = arg(2);
+   
+   if ($arg0 == 'fair_dealing' && $arg1 == 'visualizations') {
+      $visscripts = array(
+        'jquery-min-14.js','fairdealing_var.js','fairdealing_menu.js','fairdealing_init.js','fairdealing_visualizations.js'
+      );
+      
+       foreach ($visscripts as $js) {
+         drupal_add_js($js_path ."/". $js, 'module');
+       }
+
+      
+   }
+
+   if ($arg0 == 'node' && is_numeric($arg1) && ($arg2 == 'attribute')) {
+     $db_query = db_query("SELECT title, type FROM {node} WHERE nid=%d", $arg1);
+
+     $nobj = db_fetch_object($db_query);
+
+     
+     /* Left for compatibility with artmob media.  Types now handled through Content Type edit menu. */
+     
+     $filetypes = array(
+       'DigitizedWorks' => '1',
+       'amDocument' => '1', // forward compatibility
+       'amVideo' => '2',
+       'amPicture' => '3',
+       'audio' => '4',
+       'amAudio' => '4', //forward compatibility
+     );
+
+     $media_type = variable_get('media_type_'. $nobj->type, ARTMOB_FD_MEDIA_TYPE_NONE);
+
+
+     $filetype = $media_type ? $media_type : $filetypes[$nobj->type];
+
+     drupal_add_css($css_path ."/attribute.css");
+     drupal_add_css($css_path ."/artmob_works.css");
+     drupal_add_css($css_path ."/jquery.fastconfirm.css");
+
+     if ($filetype) {
+       $report = artmob_fair_dealing_build_report( $arg1, False ); //changed by Joe Oct 22. Added True
+       $existing = (count($report['works']) > 0) ? json_encode($report) : NULL;
+       $artmob_fair_dealing_settings = array(
+         'filetype' => $filetype,
+         'nid' => $arg1,
+         'cid' => 1, 
+         'existingreport' => $existing,
+         'worksmodel' => theme('afd_worksmodel'),
+         'worksmenumodel'  => theme('afd_worksmenu_model'),
+         'addworkmodel' => theme('afd_addwork_model'),
+         'nonestedworks' => theme('afd_no_nested_works'),
+         'ffcontributors' => theme('afd_formfields_contributors'),
+         'ffinfofields' => theme('afd_formfields_infofields'),
+         'datewidget' => theme('afd_date_widget'),
+         'ffaddnewcontributor' => theme('afd_add_new_contributor'),
+         'artmob_empty_title_placeholder' => ARTMOB_EMPTY_TITLE_PLACEHOLDER
+       );
+
+       drupal_add_js(array('afd' => $artmob_fair_dealing_settings), "setting");
+       
+       foreach ($fd_scripts as $js) {
+         drupal_add_js($js_path ."/". $js, 'module');
+       }
+       
+       if ($arg2 == 'attribute') {
+        drupal_set_title("Attribute: ". $nobj->title);
+        }
+
+
+     }
+   }
+
+
+}
+
+function artmob_fair_dealing_get_media_type(&$node) {
+
+  $types = array (
+    ARTMOB_FD_MEDIA_TYPE_DOCUMENT => 'Document',
+    ARTMOB_FD_MEDIA_TYPE_VIDEO => 'Video',
+    ARTMOB_FD_MEDIA_TYPE_IMAGE => 'Still Image',
+    ARTMOB_FD_MEDIA_TYPE_AUDIO => 'Audio'
+  );
+  
+  $media_type = variable_get('media_type_'. $node->type, ARTMOB_FD_MEDIA_TYPE_NONE);
+
+  if ($media_type == ARTMOB_FD_MEDIA_TYPE_NONE) {
+    return NULL;
+  } else {
+    return array(
+      'media_type' => $media_type,
+      'media_type_label' => $types[$media_type]
+    );
+  }
+}
+
+//----------------------------------------------
+// HELPER FUNCTIONS -- They all start with AFD (artmob fair dealing)
+//----------------------------------------------
+function AFD_get_licenses_for_work_by_nid( $work_nid ) {
+//returns an array of nids keyed by license_id for all licenses
+//attached to this work
+  $citation_id = AFD_get_citation_id_for_work( $work_nid );
+  if ( $citation_id ) {
+    return AFD_get_licenses_by_citation_id( $citation_id );
+  }
+  else {
+    return array();
+  }
+}
+
+function AFD_get_licenses_by_citation_id( $citation_id ) {
+//returns an array of nids keyed by license_id for all licenses
+//attached to this citation
+  $result = array();
+  $query = db_query( "SELECT a.license_id, l.nid FROM {am_associated_licenses} a
+                      LEFT JOIN {am_license} l on a.license_id = l.license_id
+                      WHERE citation_id = %d", $citation_id );
+  while ($row = db_fetch_object($query)) {
+    $result[$row->license_id] = $row->nid;
+  }
+  return $result;
+}
+
+function AFD_get_child_works_by_nid_as_list( $work_nid, $include_parent = FALSE, $include_main_citation = FALSE ) {
+//This function returns the entire list of encapsulated works for a particular work.
+//Each array element is an object containing the encapsulated work record
+  $result = array();
+  if ( $include_main_citation ) {
+    $query_citation = db_query( "select * from {am_citation} where link_nid = %d and link_eid = ''", $work_nid );
+    $row_citation = db_fetch_object( $query_citation );
+    $row_citation->eid = $work_nid .'_0';
+    $row_citation->unique_id = 0;
+    $row_citation->parent_eid = 0;
+    $row_citation->tree_level = 0;
+    $row_citation->weight = 0;
+    $result[] = $row_citation;
+  }
+
+  $query_string = "SELECT * FROM {am_encapsulated_works} WHERE nid = %d";
+  if ( !$include_parent ) {
+    $query_string .= " AND parent_eid <> 0";
+  }
+
+  $query_string .= " ORDER BY tree_level, weight, unique_id";
+  //$query_string .= " ORDER BY unique_id";
+  $query = db_query( $query_string, $work_nid);
+  while ($row = db_fetch_object($query)) {
+    $result[] = $row;
+  }
+
+
+  return $result;
+}
+
+function AFD_get_child_works_by_nid_as_select_array( $work_nid, $include_parent = TRUE ) {
+//This function returns the entire list of incorporated works for a particular item.
+//Each array element is an object containing the incorporated work record
+  $result = array();
+  $query_string = "SELECT e.citation_id, c.citation_title FROM {am_encapsulated_works} e
+                   LEFT JOIN {am_citation} c on e.citation_id = c.citation_id
+                   WHERE e.nid = %d";
+  if ( !$include_parent ) {
+    $query_string .= " AND parent_eid <> 0";
+  }
+
+  $query_string .= " ORDER BY tree_level, weight, unique_id";
+  //$query_string .= " ORDER BY unique_id";
+  $query = db_query( $query_string, $work_nid);
+  while ($row = db_fetch_object($query)) {
+    $result[$row->citation_id] = $row->citation_title;
+  }
+
+
+  return $result;
+}
+
+function AFD_get_child_works_by_nid_keyed_by_citation_nid( $work_nid, $include_parent = TRUE ) {
+//This function returns the entire list of incorporated works for a particular item.
+//It is a list of the titles as keyed on the citation_nid
+  $result = array();
+  $query_string = "SELECT c.nid, c.citation_title FROM {am_encapsulated_works} e
+                   LEFT JOIN {am_citation} c on e.citation_id = c.citation_id
+                   WHERE e.nid = %d";
+  if ( !$include_parent ) {
+    $query_string .= " AND parent_eid <> 0";
+  }
+
+  $query_string .= " ORDER BY tree_level, weight, unique_id";
+  //$query_string .= " ORDER BY unique_id";
+  $query = db_query( $query_string, $work_nid);
+  while ($row = db_fetch_object($query)) {
+    $result[$row->nid] = $row->citation_title;
+  }
+
+  //drupal_set_message(devtools_dump($result));
+
+
+  return $result;
+}
+
+function AFD_get_all_works_by_eid_as_list( $work_eid, $include_parent = FALSE ) {
+//This function returns all works for the node that this eid is associated with
+//regardless of what level the eid is on.
+// -- USE AFD_get_child_works_by_eid_as_list TO GET THE CHILDREN OF JUST THIS EID
+  $work_nid = AFD_get_works_nid( $work_eid );
+  return AFD_get_child_works_by_nid_as_list( $work_nid, $include_parent, TRUE);
+}
+
+
+function AFD_get_child_works_by_eid_as_list( $work_eid, $include_parent = FALSE ) {
+//This function will return all of the child works of $work_eid
+//in a single array of objects that match am_encapsulated_works
+  $result = array();
+  $parent = array();
+  if ( $include_parent ) {
+    $qeury = db_query( "SELECT * FROM {am_encapsulated_works}
+                      WHERE eid = %d", $work_eid);
+    while ($row = db_fetch_object($qeury)) {
+      $parent[] = $row;
+      break;
+    }
+  }
+
+  $qeury = db_query( "SELECT * FROM {am_encapsulated_works}
+                      WHERE parent_eid = %d
+                      ORDER BY tree_level, weight, unique_id", $work_eid);
+  while ($row = db_fetch_object($qeury)) {
+    $result[] = $row;
+  }
+  //This must now recurse for each child
+  $children = array();
+  foreach ( $result as $row ) {
+    $child_temp = array();
+    $child_temp = AFD_get_child_works_by_eid_as_list( $row->eid, False );
+    $children = array_merge( $children, $child_temp );
+  }
+  $result = array_merge( $result, $children );
+  $result = array_merge( $parent, $result );
+  return $result;
+}
+
+function AFD_get_child_works_by_nid_as_tree( $work_nid, $include_parent = False ) {
+//This function will return all of the child works of $work_nid
+//in a nested array of objects that match the tree structure
+// as depicted in am_encapsulated_works.
+//Each array element has an object that matches the am_encapsulated_works
+//database structure along with a $children property which holds an
+//array of it's children objects.
+  $eid = AFD_get_works_eid( $work_nid );
+  return AFD_get_child_works_by_eid_as_tree( $eid, $include_parent );
+}
+
+function AFD_get_child_works_by_eid_as_tree( $work_eid, $include_parent = False ) {
+//This function will return all of the child works of $work_eid
+//in a nested array of objects that match the tree structure
+// as depicted in am_encapsulated_works. 
+//Each array element has an object that matches the am_encapsulated_works
+//database structure along with a $children property which holds an
+//array of it's children objects.
+
+  $result = array();
+  $qeury = db_query( "SELECT * FROM {am_encapsulated_works}
+                      WHERE parent_eid = %d
+                      ORDER BY weight", $work_eid);
+  while ($row = db_fetch_object($qeury)) {
+    $node_object = new stdClass();
+    $node_object = $row;
+    $children = array();
+    $node_object->children = $children;
+    $result[$row->eid] = $node_object;
+  }
+  
+  //This must now recurse for each child
+  foreach ( $result as $child_eid => $row ) {
+    $child_temp = AFD_get_child_works_by_eid_as_tree( $child_eid, False );
+    $row->children = $child_temp;
+  }
+
+  if ( $include_parent ) {
+    //create the parent class and array
+    //assing the $result as it's children and return parent array
+    $parent = new stdClass();
+    $qeury = db_query( "SELECT * FROM {am_encapsulated_works}
+                      WHERE eid = %d", $work_eid);
+    while ($row = db_fetch_object($qeury)) {
+      $parent = $row;
+      break;
+    }
+    $parent_array = array();
+    $parent->children = $result;
+    $parent_array[$work_eid] = $parent;
+    return $parent_array;
+  } 
+  else {
+    //return the children's array
+    return $result;
+  }
+}
+
+function AFD_get_contributors_by_work_as_key_list( $work_nid ) {
+//returns an array of contributor ids for the given work
+  $citation_id = AFD_get_citation_id_for_work( $work_nid );
+  $qeury = db_query( "SELECT contributor_id FROM {am_citation_roles} where citation_id = %d", $citation_id );
+  $result = array();
+  while ($row = db_fetch_object($qeury)) {
+    $result[] = $row->contributor_id;
+  }
+  return $result;
+}
+
+function AFD_get_contributors_by_work_as_node_list( $work_nid ) {
+//returns an array of contributor nodes for the given work
+  $citation_id = AFD_get_citation_id_for_work( $work_nid );
+  $qeury = db_query( "SELECT c.nid FROM {am_citation_roles} r
+                      LEFT JOIN {am_contributor} c on c.contributor_id = r.contributor_id
+                      where citation_id = %d", $citation_id );
+  $result = array();
+  while ($row = db_fetch_object($qeury)) {
+    $result[$row->nid] = node_load( $row->nid );
+  }
+  return $result;
+}
+
+function AFD_get_citation_id_for_work( $work_nid ) {
+//This function will get the citation_id for a $work_nid
+  $result = 0;
+  $qeury = db_query( "SELECT citation_id FROM {am_encapsulated_works} where nid = %d", $work_nid );
+  while ($row = db_fetch_object($qeury)) {
+    $result = $row->citation_id;
+    break;
+  }
+  return $result;
+}
+
+function AFD_get_works_eid( $work_nid ) {
+//This function will get the TOP LEVEL eid for the given work nid (has no parent)
+  $result = db_result( db_query( "SELECT eid FROM {am_encapsulated_works}
+                      WHERE parent_eid = 0
+                      AND nid = %d", $work_nid) );
+  return $result;
+}
+
+function AFD_get_works_nid( $eid ) {
+//This function will get the work nid for the given eid
+  $result = db_result( db_query( "SELECT nid FROM {am_encapsulated_works}
+                      WHERE eid = %d", $eid) );
+  return $result;
+}
+
+
+//----------------------------------------------
+// Implementation of hook_perm().
+
+function artmob_fair_dealing_perm() {
+  return array('View Attribute Tab');
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function artmob_fair_dealing_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+  } 
+  else {
+    $items[] = array(
+      'path'          => 'admin/artmob',
+      'title'         => t('artmob settings'),
+      'description'   => t('Adjust settings for artmob modules'),
+      'position'      => 'right',
+      'weight'        => -7,
+      'callback'      => 'system_admin_menu_block_page',
+      'access'        => user_access('administer site configuration')
+    );
+
+    $items[] = array(
+      'path'  => 'fair_dealing_save_report',
+      'title' => t('Fair Dealing Save Report'),
+      'callback' => 'artmob_fair_dealing_save_report',
+      'type' => MENU_CALLBACK,
+      'access' => user_access('access content'),
+    );
+    
+    $items[] = array(
+      'path'  => 'fair_dealing/get_contributors',
+      'title' => t('Get Contributor List'),
+      'callback' => 'artmob_fair_dealing_get_contributors',
+      'type' => MENU_CALLBACK,
+      'access' => user_access('access content'),
+    );
+    
+    $items[] = array(
+      'path'  => 'fair_dealing/visualizations',
+      'title' => t('Artmob Visualization Tool'),
+      'callback' => 'artmob_fair_dealing_visualizations',
+      //'type' => MENU_CALLBACK,
+      'access' => user_access('access content'),
+    );
+
+    $arg0 = arg(0);
+    $arg1 = arg(1);
+    if ($arg0 == 'node' && is_numeric($arg1)) {
+      $node = node_load($arg1);
+      if (artmob_citation_has_citation($node)) {
+        $items[] = array('path' => 'node/'. $arg1 .'/attribute',
+          'title' => t('Attribute'),
+          'callback' => 'artmob_fair_dealing_tab',
+          'callback arguments' => array($node),
+          'access' => user_access('View Attribute Tab'),
+          'weight' => 10,
+          'type' => MENU_LOCAL_TASK,
+        );
+     }
+    }
+  }
+
+  return $items;
+}
+
+function artmob_fair_dealing_visualizations() {
+  return theme('artmob_fair_dealing_visualizations');
+}
+
+function theme_artmob_fair_dealing_visualizations() {
+  $content = '';
+  $content .= "<div id='visualizations'>\n";
+  $content .= "<h2>Nesting Options</h2>\n";
+  $content .= "<div id='nestingoptions'>\n";
+  $content .= "</div>\n";
+  $content .= "</div>\n";
+  
+  return $content;
+
+}
+
+function artmob_fair_dealing_get_contributors() {
+  drupal_set_header('Content-Type: text/javascript; charset=utf-8');
+  echo json_encode(artmob_contributor_BuildContributorList(FALSE,FALSE,TRUE));
+  exit();
+}
+
+function artmob_fair_dealing_save_report( ) {
+  global $user;
+  $report = $_POST['report'];
+
+  //watchdog( 'artmob fair dealing', 'input report from jquery = '.$report );
+  $report_array = json_decode($report, TRUE);   // TRUE forces it to convert objects associative arrays
+  //watchdog( 'artmob fair dealing', 'decoded report array from jquery = '.print_r( $report_array, True ) );
+
+  // --- SAVE THE DATA TO THE DATABASE --
+  //1. Get all citation ids for this node
+  //2. loop through citation ids and delete from citation and citation_roles
+  //3. loop through all works and ...
+    //3a generate eid by using 'nid_' and 'identifier_id'
+    //3b generate citation
+    //3c use the info array to gather citation fields
+    //3d save the citation
+    //3e create encapsulated work
+    //3f create any new contributors
+    //3g create citation roles
+
+  $nid = $report_array['works'][1][0]['nid'];
+
+  if (is_numeric($nid)) {
+
+
+    //
+
+    // load encapsulated works into an array before deleting it
+    $query = db_query( "select * from {am_encapsulated_works} where nid = %d", $nid );
+    while ($row = db_fetch_object($query)) {
+      $encapsulated_works[$row->eid] = $row;
+      $citation_nid = db_result( db_query( "select nid from am_citation where citation_id = %d",$row->citation_id ) );
+      $citation_node = node_load( $citation_nid );
+      $citations[$row->citation_id] = $citation_node;
+    }
+
+    //1. Get all citation ids for this node
+    $citation_ids = artmob_fair_dealing_get_citation_ids( $nid, True );
+    //problem is that we are losing the licenses on these works because
+    //the citation_id is changing
+    if ( count( $citation_ids ) ) {
+      //2a. loop through citation ids and delete from citation and citation_roles
+      foreach ( $citation_ids as $citation_nid => $citation_id ) {
+        //watchdog( 'artmob fair dealing', 'citation_id = '.$citation_id );
+        db_query( "DELETE FROM {am_citation_roles} where citation_id = %d", $citation_id );
+        db_query( "DELETE FROM {am_citation_roles_unknown} where citation_id = %d", $citation_id );
+        //db_query( "DELETE FROM {am_citation} where citation_id = %d",$citation_id );
+        //Since citations are nodes we should use node_delete to remove them
+        node_delete( $citation_nid );
+      }
+    }
+
+    //2b. delete current encapsulated works for this node
+    db_query( "delete from {am_encapsulated_works} where nid = %d", $nid );
+    //2c. delete any citation identifiers for this work
+    db_query( "delete from {am_citation_identifier} where nid = %d", $nid );
+
+    $item_node = node_load( $nid );
+
+    //3. loop through all works and ...
+    $works_array = $report_array['works'];
+    $tree = array();
+    foreach ( $works_array as $index => $item ) {
+      //The zeroth element is always empty for some reason
+      if ( $index <> 0 ) {
+        $work = $item[0]['identifiers'][0];
+        //3a generate eid by using 'nid_' and 'identifier_id'
+        $eid = $nid .'_'. $work['id'];
+        $parent_eid = $work['parent'];
+        if ( $parent_eid <> 0 ) {
+          $parent_eid = $nid .'_'. $parent_eid;
+          $tree_level = $tree[$parent_eid] + 1;
+        } else {
+          $tree_level = 0;
+        }
+        $tree[$eid] = $tree_level;
+
+        $sequence = $work['sequence'];
+        $weight = $work['weight'];
+        $work_type = $work['worktype'];
+        $work_type_label = $work['worktype label'];
+        //watchdog( 'FD Save', 'eid = '.$eid );
+        //watchdog( 'artmob fair dealing', '$parent_eid = '.$parent_eid );
+
+
+        //3b generate citation
+        $citation = new stdClass();
+
+        $old_work = $encapsulated_works[$eid];
+        $old_citation_id = $old_work->citation_id;
+        $citation = $citations[$old_citation_id];
+        $citation->nid = '';
+        $citation->type = 'citation';
+        $citation->uid = $user->uid;
+        $citation->link_nid = $nid;
+        $citation->link_eid = $eid;
+        $citation->status = 1;
+        $citation->work_type = $work_type;
+
+
+        //3c use the info array to gather citation fields
+        $info_array = $item[0]['info'];
+
+        //Clear old values
+         $citation->subtitle = '';
+         $citation->series_title = '';
+         $citation->series_number = '';
+         $citation->series_year = '';
+         $citation->series_description = '';
+         $citation->edition = '';
+         $citation->set_title = '';
+         $citation->set_title_without_prefix = '';
+         $citation->set_item_number = '';
+         $citation->number_of_pages = '';
+         $citation->publication_publisher_name = '';
+         $citation->publication_imprint_name = '';
+         //$node->publication_print_run,
+         //$node->genre,
+         //$node->citation_style,
+         //$node->citation_text,
+         //$node->catalogue_description,
+         $citation->features_and_distinctions = '';
+         //$node->publication_notes,
+         //$node->catalogue_description_format,
+         //$citation->features_and_distinctions_format = 0;
+         //$node->publication_notes_format,
+
+        $identifier_number = 1;
+        $widget_names = array();
+        $widget_name_array = array();
+        $widget_name_array['subwidgets'] = array();
+        foreach ( $info_array as $info_index => $info ) {
+          $field_name = $info[0]['field'];
+
+          //Proposed addition of $info[0]['type']
+          $type = $info[0]['type'];
+          $value = $info[0]['value'];
+          //If 'type' is 'date' then store differently in citation.
+          if ( $type == 'date' ) {
+            $citation->citation_dates[$field_name] = $value;
+          }
+          else {
+            if ( $field_name ) {
+              //watchdog( 'joetest', $field_name.' = '.$value );
+              //small blip from attribute tab
+              if ( $field_name == 'title' ) {
+                watchdog( 'joe fair dealing', '$tree level = '.$tree_level );
+                if ( $tree_level == 0 ){
+                  $value = $item_node->type.' Citation:'.$node->title;
+                } else {
+                  $field_name = 'citation_title';
+                  $citation->title = $value;
+                }
+                $citation->$field_name = $value;
+
+              } else if ( $field_name == 'identifier' ) {
+                //Identifiers are a special case so for each identifier
+                //we have to load up the identifier widget structure and
+                //save it.
+
+                //watchdog( 'joetest', 'value = '.$value );
+                $widgetname = 'widgetidentifier1';//.$identifier_number;
+                $widget_names[$widgetname] = $widgetname;
+                $subwidget_id = db_next_id('subwidget');
+
+                //$citation->$widgetname = array();
+                $widget_name_array['subwidgets'][$subwidget_id] = array(
+                    'identifier_type_code' => '01',
+                    'identifier_type_name' => 'proprietary identifier',
+                    'identifier_type_value' => $value,
+                );
+                $citation->$widgetname = $widget_name_array;
+
+                $identifier_number++;
+              } else {
+                $citation->$field_name = $value;
+              }
+            }
+          }
+
+        }
+        if ( $identifier_number > 1 ){
+          $citation->identifier_widget_names = $widget_names;
+        }
+
+        //3d save the citation
+        node_save( $citation );
+        //artmob_citation_insert($citation);
+        $citation_id = artmob_citation_get_citation_id( $citation->nid );
+
+        //Now look up old_citation_id and update the am_citation_license table
+        $old_work = $encapsulated_works[$eid];
+        $old_citation_id = $old_work->citation_id;
+        //watchdog( 'FD Save', 'old citation id = '.$old_citation_id );
+        //watchdog( 'FD Save', 'new citation id = '.$citation_id );
+        db_query( "Update {am_citation_license} set citation_id = %d
+       where citation_id = %d", $citation_id, $old_citation_id );
+
+        //3e create encapsulated work
+        db_query( "INSERT INTO {am_encapsulated_works} set
+                     eid = '%s', nid = %d,
+                     citation_id = %d, parent_eid = '%s',
+                     sequence = %d, weight = %d, tree_level = %d",
+                     $eid, $nid, $citation_id, $parent_eid,
+                     $sequence, $weight, $tree_level );
+
+        //3f create any new contributors
+        $contributors = $item[0]['contributors'];
+        $sequence = 0;
+        if ( count($contributors) ) {
+          foreach ( $contributors as $con_index => $contributor) {
+            $role = $contributor[0]['role'];
+            $contributor_nid = $contributor[0]['existing'];
+            $first_name = $contributor[0]['newfirstname'];
+            $last_name = $contributor[0]['newlastname'];
+            $corporatecontributor = $contributor[0]['corporatecontributor'];
+            $isunknown = $contributor[0]['isunknown'];
+            $contributor_id = 0;
+            if ( $contributor_nid == ARTMOB_FAIR_DEALING_UNKNOWN_ROLE ){
+              $contributor_id = ARTMOB_FAIR_DEALING_UNKNOWN_ROLE;
+            }
+            else if ( $contributor_nid <> 'NULL' ) {
+              $contributor_id = artmob_contributor_get_id_from_nid( $contributor_nid );
+            }
+
+
+            if (( $contributor_id == 0 ) and ( $role <> '' ) ) {
+              $contributor = new stdClass();
+              $contributor->first_name = $corporatecontributor == 0 ? $first_name : '';
+              $contributor->last_name = $last_name;
+              $contributor->contributor_type = $corporatecontributor == 1 ? 1 : 0;
+              $contributor->uid =$user->uid;
+              $contributor->type = 'Contributor';
+              $contributor->status = 1;
+              $contributor->title = $first_name .' '. $last_name;
+              node_save( $contributor );
+              $contributor_id = artmob_contributor_get_id_from_nid( $contributor->nid );
+            }
+            $sequence++ ;
+            //3g create citation roles
+            //The only way for $contributor_id to be 0 is if a role is not entered
+            //and an existing contributor is not picked so don't save it.
+
+            //if $contributor_id = -1 (ARTMOB_FAIR_DEALING_UNKNOWN_ROLE) then we write to the am_citation_roles_unknown table instead
+            if ( $contributor_id == ARTMOB_FAIR_DEALING_UNKNOWN_ROLE ) {
+              db_query( "Insert into {am_citation_roles_unknown} set
+                         citation_id = %d,
+                         contributor_id = %d,
+                         role_id = '%s',
+                         widget_name = 'widgetcontributor1',
+                         sequence = %d", $citation_id, $contributor_id, $role, $sequence);
+            } else {
+              if ( $contributor_id <> 0 ) {
+                db_query( "Insert into {am_citation_roles} set
+                         citation_id = %d,
+                         contributor_id = %d,
+                         role_id = '%s',
+                         widget_name = 'widgetcontributor1',
+                         sequence = %d", $citation_id, $contributor_id, $role, $sequence);
+              }
+            }
+          }
+        }
+        else {
+          watchdog( 'artmob fair dealing', 'no contributors found' );
+        }
+      }
+    }
+
+    //This is a test to see if we can output what we input
+    artmob_fair_dealing_build_report( $nid, False );
+  }
+
+  // --- SEND REPLY BACK TO JAVASCRIPT ---
+  //$html = devtools_dump($report_array);
+ // $html = 'Joe was here';
+//      'answer' => devtools_dump(json_decode($filter1,TRUE))  // TRUE forces it to convert objects associative arrays
+  //drupal_json( array(
+   //   'answer' => $html
+    //)
+  //);
+  exit();
+}
+
+function artmob_fair_dealing_build_report( $nid, $build_expanded = False ) {
+  //$build_expanded will add in some extra information
+  //as needed by the license tab
+
+  //This function will build the 'report' structure
+  //used by fair dealing for a node
+  $result = array();
+  $blank = array();
+  $works[0] = $blank;
+  //get all encapsulated works for this nid
+  //for each encapsulated work build the identifiers array...
+  //...the contributors array...the info array...and the nid element
+
+  //Joe!!! - get citation[0]
+  $encapsulated_works = AFD_get_child_works_by_nid_as_list( $nid, True, $build_expanded );
+  $encapsulated_works_sequence = 0;
+  foreach ( $encapsulated_works as $work ) {
+    $encapsulated_works_sequence++;
+    $citation_id = $work->citation_id;
+    //get the citation as an object
+    $citation = artmob_citation_get_citation_by_eid( $work->eid );
+    //watchdog( 'joe1', 'citation = '.print_r( $citation, True ) );
+
+    //  INFO //
+    //=======//
+    //We must do each citation field separately (and painfully).
+    //Not sure why but when this was moved lower, it didn't work
+    //so keep it up here!
+    $info = array();
+    $info_sequence = 0;
+
+    artmob_fair_dealing_build_info( $citation->citation_title, 'title', $info_sequence, $info );
+    artmob_fair_dealing_build_info( $citation->publication_publisher_name, 'publication_publisher_name', $info_sequence, $info );
+    artmob_fair_dealing_build_info( $citation->corporate_contributor, 'corporate_contributor', $info_sequence, $info );
+    artmob_fair_dealing_build_info( $citation->subtitle, 'subtitle', $info_sequence, $info );
+    artmob_fair_dealing_build_info( $citation->series_title, 'series_title', $info_sequence, $info );
+    artmob_fair_dealing_build_info( $citation->series_number, 'series_number', $info_sequence, $info );
+    artmob_fair_dealing_build_info( $citation->series_year, 'series_year', $info_sequence, $info, 'textfield' );
+    artmob_fair_dealing_build_info( $citation->series_description, 'series_description', $info_sequence, $info );
+    artmob_fair_dealing_build_info( $citation->edition, 'edition', $info_sequence, $info );
+    artmob_fair_dealing_build_info( $citation->set_title, 'set_title', $info_sequence, $info );
+    artmob_fair_dealing_build_info( $citation->set_item_number, 'set_item_number', $info_sequence, $info );
+    artmob_fair_dealing_build_info( $citation->number_of_pages, 'number_of_pages', $info_sequence, $info );
+    artmob_fair_dealing_build_info( $citation->publication_imprint_name, 'publication_imprint_name', $info_sequence, $info );
+    artmob_fair_dealing_build_info( $citation->features_and_distinctions, 'features_and_distinctions', $info_sequence, $info );
+    //watchdog( 'artmob fair dealing', 'info array = '.print_r( $info, True ) );
+
+    //now build back any identifier widget fields
+    $query = db_query('SELECT widget_name, subwidget_id, identifier_type_code, identifier_type_name, identifier_type_value '.
+                          'FROM {am_citation_identifier} '.
+                          'WHERE nid = %d '.
+                'ORDER BY subwidget_id', $citation->nid);
+    while ($row = db_fetch_object($query)) {
+      //watchdog( 'joetest', $row->date_name.' = '.$row->date_timestamp );
+      artmob_fair_dealing_build_info( $row->identifier_type_value, 'identifier', $info_sequence, $info );
+    }
+
+
+    //Now build back any date fields
+    $query = db_query( "select * from {am_citation_dates} d
+                        left join {am_date_type} t on t.date_type_id = d.date_type_id
+                        where citation_id = %d", $citation_id );
+    /*
+    $sql = sprintf( "select * from {am_citation_dates} d
+                        left join {am_date_type} t on t.date_type_id = d.date_type_id
+                        where citation_id = %d", $citation_id );
+
+    watchdog( 'joetest', $sql );
+    */
+
+    while ($row = db_fetch_object($query)) {
+      //watchdog( 'joetest', $row->date_name.' = '.$row->date_timestamp );
+      artmob_fair_dealing_build_info( $row->date_timestamp, $row->date_name, $info_sequence, $info, 'date' );
+    }
+
+
+    //  IDENTIFIER //
+    //=============//
+    //the eid is the nid_id so we need to parse it out
+    $id = artmob_fair_dealing_get_id_from_eid( $work->eid );
+    if ( $work->parent_eid == 0 ) {
+      $parent = 0;
+    } 
+    else {
+      $parent = artmob_fair_dealing_get_id_from_eid( $work->parent_eid );
+    }
+    $sequence = $work->sequence;
+    $weight = $work->weight;
+    $tree_level = $work->tree_level;
+
+    $identifiers = array();
+    $identifier_array['id'] = $id;
+    $identifier_array['parent'] = $parent;
+    $identifier_array['sequence'] = $sequence;
+    $identifier_array['weight'] = $weight;
+    $identifier_array['tree_level'] = $tree_level;
+    $identifier_array['worktype'] = $citation->work_type;
+    $identifier_array['worktypelabel'] = $citation->work_type_label;
+    $identifier_array['cnid'] = $citation->nid;
+    //need worktypelabel
+    if ( $build_expanded ) {
+      $identifier_array['title'] = $citation->citation_title;
+    }
+    $identifiers[0] = $identifier_array;
+
+    //  CONTRIBUTOR //
+    //==============//
+    $contributors = array();
+    $query = db_query( "SELECT * from {am_citation_roles} r
+                       left join {am_contributor} c on r.contributor_id = c.contributor_id
+                       where citation_id = %d order by sequence", $citation_id );
+    $contributor_sequence = 0;
+    while ($row = db_fetch_object($query)) {
+      $contributor = array();
+      $contributor_array = array();
+      $contributor_array['role'] = $row->role_id;
+      $contributor_array['existing'] = $row->nid;
+      $contributor_array['newfirstname'] = '';
+      $contributor_array['newlastname'] = '';
+      $contributor_array['contributor_type'] = $row->contributor_type;
+      if ( $build_expanded ) {
+        $contributor_array['id'] = $row->contributor_id;
+        $contributor_array['nid'] = $row->nid;
+      }
+      $contributor[0] = $contributor_array;
+      $contributors[$contributor_sequence] = $contributor;
+      $contributor_sequence++;
+    }
+
+    //Add in any unknown roles
+    $query = db_query( "SELECT * from {am_citation_roles_unknown} r
+                       where citation_id = %d order by sequence", $citation_id );
+    while ($row = db_fetch_object($query)) {
+      $contributor = array();
+      $contributor_array = array();
+      $contributor_array['role'] = $row->role_id;
+      $contributor_array['existing'] = $row->contributor_id;
+      $contributor_array['newfirstname'] = '';
+      $contributor_array['newlastname'] = '';
+      $contributor_array['contributor_type'] = $row->contributor_type;
+      if ( $build_expanded ) {
+        $contributor_array['id'] = $row->contributor_id;
+        $contributor_array['nid'] = '';
+      }
+      $contributor[0] = $contributor_array;
+      $contributors[$contributor_sequence] = $contributor;
+      $contributor_sequence++;
+    }
+
+
+    if ( $build_expanded ) {
+      $licenses = array();
+      $license_sequence = 0;
+      //build licenses info
+
+      $license_query = db_query( "Select  l.*, b.*, n.title as license_title
+                                  from {am_citation_license} l
+                                  left join {am_contributor} c on l.contributor_id = c.nid
+                                  left  join {am_license} b on l.license_id = b.license_id
+                                  left join {node} n on b.nid = n.nid
+                                  where l.citation_id = %d
+                                  group by  l.license_id", $citation_id );
+      while ($license_row = db_fetch_object($license_query)) {
+        $license =array();
+        $license_array = array();
+        $license_array['id'] = $license_row->license_id;
+        $license_array['name'] = $license_row->license_title;
+        $license_contributors = array();
+        $license_contributor_sequence = 0;
+
+        $license_contributor_query = db_query( "Select l.*, c.*, b.*, n.title as license_title, c.nid as contributor_nid
+                                  from {am_citation_license} l
+                                  left join {am_contributor} c on l.contributor_id = c.nid
+                                  left  join {am_license} b on l.license_id = b.license_id
+                                  left join {node} n on b.nid = n.nid
+                                  where l.citation_id = %d and l.license_id = %d", $citation_id, $license_row->license_id );
+
+        while ( $license_contributor_row = db_fetch_object( $license_contributor_query )) {
+          $license_contributor = array();
+          $license_contributor_array = array();
+          $license_contributor_array['id'] = $license_contributor_row->contributor_id;
+          $license_contributor_array['nid'] = $license_contributor_row->contributor_nid;
+          $license_contributor_array['firstname'] = $license_contributor_row->first_name;
+          $license_contributor_array['lastname'] = $license_contributor_row->last_name;
+          //If this contributor is a contributor in the citation then add their role here
+          $license_contributor_array['role'] = '';
+          foreach ( $contributors as $sequence => $citation_contributor_array ) {
+            if ( $citation_contributor_array[0]['nid'] == $license_contributor_row->contributor_nid ) {
+              $license_contributor_array['role'] = $citation_contributor_array[0]['role'];
+              break;
+            }
+          }
+          $license_contributor[0] = $license_contributor_array;
+          $license_contibutors[$license_contributor_sequence] = $license_contributor;
+          $license_contributor_sequence++;
+        }
+        $license_array['contributors'] = $license_contibutors;
+        $license[0] = $license_array;
+        $licenses[ $license_sequence ] = $license;
+        $license_sequence++;
+      }
+      $works[$encapsulated_works_sequence][0]['licenses'] = $licenses;
+    }
+
+    $works[$encapsulated_works_sequence][0]['identifiers'] = $identifiers;
+    $works[$encapsulated_works_sequence][0]['contributors'] = $contributors;
+    $works[$encapsulated_works_sequence][0]['info'] = $info;
+    $works[$encapsulated_works_sequence][0]['nid'] = $nid;
+  }
+  $report['works'] = $works;
+  watchdog( 'artmob fair dealing', 'output report array = '. print_r( $report, True ) );
+  return $report;
+}
+
+function artmob_fair_dealing_get_id_from_eid( $eid ) {
+  $eid_array = explode( '_', $eid );
+  $id = $eid_array[1];
+  return $id;
+}
+
+function artmob_fair_dealing_build_info( $value, $field, &$info_sequence, &$info, $type = '' ) {
+  if ( $value <> '' ) {
+    $value = check_plain($value);
+    $info_array = array();
+    $info_item = array();
+    $info_item['field'] = $field;
+    $info_item['value'] = $value;
+    $info_item['type'] = $type;
+    if ( $type == 'date' ) {
+      $info_item['themed'] = theme( 'artmob_fair_dealing_date_themer', $value );
+    }
+    $info_array[0] = $info_item;
+    $info[$info_sequence] = $info_array;
+    $info_sequence++;
+  }
+  return $info;
+}
+
+function artmob_fair_dealing_tab(&$node) {
+  return theme('artmob_fair_dealing_tab_basic_view', $node);
+}
+
+function artmob_fair_dealing_preprocess_artmob_fair_dealing_tab_basic_view(&$node) {  //D6+
+
+  $vars = array();
+
+  $vars['fair_dealing_fields'] = array(   // additional fields to display in citation tab
+  'sample data' => 'sample_data',
+  'sample_data_2' => 'sample_data_2');
+
+  return $vars;
+
+}
+
+function theme_artmob_fair_dealing_tab_basic_view(&$node) {
+  /* pre processing */
+
+  $vars = artmob_fair_dealing_preprocess_artmob_fair_dealing_tab_basic_view($node);
+
+  foreach ($vars as $var => $value) { // cast keys as variables;
+    ${$var} = $value;
+  }
+  
+  // introductory content;
+  
+  $type = artmob_fair_dealing_get_media_type($node);
+  
+  $introductory_text_array = array(
+    ARTMOB_FD_MEDIA_TYPE_DOCUMENT => 'For instance, the authors and photographers of individual literary and visual artistic works contained within an anthology will be identified as contributors to the individual literary and visual artistic works rather than as contributors to the digital file.',
+    ARTMOB_FD_MEDIA_TYPE_VIDEO => 'For instance, the director, actors and screenwriter involved in a dramatic work will be identified as contributors to the film, the screenplay, and the performances contained within the dramatic work, rather than as contributors to the digital video file.',
+    ARTMOB_FD_MEDIA_TYPE_IMAGE => 'For instance, the photographer of a visual artistic work will be identified in association with the photograph depicted in the file, rather than the compressed, digitized image file which may have been scanned or digitized by another person or organization.',
+    ARTMOB_FD_MEDIA_TYPE_AUDIO => 'For instance, the songwriter, performer, or producer of a song will be identified as contributors to the musical composition, the performance, or the recording of the song, rather than as contributors to the digital audio file.'
+  );
+  
+  $introductory_text = $introductory_text_array[$type['media_type']];
+  
+  //$worksmenu = theme('afd_worksmenu_model');
+  //$worksmodel = theme('afd_worksmodel');
+  
+  $content .= "<div id='attribute-tab'>";
+  $content .= node_view($node, FALSE, TRUE);
+  
+  //$content .= devtools_dump($node);
+
+  $content .= <<<EOT
+  <div class="introduction">
+  <p>The first step in adding materials to the archive is to describe and save the file. Information associated with the file will typically relate only to the digitized file itself, not the cultural works contained within the file. Information about the cultural works is added later, in the “attribution” phase of the input process. <span class='file-label'>{$introductory_text}</span></p>
+  <span id="errortext" style="color:red;display:none;">
+  <ul id="errorinfo">
+  </ul>
+  </span>
+  </div>
+  <div class="report"></div>
+
+    <div id="info-summary"></div>
+  </div>
+  <div id="work-collection-init"></div>
+  <div id='controls'>
+    <div id='save'>
+    <form id='savereport'>
+      <input type='button' id='savebtn' value='SAVE' />
+      <input type='button' id='revertbtn' value='REVERT' />
+    </form>
+    </div>
+  </div>
+    
+  <div id="processing" style="display:none"></div>
+EOT;
+  $content .= "</div>";
+  return $content;
+}
+
+function theme_afd_worksmenu_model($display='none') {
+  $dt = "display:{$display}";
+  $content .= <<<EOT
+    <div class="worksmenu-model"  style="display:block">
+    <h2 class='h2hasnested'>What kind of <span class='additional' style="display:none">additional</span> work is contained in this <span class='parenttypename highlight'>parent</span>?</h2>
+    <h2 class='h2nonested'>There are no nested work options for a <span class='parenttypename highlight'>parent</span>.</h2>
+    <div class='work-help-text'></div>
+    </div>
+EOT;
+  return $content;
+}
+
+function theme_afd_citation_table() {
+  $content = <<<EOT
+    <table class='contributor-table citation-table' cellpadding='0' cellspacing='0' border='0'>
+    <thead><th class='col-1'>Role</th><th class='col-2'>Name</th></thead>
+    </table>
+EOT;
+  return $content;
+}
+
+function theme_afd_info_table() {
+  $content = <<<EOT
+    <table class='info-table citation-table' cellpadding='0' cellspacing='0' border='0'>
+    <thead><th class='col-1'>Category</th><th class='col-2'>Details</th></thead>
+    </table>
+EOT;
+  return $content;
+}
+
+function theme_afd_worksmodel() {
+  $add_contributor_btn = ARTMOB_FD_IMAGE_PATH . '/add_new_contrib_up.png';
+  $add_infoval_btn = ARTMOB_FD_IMAGE_PATH . '/add_more_information.png';
+  
+  $content .= <<<EOT
+    <div class='work'>
+      <div class='identifiers' style="display:none"></div>      
+      <div class='banner'>
+        <div class='close'><a class='inactive'>Close</a></div>
+        <div class='banner-title work-title'>A title</div>
+      </div>
+      <div class='innerwork'>
+      <div class='title' style="display:none">
+        <h3 class='fd-label'>Title</h3>
+        <input class='fd-title work-title' type='text' value='Enter a Title for this work' />
+        <input class='fd-remove-btn' type='button' value='Remove this Work' />
+      </div>
+      <div class='info'>
+        <h3 class='fd-label'>Known Historical Information</h3>
+      <p><span class='helpbutton'></span>Tell us what you know about <strong>contributors</strong> to this <span class='parenttypename highlight'>work</span>.</p>
+      <div class="formfields">
+      <div class="keyroles"></div>
+      <div class='contrib-additional add-button-container'>
+        <input class='add-contributor' alt='add additional contributor button' title='add additional contributor' src='{$add_contributor_btn}' type='image' value = 'Add Contributors' />
+      </div>
+      <br /><br />
+      <p><span class='helpbutton'></span>Do you have any further <strong>information</strong> about this <span class='parenttypename highlight'>work</span>?</p>
+      <div class="keyfields"></div>
+      <div class='infoval-additional add-button-container'>
+        <input class='add-info' title='add additional contributor' src='{$add_infoval_btn}' type='image' alt='add more information button' value = 'Add More Information' />
+      </div>
+      </div>
+      </div>      
+      <div class='menu'>
+        <h3 class='fd-label'>Type of Work Contained</h3>
+      </div>
+      <div class='nested-works-title' style="display:none">
+        <h3 class='fd-label'>Works included</h3>
+      </div>
+      <div class='nested-works' style="display:none">
+      </div>
+      </div>
+    </div>
+EOT;
+  return $content;
+}
+
+
+
+function theme_afd_addwork_model() {
+  return <<<EOT
+   <div class='additional-work'>
+      <h2>Does this <span class='parenttypename highlight'>parent</span> contain additional works? </h2>
+      <input type="button" class='add-works-button' value="Yes" />
+      <p>Note: it is recommended that you input any nested works first, then additional works contained in the document. However, you can always edit your entries later if you are unsure or do not currently have the information at hand.</p>
+    </div>
+EOT;
+}
+
+function theme_afd_no_nested_works() {
+  return <<<EOT
+      <h3>This <span class='parenttypename highlight'>work</span> contains no options for nested works.</h3>  
+EOT;
+}
+
+function theme_afd_formfields_contributors() {
+  $addnewc = theme('afd_add_new_contributor');
+  $delete_btn_path = ARTMOB_FD_IMAGE_PATH . '/delete_row_up.png';
+  $content = <<<EOT
+    <div class="cvalues">
+      <div class='attr-row'>
+        <div class='contrib-role'>
+           <h4>Role</h4>
+           <select class="select-crole"></select> 
+        </div>
+        <div class='contrib-contributor'>
+          <h4>Contributor</h4>
+          <select class="select-cname">
+            <option value=""><em>Select Name</em></option>
+            <option value= '' >-------------------</option>\n
+          </select> 
+          <!--<span class='label-unknown' style='font-size: .6em; color: #AAAAAA'><input type='checkbox' class='cc-unknown' value='1' disabled='disabled'/>&nbsp;Mark as Unknown</span>-->
+          <input type="hidden" class='contributor-type' value='0'/>
+          <span class='contrib-newname'>
+            &nbsp;<span class='form-label'>or</span>&nbsp;
+            <input type="button" class='add-new-contributor' value='Or add new name'/>
+          </span>
+        </div>
+        <div class='contrib-delete'>
+          <span class='delete-contributor'><input type="image" alt='remove attribution button' title='remove this information' src='{$delete_btn_path}' class='delete-contributor-btn' value='Delete'/></span>
+        </div>
+      </div>
+        {$addnewc}
+      </div>
+    </div>
+EOT;
+
+  return $content;
+}
+
+
+function theme_afd_add_new_contributor($visibility="none") {
+  //$corpgloss = '<span class="glossary-inline">' . theme('artmob_glossary_digest_entry','Organization/Institution/Corporation','Generally, in the absence of an agreement to the contrary, a work created by a full-time employee during the course of her work while employed by an organization, institution or corporation and will be considered ‘authored’ by the corporation or institution, not the individual.') .'</span>';
+  $close_btn_path = ARTMOB_FD_IMAGE_PATH . '/close_new_contrib_up.png';
+  $content = <<<EOT
+   <div class='new-contributor add-new-contributor-container' style='display:{$visibility}'>
+      <div class='nc-cell'>
+        <input type="text" class="fname-cname" value="First Name"> <input type="text" value="Last Name" class="lname-cname">
+        <input type="button" class="add-contributor-btn" value ='Add This Contributor' />
+        <br />
+        <input type="checkbox" class='cc-cname' value='1' />&nbsp;Organization / Institution / Corporation
+      </div>
+      <div class='nc-cell nc-close'>
+        <input type="image" alt='close new contributor button' title='close without adding new name' src='{$close_btn_path}' class='close-contributor-btn' value='Close'/>
+      </div>
+   </div>
+EOT;
+  return $content;
+}
+
+function theme_afd_formfields_infofields() {
+  $delete_btn_path = ARTMOB_FD_IMAGE_PATH . '/delete_row_up.png';
+  $content .= <<<EOT
+  <div id="cvalues0-1-1" class="cvalues">
+    <div class='attr-row'>
+      <div class='infoval-delete'>
+        <input type="image" alt='remove attribution button' title='remove this information' src='{$delete_btn_path}' class='delete-info-btn' value='Delete'/></span>  
+      </div>
+      <div class='infoval-info'>
+        <h4>Information</h4>
+        <select class="select-cfield"></select>
+        <span class='infoval-container'></span>
+      </div>
+  </div>
+EOT;
+
+  return $content;
+}
+
+function theme_afd_date_widget() {
+                $monthlabel = artmob_fair_dealing_month_array();
+                
+        $days = '<option value="0">n/a</option>';
+        foreach (range(1, 31) as $day) {
+                $days .= "<option value='{$day}'>{$day}</option>";
+        }
+        
+        $months[0] = 'n/a';
+        foreach (range(0, 12) as $month) {
+                $months .= "<option value='{$month}'>{$monthlabel[$month]}</option>";
+        }
+        
+        $output = '<div class="infoval infoval-date-widget">';
+        $output .= 'Day: <select class="date-day-select">';
+        $output .= $days;
+        $output .= '</select>';
+        $output .= ' Month: <select class="date-month-select">';
+        $output .= $months;
+        $output .= '</select>';
+        $output .= 'Year: <input class="date-year-field" type="text" width="5" maxlength="4" value = "YYYY" />';
+        $output .= "</div>";
+
+        return $output;
+}
+
+function artmob_fair_dealing_month_array() {
+  $monthlabel = array(
+                  0 => 'n/a',
+                  1 => 'January',
+                  2 => 'February',
+                  3 => 'March',
+                  4 => 'April',
+                  5 => 'May',
+                  6 => 'June',
+                  7 => 'July',
+                  8 => 'August',
+                  9 => 'September',
+                  10 => 'October',
+                  11 => 'November',
+                  12 => 'December',
+  );
+  
+  return $monthlabel;
+}
+
+function artmob_fair_dealing_test() {
+  $form['fairdealing_test'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Fair Dealing Test'),
+    '#weight' => -10
+    );
+
+  $form['fairdealing_test']['procedure_parameter'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('nid/eid'),
+    '#description'   => 'Enter the nid or eid that will be passed into the testing function',
+    '#tree'          => 'FALSE',
+    '#weight'   => -8
+  );
+
+  $form['fairdealing_test']['include_parent'] = array(
+    '#type' => 'checkbox',
+    '#title' => t("Include Parent Node"),
+    '#description' => t('Include the parent node in the function call'),
+    '#weight' => -6,
+    '#default_value' => 0,
+  );
+
+
+  $form['fairdealing_test']['bynidaslist'] = array(
+    '#type'     => 'submit',
+    '#value'    => t('Get children by nid as list'),
+    '#submit'   => True,
+    '#weight'   => -4
+  );
+
+  $form['fairdealing_test']['byeidaslist'] = array(
+    '#type'     => 'submit',
+    '#value'    => t('Get children by eid as list for entire tree'),
+    '#submit'   => True,
+    '#weight'   => -2
+  );
+
+  $form['fairdealing_test']['byeidaslistchild'] = array(
+    '#type'     => 'submit',
+    '#value'    => t('Get children by eid as list for this eid'),
+    '#submit'   => True,
+    '#weight'   => 0
+  );
+
+  $form['fairdealing_test']['bynidastree'] = array(
+    '#type'     => 'submit',
+    '#value'    => t('Get children by nid as tree array for entire tree'),
+    '#submit'   => True,
+    '#weight'   => 2
+  );
+
+  $form['fairdealing_test']['byeeidastree'] = array(
+    '#type'     => 'submit',
+    '#value'    => t('Get children by eid as tree for this eid'),
+    '#submit'   => True,
+    '#weight'   => 2
+  );
+
+  return system_settings_form($form);
+}
+
+function artmob_fair_dealing_test_submit($form_id, $form_values) {
+  global $user;
+  $parameter = $form_values['procedure_parameter'];
+  $include_parent = $form_values['include_parent'];
+  drupal_set_message( 'parameter = '. $parameter .' -- include parent = '. $include_parent );
+  if ( $form_values['op'] == 'Get children by nid as list' ) {
+    $result_array = AFD_get_child_works_by_nid_as_list( $parameter, $include_parent );
+    foreach ( $result_array as $object ) {
+      drupal_set_message( 'eid = '. $object->eid );
+      drupal_set_message( 'parent eid  = '. $object->parent_eid );
+      drupal_set_message( '----------------------------------' );
+    }
+  }
+  else if ( $form_values['op'] == 'Get children by eid as list for entire tree' ) {
+    $result_array = AFD_get_all_works_by_eid_as_list( $parameter, $include_parent );
+    foreach ( $result_array as $object ) {
+      drupal_set_message( 'eid = '. $object->eid );
+      drupal_set_message( 'parent eid  = '. $object->parent_eid );
+      drupal_set_message( '----------------------------------' );
+    }
+  }
+  else if ( $form_values['op'] == 'Get children by eid as list for this eid' ) {
+    $result_array = AFD_get_child_works_by_eid_as_list( $parameter, $include_parent );
+    foreach ( $result_array as $object ) {
+      drupal_set_message( 'eid = '. $object->eid );
+      drupal_set_message( 'parent eid  = '. $object->parent_eid );
+      drupal_set_message( '----------------------------------' );
+    }
+  } 
+  else if ( $form_values['op'] == 'Get children by nid as tree array for entire tree' ) {
+    $result_array = AFD_get_child_works_by_nid_as_tree( $parameter, $include_parent );
+    print_r( $result_array );
+  }
+  else if ( $form_values['op'] == 'Get children by eid as tree for this eid' ) {
+    $result_array = AFD_get_child_works_by_eid_as_tree( $parameter, $include_parent );
+    print_r( $result_array );
+  }
+}
+
+function artmob_fair_dealing_get_citation_ids( $nid, $exclude_nid = False ) {
+  //$sql = sprintf( "select nid, citation_id from {am_citation} where link_nid = %d", $nid );
+  if ( $exclude_nid ) {
+    $query = db_query( "select nid, citation_id from {am_citation} where link_nid = %d and link_eid <> ''", $nid );
+  } 
+  else {
+    $query = db_query( "select nid, citation_id from {am_citation} where link_nid = %d", $nid );
+  }
+  while ($row = db_fetch_object($query)) {
+    $result[$row->nid] = $row->citation_id;
+  }
+  return $result;
+}
+
+function theme_artmob_fair_dealing_date_themer($date_value, $format='F j, Y' ) {
+  // The need for themeing flexibility with dates means that $day and $month can have a value of '0' to designate that they should not be rendered.
+  
+  list($day, $month, $year) = explode('/', $date_value);
+  
+  $monthlabel = artmob_fair_dealing_month_array();
+  
+  $tag = '<span class="artmob-themed-date">%s</span>';
+  // note that a value for $day must accompany a value for $month.  it's otherwise ambiguous.
+  
+  if ($month == 0) {
+        return sprintf($tag, $year);
+  }
+  else if ($day == 0 && $month > 0 && $year) {
+        return sprintf($tag, $monthlabel[$month] .', '. $year);
+  }
+  else if ($day > 0 && $month > 0 && $year) {
+        $time = strtotime($month .'/'. $day .'/'. $year); // format for strtotime
+        
+        if (is_int($time) == TRUE) {
+        
+          return date($format, $time);
+        }
+  }
+  
+  // ambiguous date value, so we'll return it intact.
+  
+  return $date_value;
+}
+
+//----------------------------------------------
+/**
+ * Implementation of hook_form_alter().
+ */
+function artmob_fair_dealing_form_alter($form_id, &$form) {
+  // boilerplate code to determine the node type of the form
+  if (isset($form['type'])) {
+      $type = $form['type']['#value'];
+    }
+  elseif (isset($form['orig_type'])) {
+      $type = $form['orig_type']['#value'];
+    }
+  else {
+//    return;
+  }
+
+  $media_type = variable_get('media_type_'. $type, ARTMOB_FD_MEDIA_TYPE_NONE);
+  $options = artmob_fair_dealing_media_type_list();
+
+  switch ($form_id) {
+    case 'node_type_form':
+      $form['artmob']['media_type'] = array(
+        '#type' => 'select',
+        '#title' => t('Media Type'),
+        '#default_value' => $media_type,
+        '#options'    => $options,
+        '#description' => t('Select the media type that this node type belongs to'),
+        '#weight'        => -8,
+      );
+
+      //Add our custom submit to the #submit array so we can save to am_node_type_mapping
+      $form['#submit']['artmob_fair_dealing_node_type_custom_submit'] = array();
+
+    break;
+    case $type .'_node_form':
+      break;
+  }
+}
+
+function artmob_fair_dealing_node_type_custom_submit( $form, $form_value ) {
+  //we couldn't use hook_node_type because the variables were not set yet
+  $type = trim($form_value['type']);
+  $media_type = $form_value['media_type'];
+  db_query( "delete from {am_node_type_mapping} where node_type = '%s'", $type );
+  db_query( "insert into {am_node_type_mapping} set node_type = '%s', media_type = '%s'", $type, $media_type );
+}
+
+/**
+ * Implementation of hook_node_type().
+ *
+function artmob_fair_dealing_node_type($op, $info) {
+  //$work_type = variable_get('work_type_'. $info->type, ARTMOB_FD_MEDIA_TYPE_NONE);
+  //drupal_set_message( 'work type = '.$work_type );
+  switch ($op) {
+    case 'update':
+      $update = TRUE;
+
+      //Fall through, with flag.  Therefore with every update we delete
+      //the old associated records and then resave the new ones
+    case 'delete':
+      if (!$update) {
+        break;
+      }
+    case 'insert':
+      break;
+  }
+}
+*/
+
+/**
+ * Implementation of hook_nodeapi().
+ *
+function artmob_fair_dealing_nodeapi(&$node, $op, $teaser=NULL,$page=NULL) {
+  switch ($op) {
+    case 'update':
+      $update = TRUE;
+
+      //Fall through, with flag.  Therefore with every update we delete
+      //the old associated records and then resave the new ones
+
+    case 'delete':
+      if (!$update) {
+        break;
+      }
+
+    case 'insert':
+      break;
+    case 'load':
+      break;
+    case 'prepare':
+      break;
+    case 'view':
+     break;
+    case 'delete revision':
+      break;
+    case 'submit':
+      break;
+  }
+}
+*/
+
+function artmob_fair_dealing_media_type_list( ) {
+  $options = array();
+  $options[ARTMOB_FD_MEDIA_TYPE_NONE] = 'None';
+  $options[ARTMOB_FD_MEDIA_TYPE_DOCUMENT] = 'Document';
+  $options[ARTMOB_FD_MEDIA_TYPE_VIDEO] = 'Video';
+  $options[ARTMOB_FD_MEDIA_TYPE_AUDIO] = 'Audio';
+  $options[ARTMOB_FD_MEDIA_TYPE_IMAGE] = 'Image';
+  return $options;
+}
+
+function theme_artmob_fair_dealing_media_type_file_label($type) {
+  $options = artmob_fair_dealing_media_type_list();
+  if (is_string($options[$type])) {
+    return ("Digital {$options[$type]} File");
+  }
+}
+
+
+/**
+ * Implementation of hook_user().
+ *
+function artmob_fair_dealing_user($op, &$edit, &$account) {
+  global $user;
+  switch ($op) {
+    case 'load':
+    case 'view':
+    case 'form':
+  };
+}
+*/
+
+/**
+ * Implementation of hook_block().
+ *
+ * Displays the Link in a block.
+function artmob_fair_dealing_block($op = 'list', $delta = 0) {
+  if ($op == 'list') {
+    $block[0]['info'] = t('Browsing Menu');
+    return $block;
+  }
+  else if ($op == 'configure') {
+    return $form;
+  }
+  else if ($op == 'save') {
+    switch ($delta) {
+      case 0: //Browsing Menu Block
+        break;
+    }
+  }
+  else if ($op == 'view') {
+    switch ($delta) {
+      case 0:  //Browsing Menu Block
+        break;
+    }
+    return $block;
+  }
+}
+ */
+

@@ -1,0 +1,137 @@
+<?php
+// $Id: PCNodeLink.info,v 1.0 2007/08/12 20:55:33 dries Exp $
+
+/**
+ * @file
+ * ADDDOCUMENTATION
+ */
+ 
+//----------------------------------------------
+/**
+ * Implementation of hook_help().
+ */
+function pcnodelink_help($section) {
+  switch ($section) {
+    case 'admin/help#PCNodeLink':
+      $output = '<p>'. t('The PCNodeLink module contains general node link functions') .'</p>';
+      return $output;
+    case 'admin/modules#description':
+    case 'admin/settings/PCNodeLink':
+      return (t('Contains general node link functions.'));
+  }
+}
+
+function pcnodelink_get_associated_items_by_node( $from_nid, $inclusionlist = '', $exclusionlist = '') {
+  $sql = 'SELECT ToNode FROM {PC_NodeLink} p left join {node} n on p.ToNode = n.nid ';
+  $where = pcmain_build_inclusion_exclusion_string( $inclusionlist, $exclusionlist, 'ToType' );
+
+  if ( $where ) {
+    $where .= ' AND ';
+  } 
+  else {
+    $where .= ' WHERE ';
+  }
+  $where .= ' p.FromNode = %d AND n.status = 1 ORDER BY LinkIndex';
+  $result= db_query( $sql . $where, $from_nid );
+  return $result;
+}
+
+function pcnodelink_get_associated_items_by_node_and_term( $from_nid, $term_name, $vname, $inclusionlist = '', $exclusionlist = '') {
+  $vid = pcmain_taxonomy_get_vocabulary_by_name( $vname );
+  if ( $vid ) {
+    $tid = '';
+    $term_result = taxonomy_get_term_by_name($term_name);
+    foreach ($term_result as $term_object) {
+      if ($term_object->vid == $vid) {
+        $tid = $term_object->tid;
+        break;
+      }
+    }
+    
+    if ( $tid ) {
+
+
+      $sql = 'SELECT ToNode FROM ( {PC_NodeLink} p left join {node} n on p.ToNode = n.nid )
+              LEFT JOIN {term_node} t on t.nid = n.nid';
+      $where = pcmain_build_inclusion_exclusion_string( $inclusionlist, $exclusionlist, 'ToType' );
+
+      if ( $where ) {
+        $where .= ' AND ';
+      } 
+      else {
+        $where .= ' WHERE ';
+      }
+      $where .= ' p.FromNode = %d AND t.tid = %d AND n.status = 1';
+      $result= db_query( $sql . $where, $from_nid, $tid );
+    }
+  }
+  return $result;
+}
+
+function pcnodelink_get_full_associated_items_by_node( $from_nid, $inclusionlist = '', $exclusionlist = '') {
+  $sql = 'SELECT p.*, n.* FROM {PC_NodeLink} p left join {node} n on p.ToNode = n.nid ';
+  $where = pcmain_build_inclusion_exclusion_string( $inclusionlist, $exclusionlist, 'ToType' );
+  if ( $where ) {
+    $where .= ' AND ';
+  } 
+  else {
+    $where .= ' WHERE ';
+  }
+  $where .= ' p.FromNode = %d AND n.status = 1 ORDER BY LinkIndex, n.changed DESC ';
+  $output = sprintf( $sql . $where, $from_nid );
+  $result= db_query( $sql . $where, $from_nid );
+  return $result;
+}
+
+function pcnodelink_is_node_linked( $to_nid, $inclusionlist = '', $exclusionlist = '') {
+  //This function is really a reverse lookup.  Is the to_nid node linked back to anything?
+  $sql = 'SELECT p.*, n.* FROM {PC_NodeLink} p left join {node} n on p.ToNode = n.nid ';
+  $where = pcmain_build_inclusion_exclusion_string( $inclusionlist, $exclusionlist, 'FromType' );
+  if ( $where ) {
+    $where .= ' AND ';
+  } 
+  else {
+    $where .= ' WHERE ';
+  }
+  $where .= ' p.ToNode = %d and p.FromNode != 0 AND n.status = 1 ORDER BY n.changed DESC ';
+  $result= db_query( $sql . $where, $to_nid );
+   return db_num_rows( $result );
+}
+
+function pcnodelink_to_node_linked_list( $to_nid, $inclusionlist = '', $exclusionlist = '') {
+  $nid_array = array();
+  //This function is really a reverse lookup.  Is the to_nid node linked back to anything?
+  $sql = 'SELECT FromNode FROM {PC_NodeLink}';
+  $where = pcmain_build_inclusion_exclusion_string( $inclusionlist, $exclusionlist, 'FromType' );
+  if ( $where ) {
+    $where .= ' AND ';
+  } 
+  else {
+    $where .= ' WHERE ';
+  }
+  $where .= ' ToNode = %d and FromNode != 0';
+  $result= db_query( $sql . $where, $to_nid );
+  while ($row = db_fetch_object( $result )) {
+    $nid_array[] = $row->FromNode;
+  }
+  return $nid_array;
+}
+
+function pcnodelink_full_to_node_linked_list( $to_nid, $inclusionlist = '', $exclusionlist = '') {
+  //This function is really a reverse lookup.  Is the to_nid node linked back to anything?
+  $sql = 'SELECT p.*, n.* FROM {PC_NodeLink} p left join {node} n on p.FromNode = n.nid ';
+  $where = pcmain_build_inclusion_exclusion_string( $inclusionlist, $exclusionlist, 'FromType' );
+  if ( $where ) {
+    $where .= ' AND ';
+  } 
+  else {
+    $where .= ' WHERE ';
+  }
+  $where .= ' p.ToNode = %d and p.FromNode != 0 AND n.status = 1 ORDER BY n.changed DESC ';
+  //$sql_display = sprintf( $sql.$where, $to_nid );
+  //drupal_set_message( '$sql = '.$sql_display );
+  $result= db_query( $sql . $where, $to_nid );
+  return $result;
+}
+
+

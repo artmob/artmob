@@ -1,0 +1,11 @@
+; $Id: activemenu.info,v 1.1.2.5 2008/04/14 16:10:31 nedjo Exp $
+name =  Activemenu
+description = Adds AJAX-based tree menu to navigation menu.
+package = Javascript tools
+dependencies = jstools
+
+; Information added by drupal.org packaging script on 2008-11-07
+version = "5.x-1.2"
+project = "jstools"
+datestamp = "1226023222"
+

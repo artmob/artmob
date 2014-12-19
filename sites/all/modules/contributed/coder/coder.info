@@ -1,0 +1,10 @@
+; $Id: coder.info,v 1.4.4.1.4.2 2007/08/28 23:21:23 douggreen Exp $
+name = Coder
+description = Developer Module that assists with code review and version upgrade
+package = Development
+
+; Information added by drupal.org packaging script on 2008-08-30
+version = "5.x-2.8"
+project = "coder"
+datestamp = "1220079606"
+

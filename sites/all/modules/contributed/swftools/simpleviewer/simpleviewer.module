@@ -1,0 +1,168 @@
+<?php
+// $Id: simpleviewer.module,v 1.1.2.1.2.20 2008/10/03 23:23:48 stuartgreenfield Exp $
+
+/**
+ * SWF Tools - simpleviewer.module
+ *
+ * Enables the use of SimpleViewer Flash
+ * for image gallery display. SimpleViewer must be downloaded separately.
+ *
+ * Author's Site.
+ * http://www.airtightinteractive.com/simpleviewer/
+ */
+
+define('SIMPLEVIEWER', 'simpleviewer'); // 'player', shows multiple images.
+
+
+/**
+ * Implementation of swftools_methods hook
+ * Report methods back to SWF Tools
+ */
+function simpleviewer_swftools_methods() {
+
+  $methods = array();
+  $image_rotator = array(
+    'name'        => SIMPLEVIEWER,
+    'module'      => 'simpleviewer',
+    'shared_file' => 'simpleviewer/viewer.swf',
+    'file'        => 'xmlDataPath',
+    'version'     => '7',
+    'title'       => t('SimpleViewer - Airtight Interactive'),
+  );
+  $methods[SWFTOOLS_IMAGE_DISPLAY_LIST][SIMPLEVIEWER] = $image_rotator;
+  return $methods;
+}
+
+function swftools_admin_simpleviewer_form() {
+  drupal_set_title('Airtight Interactive - SimpleViewer');
+  include_once(drupal_get_path('module', 'simpleviewer') .'/simpleviewer.admin.inc');
+  return _swftools_admin_simpleviewer_form();
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function simpleviewer_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+    $items[] = array('path' => 'admin/media/swf/simpleviewer',
+      'title' => t('SimpleViewer'),
+      'description' => t('Plug-in for <a href="http://www.airtightinteractive.com/simpleviewer/">SimpleViewer</a> image gallery'),
+      'weight' => 1,
+      );
+  }
+  return $items;
+}
+
+/**
+ * Implementation of swftools_flashvars hook
+ * Allows the Flash player provider to add variables to the Flashvars array.
+ * Other arrays can also be modified.
+ *
+ */
+function simpleviewer_swftools_flashvars($action, &$methods, &$vars) {
+  $sv_vars = _simpleviewer_vars(TRUE);
+
+  // Here we only assign 'other' settings to othervars, and return 'swf' settings
+  // as the flashvars. 'xml' settings are for the xml file only.
+  // See http://www.airtightinteractive.com/forum/viewtopic.php?t=4085&start=0
+  if (is_array($sv_vars['other'])) {
+    $vars->othervars = array_merge($sv_vars['other'], $vars->othervars);
+  }
+  return $sv_vars['swf'];
+}
+
+/**
+ * These are the default options and flashvars.
+ *
+ */
+function _simpleviewer_vars($flat = FALSE) {
+
+  include_once(drupal_get_path('module', 'simpleviewer') .'/simpleviewer.admin.inc');
+  // Grab the admin form and use all of the default values as settings for the flash embedding.
+  $sv_vars = _swftools_admin_simpleviewer_form($flat);
+
+  // If $flat is false, then we want a normal form version of the settings page
+  if (!$flat) {
+    return $sv_vars;
+  }
+
+  foreach (element_children($sv_vars) AS $name) {
+    $name_parts = explode('_', $name);
+    if ($name_parts[1] == 'xml') {
+      // The last part of the Drupal variable name matches the SimpleViewer XML option name
+      $return['xml'][$name_parts[2]] = $sv_vars[$name]['#default_value'];
+    }
+    elseif ($name_parts[1] == 'swf') {
+      $return['swf'][$name_parts[2]] = $sv_vars[$name]['#default_value'];
+    }
+    else {
+      $return['other'][$name_parts[2]] = $sv_vars[$name]['#default_value'];
+    }
+  }
+  return $return;
+}
+
+function swftools_simpleviewer_playlist($playlist_data, &$method, &$vars) {
+
+  $sv_vars = _simpleviewer_vars(TRUE);
+
+/*
+  $width = 0;
+  $height = 0;
+  foreach ($playlist_data['playlist'] AS $key => $file) {
+    $info = swftools_get_info($file['filepath']);
+    $height = max($info['height'], $height);
+    $width = max($info['width'], $width);
+  }
+*/
+
+  $xml_vars = array_merge($sv_vars['xml'], $vars->flashvars);
+
+  $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
+  $xml .= '<simpleviewerGallery '.
+//        'maxImageWidth="'. $width .'" '.
+//        'maxImageHeight="'. $height .'" '.
+          'maxImageWidth="'. $xml_vars['maxImageWidth'] .'" '.
+          'maxImageHeight="'. $xml_vars['maxImageHeight'] .'" '.
+          'textColor="'. str_replace('#', '0x', $xml_vars['textColor']) .'" '.
+          'frameColor="'. str_replace('#', '0x', $xml_vars['frameColor']) .'" '.
+          'frameWidth="'. $xml_vars['frameWidth'] .'" '.
+          'stagePadding="'. $xml_vars['stagePadding'] .'" '.
+          'thumbnailColumns="'. $xml_vars['thumbnailColumns'] .'" '.
+          'thumbnailRows="'. $xml_vars['thumbnailRows'] .'" '.
+          'navPosition="'. $xml_vars['navPosition'] .'" '.
+          'title="'. $xml_vars['title'] .'" '.
+          'imagePath="'.  $vars->params['base'] .'/" '.
+          'thumbPath="'.  $vars->params['base'] .'/" '.
+          'enableRightClickOpen="'. $xml_vars['enableRightClickOpen'] .'" '.
+          'backgroundImagePath="'. $xml_vars['backgroundImagePath'] .'">';
+  foreach($playlist_data['playlist'] AS $track => $details) {
+    $xml .= '
+    <image>
+    	<filename>'. $details['filename']. '</filename>
+    	<caption>'. $details['description'] .'</caption>
+    </image>';
+  }
+  $xml .= "\n</simpleviewerGallery>";
+  return $xml;
+}
+
+/**
+ * Call swf(), enforcing SimpleViewer, for a pre-saved xml file
+ * Parameters are identical to swf()
+ */
+function simpleviewer_swf($filepath, $params = SWFDEFAULT, $flashvars = SWFDEFAULT, $othervars = SWFDEFAULT, $methods = SWFDEFAULT, $debug = FALSE) {
+  $methods['player'] = SIMPLEVIEWER;
+  return swf($playlist_data, $params, $flashvars, $othervars, $methods);
+}
+
+/**
+ * Call swf_list(), enforcing the SimpleViewer, for a playlist array
+ * Parameters and calling are identical to swf_list()
+ */
+function simpleviewer_swf_list($playlist_data, $params = SWFDEFAULT, $flashvars = SWFDEFAULT, $othervars = SWFDEFAULT, $methods = array()) {
+  $methods['player'] = 'simpleviewer';
+  return swf_list($playlist_data, $params, $flashvars, $othervars, $methods);
+}

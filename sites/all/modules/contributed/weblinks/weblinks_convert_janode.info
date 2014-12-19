@@ -1,0 +1,10 @@
+; $Id: weblinks_convert_janode.info,v 1.1.2.1 2009/05/06 19:33:13 nancyw Exp $
+name = Web Links Convert Janode Package
+description = Allows users to convert Janode package to Web Links.
+dependencies = weblinks
+
+; Information added by drupal.org packaging script on 2009-05-10
+version = "5.x-2.5"
+project = "weblinks"
+datestamp = "1241917548"
+

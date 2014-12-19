@@ -1,0 +1,94 @@
+# Danish translation of Drupal (taxonomy_browser.module)
+# Copyright 2005 Lennart Kiil <lennart@zensci.com>
+msgid ""
+msgstr ""
+"Project-Id-Version: Danish translation of Drupal (taxonomy_browser.module) $Id: da.po,v 1.1 2006/01/16 08:47:05 wulff Exp $\n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: 2006-01-16 09:47+0100\n"
+"Last-Translator: Morten Wulff <wulff@tem.dtu.dk>\n"
+"Language-Team: Danish <danish@psyke.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Poedit-Language: Danish\n"
+"X-Poedit-Country: DENMARK\n"
+"X-Poedit-SourceCharset: utf-8\n"
+
+#: taxonomy_browser.module:21
+msgid "category browser"
+msgstr "gennemse kategori"
+
+#: taxonomy_browser.module:35
+msgid "An interface for viewing content grouped by arbitrary taxonomy terms."
+msgstr "En grænseflade der viser indhold grupperet efter arbitrære ord fra en taksonomi."
+
+#: taxonomy_browser.module:38
+msgid "<p>You may select multiple items from each list by holding down the <code>Ctrl</code> (Mac: <code>command</code>) key while left-clicking each item.</p>"
+msgstr "<p>Du kan vælge flere elementer fra hver liste ved at holde <code>Ctrl</code> nede (Mac: <code>command</code>), mens du klikker på hvert element.</p>"
+
+#: taxonomy_browser.module:53
+msgid "Guidelines"
+msgstr "Retningslinjer"
+
+#: taxonomy_browser.module:53
+msgid "Instructions which should appear at top of the category browser main page"
+msgstr "Instrukser der vil fremgå på kategori browserens hovedside"
+
+#: taxonomy_browser.module:58
+msgid "Included Vocabularies"
+msgstr "Inkluderede ordforråd"
+
+#: taxonomy_browser.module:58
+msgid "Select the vocabularies the user can select from on the category browser page"
+msgstr "Vælg de vokabularier brugeren kan vælge på kategori browser siden"
+
+#: taxonomy_browser.module:77
+#: ;133
+msgid "Search"
+msgstr "Søg"
+
+#: taxonomy_browser.module:84
+msgid "Advanced category search"
+msgstr "Avanceret kategorisøgning"
+
+#: taxonomy_browser.module:99
+msgid "all"
+msgstr "alle"
+
+#: taxonomy_browser.module:103
+msgid "Restrict search by content type"
+msgstr "Begræns søgning til indholdstype"
+
+#: taxonomy_browser.module:115
+msgid "%nodetype has no associated categories. Showing all categories instead."
+msgstr "%nodetype har ingen tilknyttede kategorier. Viser alle kategorier i stedet."
+
+#: taxonomy_browser.module:130
+msgid "Items containing <strong>all</strong> terms"
+msgstr "Emner indeholdende <strong>alle</strong> termer"
+
+#: taxonomy_browser.module:131
+msgid "Items containing <strong>any</strong> terms"
+msgstr "Emner indeholdende <strong>en eller flere</strong> termer"
+
+#: taxonomy_browser.module:132
+msgid "Scope"
+msgstr "Omfang"
+
+#: taxonomy_browser.module:146
+msgid "You must select the vocabularies to display from the <a href=\"%link\">taxonomy browser settings page</a>."
+msgstr "Du skal vælge de vokabularier, der skal vises fra <a href=\"%link\">taksonomi browser indstillings siden</a>."
+
+#: taxonomy_browser.module:172
+msgid "No posts match your criteria."
+msgstr "Ingen indlæg matchede dine kriterier."
+
+#: taxonomy_browser.module:176
+msgid "You must select at least one category in your search."
+msgstr "Du skal vælge mindst én kategori i din søgning."
+
+#: taxonomy_browser.module:0
+msgid "taxonomy_browser"
+msgstr "taksonomi_browser"
+

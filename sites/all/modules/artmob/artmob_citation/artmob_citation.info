@@ -1,0 +1,6 @@
+; $Id: artmob_citation.info,v 3.1 2010/04/26 20:55:33 stop14 Exp $
+name = Artmob Citation
+description = Citation module 
+package = Artmob
+version = 3.1
+dependencies = artmob_contributor PCNodeLink PCMain PCLookup display

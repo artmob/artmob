@@ -1,0 +1,121 @@
+# $Id: sv.po,v 1.1.2.2 2008/06/03 02:38:24 jpetso Exp $
+#
+# Swedish translation of Drupal (general)
+# Copyright 2008 Ola Lindberg http://drupal.org/user/181293
+# Generated from files:
+#  filefield.module,v 1.50.2.2 2007/09/25 16:06:07 jpetso
+#  filefield.info,v 1.5 2007/06/18 22:53:42 dww
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2008-02-06 15:31+0100\n"
+"PO-Revision-Date: 2008-02-06 15:31+0100\n"
+"Last-Translator: NAME <EMAIL@ADDRESS>\n"
+"Language-Team: Swedish <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=0; plural=;\n"
+
+#: filefield.module:140
+msgid "File upload was unsuccessful."
+msgstr "Filen laddades upp"
+
+#: filefield.module:267
+msgid "Permitted upload file extensions"
+msgstr "Tillåtna filändelser"
+
+#: filefield.module:270
+msgid "Extensions a user can upload to this field. Separate extensions with a space and do not include the leading dot."
+msgstr "Tillåtna filändelser för detta fält; separerade med space och utan inledande punkt."
+
+#: filefield.module:274
+msgid "File path"
+msgstr "Sökväg till filen"
+
+#: filefield.module:276
+msgid "Optional subdirectory within the \"%dir\" directory where files will be stored. Do not include trailing slash."
+msgstr "Frivillig underkatalog in katalogen \"%dir\" dit filerna kommer laddas upp (utan avslutade snedstreck)."
+
+#: filefield.module:284
+msgid "Show \"List\" option"
+msgstr "Visa listinställningar"
+
+#: filefield.module:286
+msgid "If enabled, the user can choose for each file whether it should be listed or not. If disabled, the \"List\" checkbox will be hidden and files are always listed."
+msgstr "Om igång kan användaren själv bestämma för varje fil om den ska bli listad eller inte. Annars döljs listan och filerna listas alltid."
+
+#: filefield.module:376
+msgid "Files with the extension %ext are not allowed. Please upload a file with an extension from the following list: %allowed_extensions"
+msgstr "Filer med ändelsen %ext är inte tillåtet. Tillåtna filändelser är: %allowed_extensions"
+
+#: filefield.module:439
+msgid "Changes made to the attachments are not permanent until you save this post."
+msgstr "Ändringar för bilagor är inte permanenta före posten är sparad."
+
+#: filefield.module:459
+msgid "Attach new file"
+msgstr "Bifoga en fil"
+
+#: filefield.module:490
+msgid "Maximum file size: !size."
+msgstr "Maximal filstorlek: !size."
+
+#: filefield.module:460
+msgid "Allowed extensions: %ext."
+msgstr "Tillåtna filändelser är: %ext."
+
+#: filefield.module:467
+msgid "Upload"
+msgstr "Ladda upp"
+
+#: filefield.module:497
+msgid "If a new file is uploaded, this file will be replaced upon submitting this form."
+msgstr "Om en ny fil laddas upp kommer den ersätta befintliga filen när formuläret sparas."
+
+#: filefield.module:552
+msgid "URL"
+msgstr "Webbaddress"
+
+#: filefield.module:636
+msgid "Default"
+msgstr "Default"
+
+#: filefield.module:669;670
+msgid "Delete"
+msgstr "Ta bort"
+
+#: filefield.module:669
+msgid "List"
+msgstr "Listan"
+
+#: filefield.module:669;670
+msgid "Description"
+msgstr "Beskrivning"
+
+#: filefield.module:669;670
+msgid "Size"
+msgstr "Storlek"
+
+#: filefield.module:62
+msgid "view filefield uploads"
+msgstr "Visa uppladade filer"
+
+#: filefield.module:0
+msgid "filefield"
+msgstr "filfält"
+
+#: filefield.info:0
+msgid "File Field"
+msgstr "File Field"
+
+#: filefield.info:0
+msgid "Defines a file field type."
+msgstr "Specifierar en File Fields typ"
+
+#: filefield.info:0
+msgid "CCK"
+msgstr "CCK"
+

@@ -1,0 +1,1128 @@
+<?php
+// $Id: filefield.module,v 1.50.2.48 2010/06/17 00:26:45 quicksketch Exp $
+
+/**
+ * @file
+ * Defines a file field type.
+ *
+ * uses content.module to store the fid, and the drupal files 
+ * table to store the actual file data.
+ */
+
+define('FILEFIELD_MINIMUM_PHP', '5.0');
+
+function filefield_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+    $items[] = array(
+      'path' => 'filefield/js',
+      'callback' => 'filefield_js',
+      //'access' => user_access(),
+      'access' => TRUE,
+      'type' => MENU_CALLBACK
+    );
+  }
+  else if ($_SESSION['filefield']) {
+    // Add handlers for previewing new uploads.
+    foreach ($_SESSION['filefield'] as $fieldname => $files) {
+      if (is_array($files)) {
+        foreach($files as $delta => $file) {
+          if ($file['preview']) {
+            $items[] = array(
+              'path' => $file['preview'],
+              'callback' => '_filefield_preview',
+              'access' => TRUE,
+              'type' => MENU_CALLBACK
+            );
+          }
+        }
+      }
+    }
+  }
+  return $items;
+}
+
+/**
+ *  Implementation of hook_requirements().
+ */
+function filefield_requirements($phase) {
+  $requirements = array();
+  // Ensure translations don't break at install time
+  $t = get_t();
+
+  if ($phase == 'runtime' && version_compare(phpversion(), FILEFIELD_MINIMUM_PHP) < 0) {
+    $requirements['filefield_php'] = array(
+      'title' => $t('FileField PHP'),
+      'description' => $t('FileField recommends at least PHP %version. Older versions of PHP are not supported but may function.', array('%version' => FILEFIELD_MINIMUM_PHP)),
+      'severity' => REQUIREMENT_WARNING
+    );
+  }
+
+  return $requirements;
+}
+
+/**
+ *  transfer a file that is in a 'preview' state.
+ *  @todo  multiple support
+ */
+function _filefield_preview() {
+  foreach ($_SESSION['filefield'] as $fieldname => $files) {
+    foreach ($files as $delta => $file) {
+      if ($file['preview'] == $_GET['q']) {
+        file_transfer($file['filepath'], array('Content-Type: '. mime_header_encode($file['filemime']),
+                                           'Content-Length: '. $file['filesize']));
+        exit();
+      }
+    }
+  }
+}
+
+function filefield_perm() {
+  return array('view filefield uploads');
+}
+
+/**
+ * Implementation of hook_field_info().
+ */
+function filefield_field_info() {
+  return array(
+    'file' => array('label' => 'File'),
+  );
+}
+
+/**
+ * Implementation of hook_field_settings().
+ */
+function filefield_field_settings($op, $field) {
+  switch ($op) {
+    case 'form':
+      $form = array();
+      $form['force_list'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Always list files'),
+        '#default_value' => isset($field['force_list']) ? $field['force_list'] : 0,
+        '#description' => t('If enabled, the "List" checkbox will be hidden and files are always shown. Otherwise, the user can choose for each file whether it should be listed or not.'),
+      );
+      return $form;
+
+    case 'validate':
+      break;
+
+    case 'save':
+      return array('force_list');
+
+    case 'database columns':
+      $columns = array(
+        'fid' => array('type' => 'int', 'not null' => TRUE, 'default' => '0'),
+        'description' => array('type' => 'varchar', length => 255, 'not null' => TRUE, 'default' => "''", 'sortable' => TRUE),
+        'list' => array('type' => 'int', 'not null' => TRUE, 'default' => '0'),
+      );
+      return $columns;
+
+    case 'filters':
+      return array(
+        'not null' => array(
+          'operator' => array('=' => t('Has file')),
+          'list' => 'views_handler_operator_yesno',
+          'list-type' => 'select',
+          'handler' => 'filefield_views_handler_filter_is_not_null',
+        ),
+      );  
+
+  }
+}
+
+function filefield_default_item() {
+  return array(
+    'fid' => 0,
+    'description' => '',
+    'list' => 0,
+  );
+}
+
+/**
+ * insert a file into the database.
+ * @param $node
+ *    node object file will be associated with.
+ * @param $file
+ *    file to be inserted, passed by reference since fid should be attached.
+ *    
+ */
+function filefield_file_insert($node, $field, &$file) {
+  $fieldname = $field['field_name'];
+  
+  // allow tokenized paths.
+  if (function_exists('token_replace')) {
+    global $user;
+    $widget_file_path = token_replace($field['widget']['file_path'], 'user', $user);
+  }
+  else {
+    $widget_file_path = $field['widget']['file_path'];
+  }
+
+  if (filefield_check_directory($widget_file_path)){
+    $filepath = file_create_path($widget_file_path) . '/' . $file['filename'];
+    if ($file = file_save_upload((object) $file, $filepath)) {
+      $file = (array) $file;
+      $file['fid'] = db_next_id('{files}_fid');
+      $file['filemime'] = mimedetect_mime($file);
+      db_query("INSERT into {files} (fid, nid, filename, filepath, filemime, filesize)
+                VALUES (%d, %d, '%s','%s','%s',%d)",
+                $file['fid'], $node->nid, $file['filename'], $file['filepath'],
+                $file['filemime'], $file['filesize']);
+      module_invoke_all('filefield', 'file_save', $node, $field, $file);
+      return (array) $file;
+    }
+    else {
+      // Include file name in upload error.
+      form_set_error(NULL, t('File upload was unsuccessful.'));
+      return FALSE;
+    }
+  }
+  else {
+    // Include file name in upload error.
+    form_set_error(NULL, t('File upload was unsuccessful.'));
+    return FALSE;
+  }
+}
+
+
+/**
+ * update the file record if necessary
+ * @param $node
+ * @param $file
+ * @param $field
+ */
+function filefield_file_update($node, $field, &$file) {
+  $file = (array)$file; 
+  if ($file['delete'] == TRUE) {
+    // don't delete files if we're creating new revisions,
+    // but still return an empty array...
+    if ($node->old_vid) {
+      return array();
+    }
+    if (_filefield_file_delete($node, $field, $file)) {
+      return array();
+    }
+  }
+  if ($file['fid'] == 'upload') {  
+    return filefield_file_insert($node, $field, $file);
+  }
+  else {
+    // if fid is not numeric here we should complain.
+    // else we update the file table.  
+  }
+  return $file;
+}
+
+/**
+ * Implementation of hook_field().
+ */
+function filefield_field($op, &$node, $field, &$items = array()) {
+  $fieldname = $field['field_name'];
+  switch ($op) {
+    // called after content.module loads default data.
+    case 'load':
+      if (is_array($items)) {
+        $items = array_filter($items); // drop empty deltas, cuz cck sends 'em some times.
+      }
+      if (empty($items)) {
+        return array();
+      }
+      foreach ($items as $delta => $item) {
+        if (!empty($item['fid'])) { // otherwise, merge our info with CCK's, and all is fine.
+          $items[$delta] = array_merge($item, _filefield_file_load($item['fid']));
+        }
+      }
+      $items = array_values($items); // compact deltas
+      return array($fieldname => $items);
+
+    // called before content.module defaults.
+    case 'insert':
+      foreach ($items as $delta => $item) {
+        $items[$delta] = filefield_file_insert($node, $field, $item);
+      }
+      $items = array_values($items); // compact deltas
+      filefield_clear_field_session($fieldname);
+      break;
+
+    // called before content.module defaults.
+    case 'update':
+      foreach ($items as $delta => $item) {
+        $items[$delta] = filefield_file_update($node, $field, $item);
+      }
+      $items = array_filter($items); // unset empty items.
+      $items = array_values($items); // compact deltas
+      filefield_clear_field_session($fieldname);
+      break;
+
+    case 'delete revision':
+      $db_info = content_database_info($field);
+      foreach ($items as $delta => $item) {
+        $references = db_result(db_query(
+          "SELECT COUNT(vid) FROM {" . $db_info['table'] . "}
+            WHERE nid = %d AND vid != %d
+            AND " . $db_info['columns']['fid']['column'] . " = %d",
+          $node->nid, $node->vid, $item['fid']
+        ));
+        if ($references || _filefield_file_delete($node, $field, $item)) {
+          $items[$delta] = array();
+        }
+      }
+      $items = array_values($items); // compact deltas
+      break;
+
+    case 'delete':
+      foreach ($items as $delta => $item) {
+        _filefield_file_delete($node, $field, $item); 
+      }
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_widget_info().
+ */
+function filefield_widget_info() {
+  return array(
+    'file' => array(
+      'label' => 'File',
+      'field types' => array('file'),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_widget_settings().
+ */
+function filefield_widget_settings($op, $widget) {
+  switch ($op) {
+    case 'callbacks':
+      return array('default value' => CONTENT_CALLBACK_CUSTOM);
+
+    case 'form':
+      $form = array();
+      $form['file_extensions'] = array (
+        '#type' => 'textfield',
+        '#title' => t('Permitted upload file extensions'),
+        '#default_value' => isset($widget['file_extensions']) ? $widget['file_extensions'] : 'txt',
+        '#size' => 64,
+        '#description' => t('Extensions a user can upload to this field. Separate extensions with a space and do not include the leading dot. Leaving this blank will allow users to upload a file with any extension.'),
+      );
+      $form['file_path'] = array(
+        '#type' => 'textfield', 
+        '#title' => t('File path'), 
+        '#default_value' => $widget['file_path'] ? $widget['file_path'] : '', 
+        '#description' => t('Optional subdirectory within the "%dir" directory where files will be stored. Do not include trailing slash.', array('%dir' => variable_get('file_directory_path', 'files'))), 
+      );
+      if (function_exists('token_replace')) {
+        $form['file_path']['#description'] .= theme('token_help', 'user');        
+      }
+      // Let extension modules add their settings to the form.
+      foreach (module_implements('filefield_widget_settings') as $module) {
+        $function = $module .'_filefield_widget_settings';
+        $function('form_alter', $widget, $form);
+      }
+      return $form;
+    case 'validate':
+      module_invoke_all('filefield_widget_settings', $op, $widget, NULL);
+      break;
+    case 'save':
+      $core_settings = array('file_extensions', 'file_path');
+      $additional_settings = module_invoke_all(
+        'filefield_widget_settings', $op, $widget, NULL
+      );
+      return array_merge($core_settings, $additional_settings);
+  }
+}
+
+
+function filefield_clear_session() {
+  if (is_array($_SESSION['filefield']) && count($_SESSION['filefield'])) {
+    foreach (array_keys($_SESSION['filefield']) as $fieldname) {
+      filefield_clear_field_session($fieldname);
+    }
+    unset($_SESSION['filefield']);
+  }
+}
+
+function filefield_clear_field_session($fieldname) {
+  if (is_array($_SESSION['filefield'][$fieldname]) && count($_SESSION['filefield'][$fieldname])) {
+    foreach ($_SESSION['filefield'][$fieldname] as $delta => $file) {
+      if (is_file($file['filepath'])) {
+        file_delete($file['filepath']);
+      }
+    }
+    unset($_SESSION['filefield'][$fieldname]);
+  }
+}
+
+function _filefield_file_delete($node, $field, $file) {
+  if (is_numeric($file['fid'])) {
+    db_query('DELETE FROM {files} WHERE fid = %d', $file['fid']);
+  }
+  else {
+    unset($_SESSION['filefield'][$field['field_name']][$file['sessionid']]);
+  }
+  module_invoke_all('filefield', 'file_delete', $node, $field, $file);
+  return file_delete($file['filepath']);
+}
+
+/**
+ * Implementation of hook_widget().
+ */
+function filefield_widget($op, $node, $field, &$items) {
+  $fieldname = $field['field_name'];
+  switch ($op) {
+    case 'default value':
+      return array();
+
+    case 'prepare form values':
+      _filefield_widget_prepare_form_values($node, $field, $items);
+      break;
+
+    case 'form':
+      return  _filefield_widget_form($node, $field, $items);
+
+    case 'validate':
+      _filefield_widget_validate($node, $field, $items);
+      break;
+  }
+}
+
+function _filefield_widget_prepare_form_values($node, $field, &$items) {
+  $fieldname = $field['field_name'];
+  // @todo split this into its own function. determine if we can make it a form element.
+  if (!count($_POST)) {
+    filefield_clear_session();
+  }
+  // Attach new files 
+  if ($file = file_check_upload($fieldname . '_upload')) {
+    $file = (array)$file;
+    // test allowed extensions. We do this when the file is uploaded, rather than waiting for the
+    // field itseld to reach op==validate.
+    $last_ext = array_pop(explode('.', $file['filename']));
+    $valid = TRUE;
+    // only check extensions if there extensions to check.
+    // @todo: trim & strtolower file_extenstions with a formapi validate callback.
+    if (strlen(trim($field['widget']['file_extensions']))) {
+      $allowed_extensions = array_unique(explode(' ', strtolower(trim($field['widget']['file_extensions']))));
+      $ext = strtolower(array_pop(explode('.', $file['filename'])));
+      if (!in_array($ext, $allowed_extensions)) {
+        $valid = FALSE;
+        form_set_error($field['field_name'] .'_upload', t('Files with the extension %ext are not allowed. Please upload a file with an extension from the following list: %allowed_extensions', array('%ext' => $last_ext, '%allowed_extensions' => $field['widget']['file_extensions'])));
+      }
+    }
+    // let extended validation from other module happen so we get all error messages.
+    // if you implement hook_filefield_file() return FALSE to stop the upload.
+    if (!$valid || in_array(FALSE, module_invoke_all('filefield', 'file_validate', $node, $field, $file))) {
+      return FALSE;
+    }
+    // let modules massage act on the file.
+    foreach(module_implements('filefield') as $module) {
+      $function =  $module .'_filefield';
+      $function('file_prepare', $node, $field, $file);
+    }
+
+    $filepath = file_create_filename($file['filename'], file_create_path($field['widget']['file_path']));
+    if (variable_get('file_downloads', FILE_DOWNLOADS_PUBLIC) == FILE_DOWNLOADS_PRIVATE) {
+      if (strpos($filepath, file_directory_path()) !== FALSE) {
+        $filepath = trim(substr($filepath, strlen(file_directory_path())), '\\/');
+      }
+      $filepath = 'system/files/'. $filepath;
+    };
+
+    // prepare file array. 
+    $file['fid'] = 'upload';
+    $file['preview'] = $filepath;
+
+    // if this is a single value filefield mark any other files for deletion.
+    if (!$field['multiple']) {
+      if (is_array($items)) {
+        foreach($items as $delta => $session_file) {
+          $items[$delta]['delete'] = TRUE;
+        }
+      }
+      // Remove old temporary file from session.
+      filefield_clear_field_session($fieldname);
+    }
+    $file_id = count($items) + count($_SESSION['filefield'][$fieldname]);
+    $_SESSION['filefield'][$fieldname][$file_id] = $file;
+  }
+      
+  // Load files from preview state. before committing actions.
+  if (!empty($_SESSION['filefield'][$fieldname])) {
+    foreach($_SESSION['filefield'][$fieldname] as $delta => $file) {
+      $items[] = $file;
+    }
+  }
+}
+
+function _filefield_widget_form($node, $field, &$items) {
+  drupal_add_js('misc/progress.js');
+  drupal_add_js('misc/upload.js');
+  drupal_add_js(drupal_get_path('module', 'filefield') .'/filefield.js');
+
+
+  $fieldname = $field['field_name'];
+  drupal_add_css(drupal_get_path('module', 'filefield') .'/filefield.css');
+ 
+  $form = array(); 
+  $form[$fieldname] = array(
+    '#type' => 'fieldset',
+    '#title' => t($field['widget']['label']),
+    '#description' => t('Changes made to the attachments are not permanent until you save this post.'),
+    '#weight' => $field['widget']['weight'],
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#tree' => TRUE,
+    '#prefix' => '<div id="'. form_clean_id($fieldname .'-attach-wrapper') .'">',
+    '#suffix' => '</div>',
+  );
+
+  $form[$fieldname]['new'] = array(
+    '#tree' => FALSE,
+    '#prefix' => '<div id="'. form_clean_id($fieldname .'-attach-hide') .'">',
+    '#suffix' => '</div>',
+    '#weight' => 100,
+  );
+
+  // Construct the upload description out of user supplied text,
+  // maximum upload file size, and (optionally) allowed extensions.
+  $upload_description = empty($field['widget']['description'])
+    ? '' : ($field['widget']['description'] . '<br/>');
+
+  $upload_description .= t('Maximum file size: !size.', array(
+    '!size' => format_size(file_upload_max_size()),
+  ));
+
+  if (!empty($field['widget']['file_extensions'])) {
+    $upload_description .= ' ' . t('Allowed extensions: %ext.', array(
+      '%ext' => $field['widget']['file_extensions']
+    ));
+  }
+
+  // Separate from tree becase of that silly things won't be displayed
+  // if they are a child of '#type' = form issue
+  $form[$fieldname]['new'][$fieldname .'_upload'] = array(
+    '#type'  => 'file',
+    '#title' => t('Attach new file'),
+    '#description' => $upload_description,
+    '#weight' => 9,
+    '#tree' => FALSE,
+    '#attributes' => array('accept' => str_replace(' ', ',', trim($field['widget']['file_extensions']))),
+  );
+
+  $form[$fieldname]['new']['upload'] = array(
+    '#type' => 'button',
+    '#value' => t('Upload'),
+    '#name' => 'cck_filefield_'. $fieldname .'_op',
+    '#id' => form_clean_id($fieldname .'-attach-button'),
+    '#tree' => FALSE,
+    '#weight' => 10,
+  );
+
+  if (is_array($items) && count($items)) {
+    $form[$fieldname]['files'] = array(
+      '#parents' => array($fieldname),
+      '#theme' => 'filefield_form_current',
+      // remember the force_list setting so that the theme function knows
+      '#force_list' => $field['force_list'],
+    );
+    foreach($items as $delta => $file) {
+      // @todo: split into its own form and theme functions per file like imagefield
+      if ($file['filepath'] && !$file['delete']) {
+        $form[$fieldname]['files'][$delta] = _filefield_file_form($node, $field, $file);
+      }
+      else if ($file['filepath'] && $file['delete']) {
+        $form[$fieldname]['files'][$delta]['delete'] = array(
+          '#type' => 'hidden',
+          '#value' => $file['delete'],
+        );
+      }
+    }
+    // Special handling for single value fields.
+    if (!$field['multiple']) {
+      $form[$fieldname]['replace'] = array(
+        '#type' => 'markup',
+        '#value' => '<p>'. t('If a new file is uploaded, this file will be replaced upon submitting this form.') .'</p>',
+        '#prefix' => '<div class="description">',
+        '#suffix' => '</div>',
+      );
+    }
+  }
+
+  // The class triggers the js upload behaviour.
+  $form[$fieldname.'-attach-url'] = array(
+    '#type' => 'hidden',
+    '#value' => url('filefield/js', NULL, NULL, TRUE),
+    '#attributes' => array('class' => 'upload'),
+  );
+
+  // Some useful info for our js callback.
+  $form['vid'] = array(
+    '#type' => 'hidden',
+    '#value' => $node->vid,
+    '#tree' => FALSE,
+  );
+  $form['nid'] = array(
+    '#type' => 'hidden',
+    '#value' => $node->nid,
+    '#tree' => FALSE,
+  );
+  $form['type'] = array(
+    '#type' => 'hidden',
+    '#value' => $node->type,
+    '#tree' => FALSE,
+  );
+
+  return $form;
+}
+
+function _filefield_file_form($node, $field, $file) {
+  // Lets be a good boy and initialize our variables.
+  $form = array();
+  $form['#after_build'] = array('_filefield_file_form_description_reset');
+
+  $form['icon'] = array(
+    '#type' => 'markup',
+    '#value' => theme('filefield_icon', $file),
+  );
+
+  $form['file_preview'] = array();
+
+  $filepath = ($file['fid'] == 'upload')
+              ? file_create_filename($file['filename'], file_create_path($field['widget']['file_path']))
+              : $file['filepath'];
+
+  $url = file_create_url($filepath);
+
+  $form['description'] = array(
+      '#type' => 'textfield', 
+      '#default_value' => (strlen($file['description'])) ? $file['description'] : $file['filename'], '#maxlength' => 256, 
+      '#size' => 40,
+      '#attributes' => array('class' => 'filefield-description', 'size' => '40'),
+  );
+  $form['url'] = array(
+    '#type' => 'markup',
+    '#value' => l($url, $url),
+    '#prefix' => '<div class="filefield-edit-file-url">',
+    '#suffix' => '</div>',
+  );
+  $form['size'] = array(
+    '#type' => 'markup', 
+    '#value' => format_size($file['filesize']),
+    '#prefix' => '<div class="filefield-edit-file-size">',
+    '#suffix' => '</div>',
+  );
+  $form['delete'] = array(
+    '#type' => 'checkbox',
+    '#default_value' => $file['delete'],
+  );
+
+  // Only show the list checkbox if files are not forced to be listed.
+  if (!$field['force_list']) {
+    $form['list'] = array(
+      '#type' => 'checkbox',
+      '#default_value' => $file['list'],
+    );
+  }
+  else {
+    $form['list'] = array(
+      '#type' => 'value',
+      '#value' => isset($file['list']) ? $file['list'] : 1,
+    );
+  }
+
+  $form['filename'] = array('#type' => 'value',  '#value' => $file['filename']);
+  $form['filepath'] = array('#type' => 'value',  '#value' => $file['filepath']);
+  $form['filemime'] = array('#type' => 'value',  '#value' => $file['filemime']);
+  $form['filesize'] = array('#type' => 'value',  '#value' => $file['filesize']);
+  $form['fid'] = array('#type' => 'value',  '#value' => $file['fid']);
+
+  // Remember the current filename for the check in
+  // _filefield_file_form_description_reset() that happens after submission.
+  $form['previous_filepath'] = array('#type' => 'hidden',  '#value' => $file['filepath']);
+
+  foreach (module_implements('filefield') as $module) {
+    $function = $module .'_filefield';
+    $function('file_form', $node, $field, $file, $form);
+  } 
+  return $form;
+}
+
+/**
+ * This after_build function is needed as fix for tricky Form API behaviour:
+ * When using filefield without AJAX uploading, the description field was not
+ * updated to a new '#default_value' because the textfield has been submitted,
+ * which causes Form API to override the '#default_value'.
+ *
+ * That bug is fixed with this function by comparing the previous filename
+ * to the new one, and resetting the description to the '#default_value'
+ * if the filename has changed.
+ */
+function _filefield_file_form_description_reset($form, $form_values) {
+  // Don't bother resetting the description of files that stay the same
+  if ($form['fid']['#value'] != 'upload') {
+    return $form;
+  }
+  // Get the previous filename for comparison with the current one.
+  $previous = $form['previous_filepath']['#post'];
+  foreach ($form['previous_filepath']['#parents'] as $parent) {
+    $previous = isset($previous[$parent]) ? $previous[$parent] : NULL;
+  }
+  // If a new file was uploaded (the file path changed), reset the description.
+  if ($previous != $form['filepath']['#value']) {
+    $form['description']['#value'] = $form['description']['#default_value'];
+  }
+  return $form;
+}
+
+
+/**
+ * Validate the form widget.
+ */
+function _filefield_widget_validate($node, $field, $items) {
+  
+  if (!$field['required']) {
+    return;
+  }
+  
+  // if there aren't any items.. throw an error.
+  if (!count($items)) {
+    form_set_error($field['field_name'], t('@field is required. Please upload a file.', array('@field' => $field['widget']['label'])));
+  }
+  else {
+    // Sum all the items marked for deletion, so we can make sure the end user
+    // isn't deleting all of the files.
+    $count_deleted = 0;
+    foreach($items as $item) {
+      $count_deleted += isset($item['delete']) && $item['delete'];
+    }
+    if (count($items) == $count_deleted) {
+      form_set_error($field['field_name'], t('@field is required. Please keep at least one file or upload a new one.', array('@field' => $field['widget']['label'])));
+    }
+  }
+}
+
+
+/**
+ * Implementation of hook_field formatter.
+ * @todo: finish transformer.module and integrate like imagecache with imagefield.
+ */
+function filefield_field_formatter_info() {
+  $formatters = array(
+     'default' => array(
+        'label' => t('Default'),
+        'field types' => array('file'),
+      ),
+  );
+  return $formatters;
+}
+
+function filefield_field_formatter($field, $item, $formatter) {
+  if($field['force_list']) {
+    $item['list'] = 1; // always show the files if that option is enabled
+  }
+  if(!empty($item['fid'])) {
+    $item  =  array_merge($item, _filefield_file_load($item['fid']));
+  }
+  if (!empty($item['filepath'])) {
+    drupal_add_css(drupal_get_path('module', 'filefield') .'/filefield.css');
+    return theme('filefield', $item);
+  }
+}
+
+function _filefield_file_load($fid = NULL) {
+  // Don't bother if we weren't passed and fid.
+  if (!empty($fid) && is_numeric($fid)) {
+    $result = db_query('SELECT * FROM {files} WHERE fid = %d', $fid);
+    $file = db_fetch_array($result);
+    if ($file) {
+      // let modules load extended attributes.
+      $file += module_invoke_all('filefield', 'file_load', $node, $field, $file);
+      return $file;
+    }
+  }
+  // return an empty array if nothing was found.
+  return array();
+}
+
+function theme_filefield_form_current($form) {
+  $header = $form['#force_list']
+            ? array('', t('Delete'), '',  t('Description'), t('Size'))
+            : array('', t('Delete'), t('List'), '',  t('Description'), t('Size'));
+
+  foreach (element_children($form) as $key) {
+    // Don't display (hidden) replaced items.
+    if ($form[$key]['delete']['#type'] == 'hidden') {
+      continue;
+    }
+
+    $row = array();
+    // we just going to lose this for now until we figure out how to handle it... 
+    $row[] = drupal_render($form[$key]['file_preview']);  
+    $row[] = drupal_render($form[$key]['delete']);
+    if (!$form['#force_list']) {
+      $row[] = drupal_render($form[$key]['list']);
+    }
+    $row[] = drupal_render($form[$key]['icon']);
+    $row[] = drupal_render($form[$key]['description']).
+             drupal_render($form[$key]['url']);
+    $row[] = drupal_render($form[$key]['size']);
+    $rows[] = $row;
+  }
+  $output = theme('table', $header, $rows, array('class' => 'filefield-filebrowser'));
+  $output .= drupal_render($form);
+  return $output;
+}
+
+function theme_filefield_icon($file) {
+  $mime = check_plain($file['filemime']);
+
+  $dashed_mime = strtr($mime, array('/' => '-'));
+
+  if ($icon_url = filefield_icon_url($file)) {
+    $icon = '<img class="field-icon-'. $dashed_mime .'"  alt="'. $mime .' icon" src="'. $icon_url .'" />';
+  }
+  return '<div class="filefield-icon field-icon-'. $dashed_mime .'">'. $icon .'</div>';
+}
+
+function theme_filefield_view_file($file) {
+  return theme('filefield', $file);
+}
+
+function theme_filefield($file) {
+  if (user_access('view filefield uploads') && is_file($file['filepath']) && $file['list']) {
+    $path = ($file['fid'] == 'upload')
+            ? file_create_filename($file['filename'], file_create_path($field['widget']['file_path']))
+            : $file['filepath'];
+
+    $icon = theme('filefield_icon', $file);
+    $url = file_create_url($path);
+    $desc = $file['description'];
+    return '<div class="filefield-item clear-block">'. $icon . l($desc, $url) .'</div>';
+  }
+  return '';
+}
+
+function filefield_file_download($file) {
+  $file = file_create_path($file);
+
+  $result = db_query("SELECT * FROM {files} WHERE filepath = '%s'", $file);
+  if (!$file = db_fetch_object($result)) {
+    // We don't really care about this file.
+    return;
+  }
+
+  $node = node_load($file->nid);
+  if (!node_access('view', $node)) {
+    // You don't have permission to view the node
+    // this file is attached to.
+    return -1;
+  }
+ 
+  // @todo: check the node for this file to be referenced in a field 
+  // to determine if it is managed by filefield. and do the access denied part here.
+  if (!user_access('view filefield uploads')) {
+    // sorry you do not have the proper permissions to view
+    // filefield uploads.
+    return -1;
+  }
+
+  // Well I guess you can see this file.
+  $name = mime_header_encode($file->filename);
+  $type = mime_header_encode($file->filemime);
+  // Serve images and text inline for the browser to display rather than download.
+  $disposition = (ereg('^(text/|image/)', $file->filemime) || ereg('flash$', $file->filemime)) ? 'inline' : 'attachment';
+  return array(
+    'Content-Type: '. $type .'; name='. $name,
+    'Content-Length: '. $file->filesize,
+    'Content-Disposition: '. $disposition .'; filename='. $name,
+    'Cache-Control: private',
+  );
+}
+
+/**
+ * Create the file directory relative to the 'files' dir recursively for every
+ * directory in the path.
+ * 
+ * @param $directory
+ *   The directory path under files to check, such as 'photo/path/here'
+ * @param $form_element
+ *   A form element to throw an error on if the directory is not writable
+ */ 
+function filefield_check_directory($directory, $form_element = array()) {
+  foreach(explode('/', $directory) as $dir) {
+    $dirs[] = $dir;
+    $path = file_create_path(implode($dirs,'/'));
+    if (!file_check_directory($path, FILE_CREATE_DIRECTORY, $form_element['#parents'][0])){
+      return FALSE;
+    }
+  }
+  return TRUE;
+}
+
+/**
+ * Menu callback for JavaScript-based uploads.
+ */
+function filefield_js() {
+  
+  // Parse fieldname from submit button.
+  $matches = array();
+  foreach(array_keys($_POST) as $key) {
+    if (preg_match('/cck_filefield_(.*)_op/', $key, $matches)) {
+      $fieldname = $matches[1];
+      break;
+    }
+  }
+
+  $node = (object)$_POST;
+  $field = content_fields($fieldname, $node->type); // load field data
+
+  // Load fids stored by content.module.
+  $items = array();
+  $values = content_field('load', $node, $field, $items, FALSE, FALSE);
+  $items = $values[$fieldname];
+
+  // Load additional field data.
+  filefield_field('load', $node, $field, $items, FALSE, FALSE);
+
+  // Handle uploads and validation.
+  _filefield_widget_prepare_form_values($node, $field, $items);
+  _filefield_widget_validate($node, $field, $items);
+
+  // Get our new form baby, yeah tiger, get em!
+  $form = _filefield_widget_form($node, $field, $items);
+
+  foreach (module_implements('form_alter') as $module) {
+    $function = $module .'_form_alter';
+    $function('filefield_js', $form);
+  }
+  $form = form_builder('filefield_js', $form);
+
+  $output = theme('status_messages') . drupal_render($form);
+
+  // Send the updated file attachments form.
+  $GLOBALS['devel_shutdown'] = false;
+  print drupal_to_js(array('status' => TRUE, 'data' => $output));
+  exit();
+}
+
+
+
+function filefield_token_list($type = 'all') {
+  if ($type == 'field' || $type == 'all') {
+    $tokens = array();
+    $tokens['file']['fid']         = t("File ID");
+    $tokens['file']['description'] = t("File description");
+    $tokens['file']['filename']    = t("File name");
+    $tokens['file']['filepath']    = t("File path");
+    $tokens['file']['filemime']    = t("File MIME type");
+    $tokens['file']['filesize']    = t("File size");
+    $tokens['file']['view']        = t("Fully formatted HTML file tag");
+    return $tokens;
+  }
+}
+
+function filefield_token_values($type, $object = NULL) {
+  if ($type == 'field') {
+    $item = $object[0];
+    $tokens['fid']         = $item['fid'];
+    $tokens['description'] = check_plain($item['description']);
+    $tokens['filename']    = check_plain($item['filename']);
+    $tokens['filepath']    = check_plain($item['filepath']);
+    $tokens['filemime']    = $item['filemime'];
+    $tokens['filesize']    = $item['filesize'];
+    $tokens['view']        = $item['view'];
+    return $tokens;
+  }
+}
+
+
+/**
+ * Custom filter for filefield NOT NULL
+ */
+function filefield_views_handler_filter_is_not_null($op, $filter, $filterinfo, &$query) {
+  if ($op == 'handler') {
+    $query->ensure_table($filterinfo['table']);
+    if ($filter['value']) {
+      $qs = '%s.%s > 0';
+    }
+    else {
+      $qs = '%s.%s = 0 OR %s.%s IS NULL';
+    }
+    $query->add_where($qs, $filterinfo['table'], $filterinfo['field'], $filterinfo['table'], $filterinfo['field']);
+  }
+}
+
+
+/**
+ * Determine the most appropriate icon for the given file's mimetype.
+ *
+ * @return The URL of the icon image file, or FALSE if no icon could be found.
+ */
+function filefield_icon_url($file) {
+  global $base_url;
+  $theme = variable_get('filefield_icon_theme', 'protocons');
+
+  if ($iconpath = _filefield_icon_path($file, $theme)) {
+    return $base_url .'/'. $iconpath;
+  }
+  return FALSE;
+}
+
+function _filefield_icon_path($file, $theme = 'protocons') {
+  // If there's an icon matching the exact mimetype, go for it.
+  $dashed_mime = strtr($file['filemime'], array('/' => '-'));
+  if ($iconpath = _filefield_create_icon_path($dashed_mime, $theme)) {
+    return $iconpath;
+  }
+  // For a couple of mimetypes, we can "manually" tell a generic icon.
+  if ($generic_name = _filefield_generic_icon_map($file)) {
+    if ($iconpath = _filefield_create_icon_path($generic_name, $theme)) {
+      return $iconpath;
+    }
+  }
+  // Use generic icons for each category that provides such icons.
+  foreach (array('audio', 'image', 'text', 'video') as $category) {
+    if (strpos($file['filemime'], $category .'/') === 0) {
+      if ($iconpath = _filefield_create_icon_path($category .'-x-generic', $theme)) {
+        return $iconpath;
+      }
+    }
+  }
+  // Try application-octet-stream as last fallback.
+  if ($iconpath = _filefield_create_icon_path('application-octet-stream', $theme)) {
+    return $iconpath;
+  }
+  // Sorry, no icon can be found...
+  return FALSE;
+}
+
+function _filefield_create_icon_path($iconname, $theme = 'protocons') {
+  $iconpath = drupal_get_path('module', 'filefield')
+    .'/icons/'. $theme .'/16x16/mimetypes/'. $iconname .'.png';
+  if (file_exists($iconpath)) {
+    return $iconpath;
+  }
+  return FALSE;
+}
+
+function _filefield_generic_icon_map($file) {
+  switch ($file['filemime']) {
+    // Word document types.
+    case 'application/msword':
+    case 'application/vnd.ms-word.document.macroEnabled.12':
+    case 'application/vnd.oasis.opendocument.text':
+    case 'application/vnd.oasis.opendocument.text-template':
+    case 'application/vnd.oasis.opendocument.text-master':
+    case 'application/vnd.oasis.opendocument.text-web':
+    case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+    case 'application/vnd.stardivision.writer':
+    case 'application/vnd.sun.xml.writer':
+    case 'application/vnd.sun.xml.writer.template':
+    case 'application/vnd.sun.xml.writer.global':
+    case 'application/vnd.wordperfect':
+    case 'application/x-abiword':
+    case 'application/x-applix-word':
+    case 'application/x-kword':
+    case 'application/x-kword-crypt':
+      return 'x-office-document';
+
+    // Spreadsheet document types.
+    case 'application/vnd.ms-excel':
+    case 'application/vnd.ms-excel.sheet.macroEnabled.12':
+    case 'application/vnd.oasis.opendocument.spreadsheet':
+    case 'application/vnd.oasis.opendocument.spreadsheet-template':
+    case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+    case 'application/vnd.stardivision.calc':
+    case 'application/vnd.sun.xml.calc':
+    case 'application/vnd.sun.xml.calc.template':
+    case 'application/vnd.lotus-1-2-3':
+    case 'application/x-applix-spreadsheet':
+    case 'application/x-gnumeric':
+    case 'application/x-kspread':
+    case 'application/x-kspread-crypt':
+      return 'x-office-spreadsheet';
+
+    // Presentation document types.
+    case 'application/vnd.ms-powerpoint':
+    case 'application/vnd.ms-powerpoint.presentation.macroEnabled.12':
+    case 'application/vnd.oasis.opendocument.presentation':
+    case 'application/vnd.oasis.opendocument.presentation-template':
+    case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+    case 'application/vnd.stardivision.impress':
+    case 'application/vnd.sun.xml.impress':
+    case 'application/vnd.sun.xml.impress.template':
+    case 'application/x-kpresenter':
+      return 'x-office-presentation';
+
+    // Compressed archive types.
+    case 'application/zip':
+    case 'application/x-zip':
+    case 'application/stuffit':
+    case 'application/x-stuffit':
+    case 'application/x-7z-compressed':
+    case 'application/x-ace':
+    case 'application/x-arj':
+    case 'application/x-bzip':
+    case 'application/x-bzip-compressed-tar':
+    case 'application/x-compress':
+    case 'application/x-compressed-tar':
+    case 'application/x-cpio-compressed':
+    case 'application/x-deb':
+    case 'application/x-gzip':
+    case 'application/x-java-archive':
+    case 'application/x-lha':
+    case 'application/x-lhz':
+    case 'application/x-lzop':
+    case 'application/x-rar':
+    case 'application/x-rpm':
+    case 'application/x-tzo':
+    case 'application/x-tar':
+    case 'application/x-tarz':
+    case 'application/x-tgz':
+      return 'package-x-generic';
+
+    // Script file types.
+    case 'application/ecmascript':
+    case 'application/javascript':
+    case 'application/mathematica':
+    case 'application/vnd.mozilla.xul+xml':
+    case 'application/x-asp':
+    case 'application/x-awk':
+    case 'application/x-cgi':
+    case 'application/x-csh':
+    case 'application/x-m4':
+    case 'application/x-perl':
+    case 'application/x-php':
+    case 'application/x-ruby':
+    case 'application/x-shellscript':
+    case 'text/vnd.wap.wmlscript':
+    case 'text/x-emacs-lisp':
+    case 'text/x-haskell':
+    case 'text/x-literate-haskell':
+    case 'text/x-lua':
+    case 'text/x-makefile':
+    case 'text/x-matlab':
+    case 'text/x-python':
+    case 'text/x-sql':
+    case 'text/x-tcl':
+      return 'text-x-script';
+
+    // HTML aliases.
+    case 'application/xhtml+xml':
+      return 'text-html';
+
+    // Executable types.
+    case 'application/x-macbinary':
+    case 'application/x-ms-dos-executable':
+    case 'application/x-pef-executable':
+      return 'application-x-executable';
+
+    default:
+      return FALSE;
+  }
+}

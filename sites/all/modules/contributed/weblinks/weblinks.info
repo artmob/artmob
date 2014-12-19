@@ -1,0 +1,4 @@
+; $Id: weblinks.info,v 1.1.2.2 2007/06/18 23:07:15 dww Exp $
+name = Web Links
+description = Web Links provides a comprehensive way to post weblinks to your site. All links are nodes, which can be put into taxonomies/categories and administered.
+

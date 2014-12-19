@@ -1,0 +1,36 @@
+<?php
+// $Id: license install,v 1.0 2008/03/01 01:30:00 drumm Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function artmob_usage_request_ticket_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      db_query("CREATE TABLE {am_usage_request_ticket} (
+        cid integer unsigned auto_increment primary key,
+        nid int unsigned NOT NULL default '0',
+        uid int unsigned NOT NULL default '0',
+        ticket_number int unsigned NOT NULL default '0',
+        ticket_link_nid int unsigned NOT NULL default '0',
+        is_public smallint default '0',
+        ticket_name text,
+        ticket_email text,
+        ticket_status text,
+        dispute_status text
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+      break;
+    case 'pgsql':
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function artmob_usage_request_ticket_uninstall() {
+  db_query('DROP TABLE {am_usage_request_ticket}');
+}
+?>

@@ -1,0 +1,138 @@
+<?php
+// $Id: performance.install,v 1.1.2.6 2009/09/13 12:11:39 salvis Exp $
+
+// Copyright Khalid Baheyeldin 2008 of http://2bits.com
+
+function performance_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      db_query("CREATE TABLE {performance_detail} (
+        pid         INT          NOT NULL AUTO_INCREMENT,
+        timestamp   INT          NOT NULL DEFAULT '0',
+        bytes       INT          NOT NULL DEFAULT '0',
+        millisecs   INT          NOT NULL DEFAULT '0',
+        query_count INT          NOT NULL DEFAULT '0',
+        query_timer INT          NOT NULL DEFAULT '0',
+        anon        INT(1)       DEFAULT '1',
+        path        VARCHAR(255) DEFAULT NULL,
+        PRIMARY KEY (pid),
+        KEY (timestamp)
+        ) /*!40100 DEFAULT CHARACTER SET UTF8 */ ");
+
+      db_query("CREATE TABLE {performance_summary} (
+        path            VARCHAR(255) NOT NULL DEFAULT '',
+        last_access     INT          NOT NULL DEFAULT '0',
+        bytes_max       INT          NOT NULL DEFAULT '0',
+        bytes_avg       INT          NOT NULL DEFAULT '0',
+        millisecs_max   INT          NOT NULL DEFAULT '0',
+        millisecs_avg   INT          NOT NULL DEFAULT '0',
+        query_count_max INT          NOT NULL DEFAULT '0',
+        query_count_avg INT          NOT NULL DEFAULT '0',
+        query_timer_max INT          NOT NULL DEFAULT '0',
+        query_timer_avg INT          NOT NULL DEFAULT '0',
+        num_accesses    INT          NOT NULL DEFAULT '0',
+        PRIMARY KEY (path),
+        KEY  (last_access)
+        ) /*!40100 DEFAULT CHARACTER SET UTF8 */ ");
+      break;
+
+    case 'pgsql':
+      db_query("CREATE TABLE {performance_detail} (
+        pid          SERIAL,
+        timestamp    INT          NOT NULL DEFAULT '0',
+        bytes        INT          NOT NULL DEFAULT '0',
+        millisecs    INT          NOT NULL DEFAULT '0',
+        query_count  INT          NOT NULL DEFAULT '0',
+        query_timer  INT          NOT NULL DEFAULT '0',
+        anon         SMALLINT     DEFAULT '1',
+        path         VARCHAR(255) DEFAULT NULL,
+        PRIMARY KEY (pid)
+      )");
+      db_query("CREATE INDEX {performance_detail}_timestamp_idx ON {peformance_detail} (timestamp)");
+
+      db_query("CREATE TABLE {performance_summary} (
+        path            VARCHAR(255) NOT NULL DEFAULT '',
+        last_access     INT          NOT NULL DEFAULT '0',
+        bytes_max       INT          NOT NULL DEFAULT '0',
+        bytes_avg       INT          NOT NULL DEFAULT '0',
+        millisecs_max   INT          NOT NULL DEFAULT '0',
+        millisecs_avg   INT          NOT NULL DEFAULT '0',
+        query_count_max INT          NOT NULL DEFAULT '0',
+        query_count_avg INT          NOT NULL DEFAULT '0',
+        query_timer_max INT          NOT NULL DEFAULT '0',
+        query_timer_avg INT          NOT NULL DEFAULT '0',
+        num_accesses    INT          NOT NULL DEFAULT '0',
+        PRIMARY KEY (path)
+      )");
+      db_query("CREATE INDEX {performance_summary}_last_access_idx ON {performance_summary} (last_access)");
+      break;
+  }
+
+  // Set the weight so this module runs last
+  db_query("UPDATE {system} SET weight = 3000 WHERE name = 'performance'");
+}
+
+function performance_uninstall() {
+  db_query("DROP TABLE {performance_detail}");
+  db_query("DROP TABLE {performance_summary}");
+  db_query("DELETE FROM {variable} WHERE name LIKE 'performance%'");
+}
+
+function performance_requirements($phase) {
+  $requirements = array();
+
+  if ($phase != 'runtime') {
+    return $requirements;
+  }
+
+   if (variable_get('performance_detail', 0)) {
+     $requirements['performance_detail'] = array(
+       'title'       => t('Performance logging details'),
+       'value'       => 'Enabled',
+       'severity'    => REQUIREMENT_WARNING,
+       'description' => t('Performance detailed logging is <a href="@link">enabled</a>. This can cause severe issues on live sites.', array('@link' => url('admin/settings/performance_logging'))),
+     );
+   }
+
+   if (variable_get('dev_query', 0)) {
+     if (variable_get('performance_detail', 0) ||
+         variable_get('performance_summary_db', 0) ||
+         variable_get('performance_summary_apc', 0)) {
+       $requirements['performance_query'] = array(
+         'title'       => t('Performance logging query'),
+         'value'       => 'Enabled',
+         'severity'    => REQUIREMENT_WARNING,
+         'description' => t('Query timing and count logging is <a href="@link">enabled</a>. This can cause memory size per page to be larger than normal.', array('@link' => url('admin/settings/performance_logging'))),
+       );
+     }
+   }
+
+   if (!function_exists('apc_fetch')) {
+     $requirements['performance_apc'] = array(
+       'title'       => t('Performance logging APC'),
+       'value'       => 'Disabled',
+       'severity'    => REQUIREMENT_WARNING,
+       'description' => t('Performance logging on live web sites works best if APC is enabled.'),
+     );
+   }
+
+   $shm_size = ini_get('apc.shm_size');
+   if ($shm_size < 48) {
+     $requirements['performance_apc_mem'] = array(
+       'title'       => t('Performance logging APC memory size'),
+       'value'       => $shm_size,
+       'severity'    => REQUIREMENT_WARNING,
+       'description' => t('APC has been configured for !size, which is less than the recommended 48 MB of memory. If you encounter errors when viewing the summary report, then try to increase that limit for APC.', array('!size' => $shm_size)),
+     );
+  }
+
+  return $requirements;
+}
+
+function performance_update_1() {
+  $ret = array();
+  $ret[] = update_sql("ALTER TABLE {performance_detail}  DROP title");
+  $ret[] = update_sql("ALTER TABLE {performance_summary} DROP title");
+  return $ret;
+}

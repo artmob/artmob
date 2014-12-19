@@ -1,0 +1,8 @@
+1.5.2
+	Breaking the dynamic subform functions out into their own module
+	
+1.5.1
+	Cleaning up some bad merge issues
+	
+1.4
+	Adding in dynamic subform functions, todo lists example and subform.test

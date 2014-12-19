@@ -1,0 +1,1396 @@
+<?php
+// $Id: artmob_license.module,v 1.0 2008/03/01 08:31:22 drumm Exp $
+
+/**
+ * @file
+ * Allows users to enter a license to a node.
+ */
+
+
+define('ARTMOB_LICENSE_DEFAULT_LICENSE_TITLE', 'License title');
+define('ARTMOB_LICENSE_DEFAULT_CONDITIONS', 'Additional licensing terms and conditions for re-use');
+define('ARTMOB_LICENSE_DEFAULT_NEW_CONDITIONS', 'Enter license conditions');
+define('ARTMOB_LICENSE_DEFAULT_SOURCE_LINK', 'Link to web reference');
+define('ARTMOB_LICENSE_DEFAULT_FIRST_NAME', 'First Name');
+define('ARTMOB_LICENSE_DEFAULT_LAST_NAME', 'Last Name');
+
+define('ARTMOB_LICENSE_ACTION_EXISTING', 'existing' );
+define('ARTMOB_LICENSE_ACTION_MODIFIED', 'modified' );
+define('ARTMOB_LICENSE_ACTION_NEW', 'new' );
+
+define('ARTMOB_LICENSE_MODE_FULL', 0 );
+define('ARTMOB_LICENSE_MODE_LICENSE_ONLY', 1 );
+define('ARTMOB_LICENSE_MODE_NONE', 2 );
+
+define('ARTMOB_LICENSE_CITATION_COMPATIBLE', variable_get('citation_compatible', 0 ));
+
+define('ARTMOB_LICENSE_NO_LICENSE_TEXT','There is no license currently associated with this %s.'); // type to be provided in context via sprintf()
+
+//* Implementation of hook_node_info().
+function artmob_license_node_info() {
+  return array(
+    'license' => array(
+      'name' => t('License'),
+      'module' => 'artmob_license',
+      'description' => t("This allows a user to enter a new license for site materials.")
+    ),
+  );
+}
+
+// Implementation of hook_perm().
+function artmob_license_perm() {
+    return array('Add license', 'Edit license', 'Remove license', 'View license');
+}
+
+
+// Implementation of hook_access().
+function artmob_license_access($op, $node) {
+  global $user;
+
+  if ($op == 'create') {
+    // Only registered users can create Articles.
+    return user_access('Add license');
+  }
+
+  else if ($op == 'update') {
+    // Only registered users can update an Article.
+    return user_access('Edit license');
+  }
+  else if ($op == 'delete') {
+    // Only registered users can delete an Article.
+    return user_access('Remove license');
+  }
+  else if ($op == 'view') {
+    // Only registered users can view an Article if it is locked.
+    return user_access('View license');
+  }
+  else {
+    return FALSE;
+  }
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function artmob_license_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+  }
+  else {
+    $items[] = array(
+      'path'              => 'admin/artmob/licensing',
+      'title'             => t('Licensing Configuration Options'),
+      'description'       => t('Modify licensing configuraion options'),
+      'weight'            => -7,
+      'callback'          => 'drupal_get_form',
+      'callback arguments' => array( 'artmob_license_config_settings'),
+      'access'            => user_access('administer site configuration')
+    );
+
+    $items[] = array(
+      'path'  => 'artmob_license/licenses/update',
+      'title' => t('Artmob License Update Licenses'),
+      'callback' => 'artmob_license_update_licenses',
+      'type' => MENU_CALLBACK,
+      'access' => user_access('Add license'),
+    );
+
+    $items[] = array(
+      'path'  => 'artmob_license/licenses/delete',
+      'title' => t('Artmob License Remove license'),
+      'callback' => 'artmob_license_delete_licenses',
+      'type' => MENU_CALLBACK,
+      'access' => user_access('Remove license'),
+    );
+
+    if (arg(0) == 'node' && is_numeric(arg(1))) {
+      $node = node_load(arg(1));
+      /* OLD -
+      $enabled = variable_get('rdolicense_'. $node->type, 0) ||
+                 ARTMOB_LICENSE_CITATION_COMPATIBLE ||
+                 (variable_get( 'rdo_license_options_'.$type, ARTMOB_LICENSE_MODE_NONE ) != ARTMOB_LICENSE_MODE_LICENSE_NONE ) ;
+      */
+      //New
+      $enabled = (variable_get( 'rdo_license_options_'.$node->type, ARTMOB_LICENSE_MODE_NONE ) != ARTMOB_LICENSE_MODE_NONE );
+      if ( $enabled ) {
+        $items[]= array(
+          'path' => 'node/'. $node->nid .'/license',
+          'title' => t('Licensing'),
+          'callback' => 'artmob_license_license_tab',
+          'callback arguments' => array($node, 'add_license'),
+          'access' => TRUE,
+          'type' => MENU_LOCAL_TASK,
+          'weight' => 2,
+        );
+      }
+    }
+
+  }
+
+  return $items;
+}
+
+function artmob_license_init() {
+        $path = drupal_get_path('module', 'artmob_license');
+        drupal_add_js($path .'/js/artmob_license.js');
+
+        //OLD -
+        //if ( ARTMOB_LICENSE_CITATION_COMPATIBLE && module_exists('artmob_fair_dealing')) {
+        if ( module_exists('artmob_fair_dealing') ){
+          drupal_add_css(drupal_get_path('module', 'artmob_fair_dealing') .'/css/artmob_works.css');
+        }
+        else {
+          drupal_add_css($path .'/css/artmob_license.css');
+        }
+
+        $artmob_license_settings = array(
+         'defaultlicensetitle' => ARTMOB_LICENSE_DEFAULT_LICENSE_TITLE,
+         'defaultconditions' => ARTMOB_LICENSE_DEFAULT_CONDITIONS,
+         'defaultnewconditions' => ARTMOB_LICENSE_DEFAULT_NEW_CONDITIONS,
+         'defaultfirstname' => ARTMOB_LICENSE_DEFAULT_FIRST_NAME,
+         'defaultlastname' => ARTMOB_LICENSE_DEFAULT_LAST_NAME
+       );
+
+       drupal_add_js(array('artmoblicense' => $artmob_license_settings), "setting");
+}
+
+function artmob_license_update_licenses() {
+  $licenseinfo = $_POST['licenseinfo'];
+  $report_array = json_decode($licenseinfo, TRUE);
+  $nid = $report_array['nid'];
+  $cid = $report_array['cid'];
+  $action = $report_array['action'];
+  //temporarily add this for testing.
+  //watchdog( 'license update', 'report array = '. print_r( $report_array, True ) );
+  $node_temp = node_load( $nid );
+  watchdog( 'artmob license', 'inside artmob_license_update_licenses' );
+  watchdog( 'artmob license', '$nid = '.$nid );
+  watchdog( 'artmob license', '$cid = '.$cid );
+  watchdog( 'artmob license', '$licenseinfo = '.print_r( $licenseinfo, true ) );
+
+  //OLD -
+  //if ( ARTMOB_LICENSE_CITATION_COMPATIBLE ) {
+  if ( variable_get( 'rdo_license_options_' .$node_temp->type, ARTMOB_LICENSE_MODE_NONE ) == ARTMOB_LICENSE_MODE_FULL ){
+    $citation_nid = db_result( db_query( "SELECT nid from {am_citation} where citation_id = %d", $cid ));
+    $id = $citation_nid;
+    $theme_id = $cid;
+  }
+  else {
+    $id = $nid;
+    $theme_id = $nid;
+  }
+
+  $is_continue = true;
+  if ( $action == ARTMOB_LICENSE_ACTION_NEW ) {
+    $new_license_title = $report_array['new-license-title'];
+    if ( $new_license_title == ARTMOB_LICENSE_DEFAULT_LICENSE_TITLE ) {
+      $new_license_title = '';
+    }
+    $new_license_conditions = $report_array['new-license-conditions'];
+    if ( $new_license_conditions == ARTMOB_LICENSE_DEFAULT_NEW_CONDITIONS ) {
+      $new_license_conditions = '';
+    }
+
+    $new_license_source = $report_array['new-license-source'];
+    if ( $new_license_source = ARTMOB_LICENSE_DEFAULT_SOURCE_LINK ) {
+      $new_license_source = '';
+    }
+
+
+    if (( $new_license_title <> '' ) and ($new_license_conditions <> '' ) ) {
+      //Create a new license
+      $license_node = new stdClass();
+      $license_node->nid = '';
+      $license_node->type = 'license';
+      $license_node->status = 1;
+      $license_node->title = $report_array['new-license-title'];
+      $license_node->additional_instructions = $report_array['new-license-conditions'];
+      $license_node->web_reference = $new_license_source;
+      node_save( $license_node );
+      $license_nid = $license_node->nid;
+    }
+    else {
+      $is_continue = False;
+    }
+  }
+  else if ( $action == ARTMOB_LICENSE_ACTION_MODIFIED ) {
+    if ( $report_array['license-conditions-modify'] ) {
+      //create a copy of an existing license with modification
+      $license_nid = $report_array['modified-existing-license'];
+      if ( $license_nid ) {
+        $license_node = node_load( $license_nid );
+        $modified_license_title = $report_array['modified-license-title'];
+        if ( $modified_license_title == ARTMOB_LICENSE_DEFAULT_LICENSE_TITLE ) {
+          $node = node_load( $id );
+          $modified_license_title = $license_node->title .' ('. $node->title .')';
+        }
+        $license_node->nid = '';
+        $license_node->related_license_id = $license_nid;
+        $license_node->title = $modified_license_title;
+        $additional_license_conditions = $report_array['license-conditions-modify'];
+        if ( $additional_license_conditions == ARTMOB_LICENSE_DEFAULT_CONDITIONS ) {
+          $additional_license_conditions = '';
+        }
+        $license_node->additional_instructions = $additional_license_conditions;
+        node_save( $license_node );
+        $license_nid = $license_node->nid;
+      }
+      else {
+        $is_continue = false;
+      }
+    }
+    else {
+      $is_continue = false;
+    }
+  }
+  else if ( $action == ARTMOB_LICENSE_ACTION_EXISTING ) {
+    //Attach an existing license to this work
+    $license_nid = $report_array['existing-license'];
+    if ( !$license_nid ) {
+      $is_continue = false;
+    }
+  }
+  else {
+    $is_continue = false;
+  }
+
+  $contributor_array = $report_array['existing-contributors'];
+  $first_name = $report_array['new-licensee-first'];
+  $key_name = $report_array['new-licensee-last'];
+
+  $is_corporate = $report_array['new-licensee-cc'];
+
+
+  //If the default is left then ignore
+  if ( $first_name == ARTMOB_LICENSE_DEFAULT_FIRST_NAME) {
+    $first_name = '';
+  }
+  if ( $key_name == ARTMOB_LICENSE_DEFAULT_LAST_NAME) {
+    $key_name = '';
+  }
+
+  if (( count($contributor_array) === 0 ) and ( $first_name == '' ) and ( $key_name == '' ) ) {
+    $is_continue = false;
+  }
+  if ( $is_continue ) {
+    //Build the existing $widgetlicensecontributor1 array and save the node with it
+    //This way it will automatically call all of thefunctions in the
+    //artmob_license_contributor_widget.module.
+    $node = node_load( $id );
+    $widgetlicensecontributor1 = array();
+    $subwidgets = array();
+    $license_array = array();
+    $license_array['license_nid'] = $license_nid;
+    $license_array['firstname'] = $first_name;
+    $license_array['keyname'] = $key_name;
+
+    if ( $is_corporate ){
+      $license_array['contributor_type'] = 1;
+    } else {
+      $license_array['contributor_type'] = 0;
+    }
+
+    if ( count($contributor_array) ) {
+      foreach ($contributor_array as $key => $contributor_id) {
+        $license_array['contributor_nid'][$contributor_id] = $contributor_id;
+      }
+    }
+    else {
+      $license_array['contributor_nid'] = array();
+    }
+
+    $subwidgets[1] = $license_array;
+    $widgetlicensecontributor['subwidgets'] = $subwidgets;
+    $node->widgetlicensecontributor1 = $widgetlicensecontributor;
+
+    $license_contributor_widget_names = array();
+    $license_contributor_widget_names['widgetlicensecontributor1'] = 'widgetlicensecontributor1';
+    $node->license_contributor_widget_names = $license_contributor_widget_names;
+    node_save( $node );
+
+    //$license_node = node_load( $license_nid );
+    //$license_array = artmob_license_get_license_array_for_node( $nid );
+    //$contributors = $license_array[$license_node->license_id];
+    //$ajax_answers['html'] = theme ( 'artmob_license_display_license_info', $license_node, $contributors);
+    $ajax_answers = array();
+
+  //OLD -
+  //if ( ARTMOB_LICENSE_CITATION_COMPATIBLE ) {
+    if ( variable_get( 'rdo_license_options_' .$node_temp->type, ARTMOB_LICENSE_MODE_NONE ) == ARTMOB_LICENSE_MODE_FULL ){
+      $licenses = artmob_citation_get_licenses( $cid );
+    }
+    else {
+      $licenses = artmob_license_get_license_array_for_node( $nid );
+    }
+    $content = '';
+    if (count($licenses) > 0) {
+      foreach ($licenses as $license_id => $license) {
+        $content .= theme('artmob_license_display_license_info', $license, $license['contributors'], $cid); //In this case pass in $cid not $nid because if it is coming from Ajax we want the $cid passed in due to arg(0) not being node
+      }
+    }
+
+    $ajax_answers['html'] = $content; //theme ( 'artmob_license_display_license_info', NULL, NULL, $theme_id);
+    //drupal 5 does not use json_encode
+    //$ajax_answers_json = json_encode( $ajax_answers );
+    drupal_set_header('Content-Type: text/javascript; charset=utf-8');
+    print drupal_to_js($ajax_answers);
+  }
+  exit();
+}
+
+function artmob_license_delete_licenses() { //This id can be either the citation_id or the node nid
+  $id = $_POST['id'];
+  $type = $_POST['ntype'];//this is the type of the original node that the license is attached to
+
+
+  //OLD -
+  //if ( ARTMOB_LICENSE_CITATION_COMPATIBLE ) {
+  //since citation compatible is by node then we need to know the node type too!
+  if ( ( variable_get( 'rdo_license_options_'.$type, ARTMOB_LICENSE_MODE_NONE ) == ARTMOB_LICENSE_MODE_FULL )
+    || ( $type == 'citation') ) {
+    db_query( "DELETE FROM {am_citation_license} WHERE citation_id = %d", $id );
+  }
+  else {
+    db_query( "DELETE FROM {am_node_license}  WHERE node_nid = %d", $id );
+  }
+
+  $ajax_answers = array();
+  $ajax_answers['html'] = theme( 'artmob_license_display_license_info', NULL, NULL, $id, true);
+
+
+  //watchdog('artmob_license', $ajax_answers['html']);
+  //drupal 5 does not use json_encode
+  //$ajax_answers_json = json_encode( $ajax_answers );
+
+  drupal_set_header('Content-Type: text/javascript; charset=utf-8');
+  print drupal_to_js($ajax_answers) ;
+
+  exit();
+}
+
+function artmob_license_license_tab( &$node ) {
+  //!!!Will need to change to artmob_license_license_tab in theming
+  //return theme('artmob_copyright_copyright_tab',$node);
+  //OLD -
+  //if ( ARTMOB_LICENSE_CITATION_COMPATIBLE ) {
+  if ( variable_get( 'rdo_license_options_'.$node->type, ARTMOB_LICENSE_MODE_NONE ) == ARTMOB_LICENSE_MODE_FULL ){
+    return theme('artmob_license_license_tab', $node);
+  }
+  else {
+    return theme('artmob_license_node_license_tab', $node);
+  }
+}
+
+/* This theme will be called from a number of different circumstances.  In some instances
+ * it will be passed a license node object (from hook_view), a license array(just the
+ * salient license information, or NULL, indicating no license.  */
+
+function theme_artmob_license_display_license_info($license=NULL, $contributors=NULL, $nid =NULL, $ajax=false) {
+     $limited_data = FALSE;
+
+     if (is_array($license)) {
+        $license = (object) $license;
+        $limited_data = TRUE;
+     }
+
+     if ($license != NULL && is_object($license)) {
+           $copyright_holders = '';
+           $licensee_options = '';
+
+           if ($license->contributors != NULL) {
+             $copyright_holders .= '<td><h3 class="fd-label">Copyright Holders</h3>';
+           }
+
+           if (is_array($contributors)) {
+             foreach ($contributors as $contributor_id => $licensee) {
+               $copyright_holders .= '<p>'. $licensee['firstname'] .' '. $licensee['lastname'] .'</p>';
+             }
+           }
+
+           if ($licence->contributors != NULL) {
+             $copyright_holders .= '</td>';
+           }
+
+           $license->description = $license->description ? $license->description : $license->body;
+           
+           $title = $limited_data == TRUE ? $license->name : $license->title;
+
+           if ($license->source && $license->related_license_id == 0) {
+                  $title = theme('artmob_license_site_link', $license->source, TRUE, $title, 'Click for more information on this license');
+           }
+
+
+           $license_title = '<div class="license-name">'. $title .'</div>';
+           $license_description = $license->description && $license->format? check_markup($license->description, $license->format, FALSE) : '<p>'. $license->description .'</p>';
+
+           // check for modified license
+
+           if ($license->related_license_id > 0) {
+              $rnode = node_load($license->related_license_id);
+  
+              $rtitle = $rnode->source ? theme('artmob_license_site_link', $rnode->source, TRUE, $rnode->title, 'Click for more information on this license') : $rnode->title;
+  
+              $license_description .= "<p>This license is a modification of the <strong>". $rtitle  ."</strong> license.  Please take note of the additional terms and conditions.</p>";
+           }
+
+           $additional_instructions = '<h3 class="fd-label">'. ARTMOB_LICENSE_DEFAULT_CONDITIONS .'</h3>';
+           $additional_instructions .= $license->additional_instructions ? $license->additional_instructions : "<p>No additional licensing terms or conditions for re-use have been provided.</p>";
+
+           if ( $nid ) {
+             //in this case the nid is actually the cid
+             $temp_nid = artmob_citation_get_nid_by_citation_id( $nid );
+             $temp_node = node_load ( $temp_nid );
+             $type = $temp_node->type;
+           }
+
+           if  (user_access('Remove license')) {
+             $add_license = "<input type='button' class='remove-license-btn' value='remove licensing terms' name='license-submit' />";
+             $add_license .= "<input type='hidden' class='remove-nid' value='{$nid}' name='license-remove-nid' />";
+             $add_license .= "<input type='hidden' class='remove-nid-type' value='{$type}' name='license-remove-nid-type' />";
+           }
+     }
+     else { /* No Licenses provided */
+          $label = 'item';
+           if ( $nid ) {
+             //in this case the nid is actually the cid
+             $temp_nid = artmob_citation_get_nid_by_citation_id( $nid );
+             $temp_node = node_load ( $temp_nid );
+             $types = artmob_citation_build_work_types(false,'',true);
+             $wt = $temp_node->work_type;
+             $label = theme('artmob_fair_dealing_media_type_file_label',$wt);  
+           }
+            
+          $license_title = '';
+          $license_description = "<p>" . sprintf(ARTMOB_LICENSE_NO_LICENSE_TEXT,strtolower($label)) . " <a href='#respond'>Do you know more?</a></p>";
+          $copyright_holders = '';
+          $additional_instructions = '';
+          $add_license = '';
+          
+          if  (user_access('Add license') && $nid != NULL) {
+            $none_array = array();
+            $none_array[0] = 'None';
+            //Cannot use array_merge because for numeric keys, it renumbers them in sequence
+            //$contributors_list = array_merge(array(0 => 'None'),artmob_license_build_contributor_list());
+            $contributors_list = artmob_license_build_contributor_list( true );
+
+            $licenses = artmob_license_build_license_list();
+            $add_license .= theme('artmob_license_add_license', $nid, $contributors_list, $licenses, $ajax);
+          }
+         }
+
+      $content .= <<<EOT
+        <div class='licenses view-licenses'>
+          <table class='license-table' cellspacing='0' cellpadding='0' border='0'>
+            <tr>
+              {$copyright_holders}
+              <td>
+                <h3 class="fd-label">License</h3>
+                {$license_title}
+                <div class='license-description'>
+                  {$license_description}
+                </div>
+              </td>
+            </tr>
+          </table>
+                  <div class='license-additional'>
+                        {$additional_instructions}
+                  </div>
+          {$add_license}
+        </div>
+EOT;
+
+ return $content;
+}
+
+function theme_artmob_license_node_license_tab(&$node) {
+  $licenses = artmob_license_get_license_array_for_node( $node->nid );
+  $content = '';
+  $content .= "<div class='copyright-module license-module'>\n";  /* copyright-module reference for backwards compatibility */
+  if (count($licenses) > 0) {
+    $content .= theme('artmob_license_get_introduction');
+
+    foreach ($licenses as $license_id => $license) {
+      $content .= theme('artmob_license_display_license_info', $license, $license['contributors'], $node->nid);
+    }
+  }
+  else {
+    $content .= theme('artmob_license_display_license_info', NULL, NULL, $node->nid);
+  }
+  
+  foreach (module_implements('license_tab_view') as $name) {
+    if ($name == 'artmob_respond') {
+          $function = $name .'_license_tab_view';
+          $content .= $function($node);
+    }
+  }
+  $content .= "</div>";
+  return $content;
+}
+
+function theme_artmob_license_license_tab( &$node ) {
+  global $user;
+  $nid = arg(1);
+
+  drupal_set_title('License Terms for the re-use of: '. $node->title);
+  $content = '';
+  $content .= "<div class='copyright-module license-module'>\n";  /* copyright-module reference for backwards compatibility */
+  $citations = artmob_citation_get_citation_array_for_node( $nid );
+
+  $content .= theme( 'artmob_license_get_introduction' );
+
+  if (count($citations) > 0) {
+  
+  $wtopt = artmob_citation_build_work_types(null,null,true);
+        foreach ($citations as $citation) {
+          
+          // numeric keys are file types
+          if (is_numeric($citation->work_type)) {
+            $type =  theme('artmob_fair_dealing_media_type_file_label',$citation->work_type);
+            $typeclass = 'filetype-' . $citation->work_type;
+            $typelabel = 'Type of Item';
+          } else {
+            $type = $wtopt[$citation->work_type];
+            $typeclass = 'worktype-' . substr($citation->work_type, 0, 1);
+            $typelabel = 'Type of Work Contained';
+          }
+          
+          $content .= <<<EOT
+                <div class='work {$typeclass}'>
+                  <div class='identifiers' style="display:none"></div>
+                  <div class='banner'>
+                        <div class='close'><a class='inactive'>Close</a></div>
+                        <div class='banner-title work-title'>Licensing terms for <em>{$citation->citation_title}</em></div>
+                  </div>
+                  <div class='innerwork'>
+                        <div class='menu'>
+                          <h3 class='fd-label'>{$typelabel}</h3>
+                          <p><span class='worktype-swop license-worktype-label'>{$type}</span></p>
+                        </div>
+                        <div class='title' style="display:none">
+                          <h3 class='fd-label'>Title</h3>
+                          {$citation->citation_title}
+                        </div>
+EOT;
+
+          if (count($citation->licenses)>0) {
+                foreach ($citation->licenses as $license_id => $license) { /* LEGACY.  There now can only be one license per citation. */
+                  //ToDo dynamically change $node->citation_id in 3rd parameter to nid if not if ( variable_get('citation_compatible', 0 )
+                  $content .= theme('artmob_license_display_license_info', $license, $license['contributors'], $citation->citation_id);
+                }
+          }
+          else {
+                $content .= theme('artmob_license_display_license_info', NULL, NULL, $citation->citation_id);
+          }
+
+          $content .= "</div></div>";
+        }
+  }
+  else {
+                //no citations
+
+                $content .= theme('artmob_license_no_information');
+  }
+
+  foreach (module_implements('license_tab_view') as $name) {
+    if ($name == 'artmob_respond') {
+          $function = $name .'_license_tab_view';
+          $content .= $function($node);
+    }
+  }
+
+  //$content .= "<a name='know-more'></a><a name='do-more'></a>";
+  //$content .= tabbed_content((array)$node); //ToDo:!!! move to artmob_response_tabbed_content and called from nodeapi view in artmob_response
+  //$content .= "</div>\n";
+  return $content;
+}
+
+function theme_artmob_license_add_license($id, $contributors, $licenses, $ajax = false) {
+  watchdog( 'artmob license', 'add license - $id = '.$id );
+  watchdog( 'artmob license', 'arg(0) = '.arg(0) );
+  watchdog( 'artmob license', 'arg(1) = '.arg(1) );
+  $contributor_options = '';
+
+  if (arg(0) == 'node' && is_numeric(arg(1))) {
+    $nid = arg(1);
+    $node = node_load( $nid );
+    $type = $node->type;
+  }
+  else {
+    //$id is the cid so retrieve the nid from the am_citation table
+    $nid = artmob_citation_get_link_nid_by_citation_id( $id );
+    if (( $nid == 0 ) || ( $nid == '' )) {
+      $type = '';
+      $nid = 0;
+    } else {
+      $node = node_load( $nid );
+      $type = $node->type;
+    }
+    //$nid = 0;
+    //$type = '';
+  }
+  watchdog( 'artmob license', '$nid = '.$nid );
+
+  $contributor_options = '';
+  $new_contributor_label = '';
+
+  //OLD -
+  //if ( ARTMOB_LICENSE_CITATION_COMPATIBLE ) {
+  if ( (variable_get( 'rdo_license_options_'.$type, ARTMOB_LICENSE_MODE_NONE ) == ARTMOB_LICENSE_MODE_FULL) || $ajax === true ){
+          if (count($contributors) > 0) {
+            $contributor_options .= '<select name="license-contributor-options" multiple size=5 style="height: 70px">';
+            foreach ($contributors as $cid => $contributor) {
+              $contributor_options .= "<option value='{$cid}'>". $contributor ."</option>";
+            }
+            $contributor_options .= '</select>';
+            $new_contributor_label = '<em>OR</em> add a name not on the list: ';
+          }
+          else {
+            $contributor_options = '<p>There are currently no contributors listed on the site. You may add one.</p>';
+          }
+  } 
+  else {
+        $new_contributor_label = 'Add a copyright holder: ';
+  }
+
+  $license_options = '';
+
+  if (count($licenses) > 0) {
+    $license_options .= '<select name="license-options">';
+    $modify_license_options .= '<select name="modify-license-options">';
+    foreach ($licenses as $lid => $license) {
+      $license_options .= "<option value='{$lid}'>". $license ."</option>";
+      $modify_license_options .= "<option value='{$lid}'>". $license ."</option>";
+    }
+    $license_options .= '</select>';
+    $modify_license_options .= '</select>';
+  }
+
+
+
+  $default_title = ARTMOB_LICENSE_DEFAULT_LICENSE_TITLE;
+  $default_conditions = ARTMOB_LICENSE_DEFAULT_CONDITIONS;
+  $default_new_conditions = ARTMOB_LICENSE_DEFAULT_NEW_CONDITIONS;
+  $default_source = ARTMOB_LICENSE_DEFAULT_SOURCE_LINK;
+
+  // new
+
+  $add_new_contributor = theme('afd_add_new_contributor','block');
+  
+  $content = '';
+  $content .=<<<EOT
+                                        <div class='add-license-block' id='add-license-block-{$id}'>
+                                                  <form name='add-license-form'>
+                                                          <input name='add-license-form-cid' class='add-license-form-cid' type='hidden' value='{$id}' />
+                                                          <input name='add-license-form-nid' class='add-license-form-nid' type='hidden' value='{$nid}' />
+                                                          <div class='add-license'>
+                                                                  <input type='button' class='fd-button' value="Add Licensing Terms" />
+                                                          </div>
+                                                          <div class='add-license-info' id='add-license-info-{$id}' style='display:none'>
+                                                                <div class='body-panels-nav'>
+                                                                    <a class='panel-nav panel-nav-1 active' tabindex='1'><div class='inner-panel-nav'>Select <br />licensing terms</div></a><a class='panel-nav panel-nav-2 inactive' tabindex='2'><div class='inner-panel-nav'>Modify existing <br />licensing terms</div></a><a class='panel-nav panel-nav-3 inactive' tabindex='3'><div class='inner-panel-nav'>Create new <br />licensing terms</div></a>
+                                                                </div>
+                                                                <div class='message' style='display:none'></div>
+                                                                <div class='panel-wrapper'>
+                                                                  <div class='known-contributors' id='known-contributors-{$id}'>
+                                                                          <table>
+                                                                            <tr>
+                                                                              <td colspan='2'>
+                                                                                <div class='am-help am-inline-help'>
+                                                                                  <div class='license-help-panel license-help-panel-1'>
+                                                                                    To indicate knowledge of licensing conditions select one or more licensors, choose a set of existing licensing terms (such as a creative commons license), and associate this license with the work.
+                                                                                  </div>
+                                                                                  <div class='license-help-panel license-help-panel-2' style='display:none'>
+                                                                                    To indicate knowledge of licensing conditions select one or more licensors, modify a set of existing licensing terms (such as a creative commons license), and associate this license with the work.
+                                                                                  </div>
+                                                                                  <div class='license-help-panel license-help-panel-3' style='display:none'>
+                                                                                    To indicate knowledge of licensing conditions select one or more licensors, indicate the licensing terms, provide an optional URL to a description of the licensing terms and associate this license with the work.
+                                                                                  </div>
+                                                                                </div>
+                                                                              </td>
+                                                                            </tr>
+                                                                            <tr>
+                                                                              <td>
+                                                                                <div class='license-add-existing-contributors'>
+                                                                                  <h3>Select licensors</h3>
+                                                                                  {$contributor_options}
+                                                                                </div>
+                                                                              </td>
+                                                                              <td>
+                                                                                <div class='license-add-new-contributor'>
+                                                                                  <h3>{$new_contributor_label}</h3>
+                                                                                  {$add_new_contributor}
+                                                                                </div>
+                                                                              </td>
+                                                                            </tr>
+                                                                          </table>
+                                                                  </div>
+                                                                  <div class='existing-license license-panel panel-1' id='existing-license-info-{$id}'>
+                                                                           <h3>Choose licensing terms</h3>
+                                                                          {$license_options}
+                                                                          <input type='button' class='submit-license-btn' value='Apply licensing terms' name='license-submit-existing' />
+                                                                  </div>
+                                                                  <div class='modify-license license-panel panel-2' id='modified-license-info-{$id}' style='display:none'>
+                                                                          <div class='existing-select'>
+                                                                            <h3>Choose licensing terms</h3>
+                                                                            {$modify_license_options}
+                                                                          </div>
+                                                                          <div class='additional-conditions' id='additional-conditions-info-{$id}'>
+                                                                            <input name='license-title-modify' style='display:block' type='textfield' size='60' value='{$default_title}' />
+                                                                            <textarea name='license-conditions-modify' style='display:block' rows='5' cols='60'>{$default_conditions}</textarea>
+                                                                          </div>
+                                                                          <input type='button' class='submit-license-btn' value='Apply licensing terms' name='license-submit-modified' />
+                                                                  </div>
+                                                                  <div class='new-license license-panel panel-3' id='new-license-info-{$id}'  style='display:none'>
+                                                                          <input name='license-title' style='display:block' type='textfield' size='60' value='{$default_title}' />
+                                                                          <textarea name='new-license-conditions' style='display:block' rows='5' cols='60 value='License Conditions'>{$default_new_conditions}</textarea>
+                                                                          <input name='new-license-source' style='display:block' type='textfield' size='60' value='{$default_source}'/>
+                                                                          <input type='button' class='submit-license-btn' value='Apply licensing terms' name='license-submit-new' />
+  
+                                                                  </div>
+                                                                </div>
+                                                          </div>
+
+                                                  </form>
+                                            </div>
+EOT;
+
+  return $content;
+
+}
+
+function theme_artmob_license_get_introduction() {
+  $content = "<div class='license-introduction'>\n";
+  $content .= '<p>Below are the licensing terms that have been provided for this work and the works contained within it.</p>';
+
+  foreach (module_implements('license_tab_view') as $name) {
+    if ($name == 'artmob_respond') {
+      $content .= '<p>Do you know more about the licensing terms for re-use of the file and/or its incorporated works? Please use the <a href="#know-more">form below</a> to add or correct information.</p>';
+        }
+  }
+  
+  $content .= "</div>";
+ 
+ return $content;
+}
+
+function theme_artmob_license_item_license($license) {
+    $content  = "<div class='license-label'>";
+    $content .= "This item has the following license: ";
+    $content .= "</div>";
+        $content .= "<h3>". $license->title ."</h3>";
+        $content .= "<div class='license-description'>";
+        $content .= $license->description ? $license->description : $license->body;
+        $content .= "</div>";
+
+        return $content;
+}
+
+function theme_artmob_license_no_information() {
+        $content = "<p>There is no license information for this.</p>";
+        
+        return $content;
+}
+
+function artmob_license_config_settings() {
+  $form['license_settings'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Licensing Options'),
+    '#weight' => -2
+    );
+
+
+  /* SITEWIDE LICENSE
+  $options = artmob_license_build_license_list();
+
+  Not implemented yet.
+
+  $form['license_settings']['sitewide_license'] = array(
+    '#type'     => 'select',
+    '#title'    => 'Set a default site license',
+    '#options'    => $options,
+    '#default_value' => variable_get('sitewide_license', 0 )
+  );
+  */
+
+  if ( module_exists('artmob_citation') ) {
+    $form['license_settings']['citation_compatible'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Make license module compatible with the Artmob Fair Dealing Suite?'),
+      '#description' => t('This will allow licenses to be assigned to indvidual works via the Citation module.'),
+      '#default_value' => variable_get('citation_compatible', 1 ),
+    );
+  }
+
+  return system_settings_form($form);
+}
+
+function artmob_license_view($node, $teaser = FALSE, $page = FALSE) {
+  if ($teaser) {
+    $node->teaser = check_markup($node->teaser, $node->format, FALSE);
+    $node->content['artmob_license'] = array('#value' => theme( 'artmob_license_teaser', $node, $page ));
+  }
+
+  if ($page) {
+    $node->body = check_markup($node->body, $node->format, FALSE);
+    $node->content['artmob_license'] = array('#value' => theme( 'artmob_license_page', $node, $page ));
+  }
+  return $node;
+
+}
+
+function theme_artmob_license_teaser( &$node, $page ) {
+  $content = '';
+  $content .= theme('artmob_license_display_license_info', $node);
+  return $content;
+}
+
+function theme_artmob_license_page( &$node, $page ) {
+  $content = '';
+  $content .= theme('artmob_license_display_license_info', $node);
+  return $content;
+}
+
+/**
+ * Implementation of hook_block().
+ *
+ * Displays the Link in a block.
+ */
+function artmob_license_block($op = 'list', $delta = 0) {
+
+  if ($op == 'list') {
+    $block[0]['info'] = t('License for this item.');
+    return $block;
+  }
+  else if ($op == 'configure') {
+    switch ($delta) {
+      case 0:
+        break;
+    }
+    return $form;
+  }
+  else if ($op == 'save') {
+    switch ($delta) {
+      case 0:
+        break;
+    }
+  }
+  else if ($op == 'view') {
+    switch ($delta) {
+      case 0: /* License for this item */
+        if ( (arg(0) == 'node') and (is_numeric(arg(1)))) {
+          $nid = arg(1);
+          $node = node_load( $nid );
+          if ( $node->licenses ) {
+            $block['subject'] = 'License for this item';
+            $block['content'] = theme('item_license', $node->licenses[0]);
+          }
+        }
+        break;
+    }
+  }
+}
+
+// Implementation of hook_insert().
+function artmob_license_insert($node) {
+  db_query("INSERT INTO {am_license} (nid, uid, version, web_reference, additional_instructions, instruction_format, source, related_license_id, small_icon_path, large_icon_path, license_name, license_description, description_format )
+                               VALUES (%d, %d, '%s', '%s', '%s', %d, '%s', %d, '%s', '%s', '%s', '%s', %d )",
+       $node->nid, $node->uid, $node->version, $node->web_reference, $node->additional_instructions, $node->instruction_format,
+       $node->source, $node->related_license_id, $node->small_icon_path, $node->large_icon_path, $node->title, $node->body, $node->format  );
+}
+
+// Implementation of hook_update().
+function artmob_license_update($node) {
+  watchdog('license', 'inside license update' );
+  db_query("UPDATE {am_license}
+            set uid = %d,
+            version = '%s',
+            web_reference = '%s',
+            additional_instructions = '%s',
+            instruction_format = '%s',
+            source = '%s',
+            related_license_id = %d,
+            small_icon_path = '%s',
+            large_icon_path = '%s',
+            license_name = '%s',
+            license_description = '%s',
+            description_format = %d
+
+            where nid = %d",
+
+            $node->uid,
+            $node->version,
+            $node->web_reference,
+            $node->additional_instructions,
+            $node->instruction_format,
+            $node->source,
+            $node->related_license_id,
+            $node->small_icon_path,
+            $node->large_icon_path,
+            $node->title,
+            $node->body,
+            $node->format,
+            $node->nid);
+}
+
+// Implementation of hook_delete().
+function artmob_license_delete($node) {
+  db_query("delete FROM {am_license}
+             where nid = %d",
+             $node->nid);
+}
+
+
+// Implementation of hook_load().
+function artmob_license_load($node) {
+
+  $t = db_fetch_array(db_query('SELECT * FROM {am_license} WHERE nid = %d', $node->nid));
+  return $t;
+}
+
+
+/**
+ * Implementation of hook_submit().
+ */
+function artmob_license_submit(&$node) {
+  global $user;
+  // Set default values for non-administrators.
+  if (!user_access('administer nodes')) {
+    $node->revision = 1;
+    $node->uid = $user->uid;
+  }
+}
+
+// Implementation of hook_form().
+function artmob_license_form(&$node, $form_values) {
+
+  $type = node_get_types('type', $node);
+
+  $form['license'] = array(
+    '#type'          => 'fieldset',
+    '#title'         => t('license'),
+    '#weight'        => -5,
+    '#collapsible'   => TRUE,
+    '#collapsed'     => FALSE
+  );
+
+  $form['license']['title'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Name'),
+    '#default_value' => $node->title,
+    '#description'   => t("enter the license name"),
+    '#tree'          => 'FALSE',
+    '#rows'          => 1,
+    '#weight'        => -10,
+    '#required'      => TRUE
+  );
+
+  $form['license']['version'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Version'),
+    '#default_value' => $node->version,
+    '#description'   => t("enter the license's version"),
+    '#tree'          => 'FALSE',
+    '#rows'          => 1,
+    '#weight'        => -8,
+    '#required'      => FALSE
+  );
+
+  $form['license']['body'] = array(
+    '#type'          => 'textarea',
+    '#title'         => t('Description'),
+    '#default_value' => $node->body,
+    '#description'   => t("enter the license's description"),
+    '#tree'          => 'FALSE',
+    '#rows'          => 3,
+    '#weight'        => -4,
+    '#required'      => TRUE
+  );
+  $form['license']['format'] = filter_form($node->format, -2);
+
+  $form['license']['source'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Source'),
+    '#default_value' => $node->source,
+    '#description'   => t("enter the license's source"),
+    '#tree'          => 'FALSE',
+    '#rows'          => 1,
+    '#weight'        => -8,
+    '#required'      => FALSE
+  );
+
+  /*
+  $form['license']['web_reference'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Web Reference'),
+    '#default_value' => $node->web_reference,
+    '#description'   => t("web link; links to maintainers site for more details, e.g. creativecommons.ca"),
+    '#tree'          => 'FALSE',
+    '#rows'          => 1,
+    '#weight'        => 0,
+    '#required'      => FALSE
+  );
+
+  $form['license']['additional_instructions'] = array(
+    '#type'          => 'textarea',
+    '#title'         => t('Additional Instructions'),
+    '#default_value' => $node->additional_instructions,
+    '#description'   => t("enter any additional instructions"),
+    '#tree'          => 'FALSE',
+    '#rows'          => 3,
+    '#weight'        => 2,
+  );
+  $form['license']['instruction_format'] = filter_form($node->instruction_format, 4, array('instruction_format') );
+  */
+
+  return $form;
+
+}
+
+/**
+ * Implementation of hook_form_alter().
+ *
+*/
+function artmob_license_form_alter($form_id, &$form) {
+  // boilerplate code to determine the node type of the form
+  if (isset($form['type'])) {
+    $type = $form['type']['#value'];
+  }
+  elseif (isset($form['orig_type'])) {
+      $type = $form['orig_type']['#value'];
+  } 
+  else {
+    return;
+  }
+
+  //This condition will allow the rdolicense radio
+  //button to be defaulted to on for new modules.  Therefore,
+  //whenever a new module/NodeType is added to the project
+  //it will automatically be turned on and have the ability
+  //to have licenses
+  if (($form['#node_type']->type == 'license') || ($type == 'license')) {
+    $enabled = 0;
+    $rdo_license_type = ARTMOB_LICENSE_MODE_NONE;
+  }
+  else{
+    //if citation compatible is turned on then one cannot have licenses per node
+    //OLD -
+    //if ( ARTMOB_LICENSE_CITATION_COMPATIBLE ) {
+    $enabled = variable_get( 'rdo_license_options_'.$type, ARTMOB_LICENSE_MODE_NONE ) == ARTMOB_LICENSE_MODE_LICENSE_ONLY;
+    $rdo_license_type = variable_get( 'rdo_license_options_'.$type, ARTMOB_LICENSE_MODE_NONE );
+  }
+
+  switch ($form_id) {
+    // Form addition that appears on Content Types page. Drupal saves as a setting.
+    case 'node_type_form':
+      if ($form['#node_type']->type != 'license') {
+        /*OLD -
+        $form['artmob']['rdolicense'] = array(
+          '#type' => 'radios',
+          '#title' => t('Assign Licenses'),
+          '#default_value' => $enabled,
+          '#options' => array(0 => t('Disabled'), 1 => t('Enabled')),
+          '#description' => t('Should this node allow users to assign licenses?'),
+          '#weight'        => -6,
+          '#disabled'   => variable_get('citation_compatible', 0 )
+        );
+        */
+        $form['artmob']['rdo_license_options'] = array(
+          '#type' => 'radios',
+          '#title' => t('License Options'),
+          '#default_value' => $rdo_license_type,
+          '#options' => array(
+                        ARTMOB_LICENSE_MODE_FULL => t('Add full citations to this content, including the citation, license, attribution tabs and contributors'),
+                        ARTMOB_LICENSE_MODE_LICENSE_ONLY => t('Add licenses and contributors'),
+                        ARTMOB_LICENSE_MODE_NONE => t('Do not add citations or licenses to this content')
+                        ),
+          '#description' => t('Should this node allow users to assign licenses and use citations?'),
+          '#weight'        => -6,
+        );
+
+        //Build the interface to match the fields that are in the database for this $type.
+      }
+      break;
+
+    // Form addition to all Enabled node types.  A node is enabled using
+    // rdolicense radio button that we added to the content types page
+    // in the hook_form_alter hook above.
+    case $type .'_node_form':
+
+      //old - if ($enabled) {
+      if ( $rdo_license_type == ARTMOB_LICENSE_MODE_LICENSE_ONLY ){
+
+        $form['license'] = array(
+          '#type' => 'fieldset',
+          '#tree' =>  FALSE,
+          '#title' => 'license',
+          '#collapsible'  => TRUE,
+          '#collapsed'  => FALSE,
+          '#weight' => -4,
+        );
+
+        $form['license']['widgetlicensecontributor1'] = array(
+          '#type' => 'artmob_license_contributor_widget',
+          '#title' => '',
+          '#process' => array('artmob_license_contributor_widget_expand' => array($form['#node']) )
+        );
+      }
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ *
+ */
+function artmob_license_nodeapi(&$node, $op, $teaser, $page) {
+  switch ($op) {
+    case 'submit':
+      break;
+    case 'update':
+      $bupdate = TRUE;
+
+      //Fall through, with flag.  Therefore with every update we delete
+      //the old associated records and then resave the new ones
+
+    case 'delete':
+
+      if ( $node->type <> 'license') {
+//        $sql = sprintf( 'DELETE FROM {PC_NodeLink} WHERE FromNode=%d AND ToType="%s"', $node->nid, "license" );
+//        db_query('DELETE FROM {PC_NodeLink} WHERE FromNode=%d AND ToType="%s"', $node->nid, "license");
+      }
+
+      if (!$bupdate) {
+        break;
+      }
+
+    case 'insert':
+
+      if ( $node->type <> 'license') {
+        //db_query("INSERT INTO {PC_NodeLink} (FromNode, ToNode, FromType, ToType, LinkIndex, LinkBlob ) VALUES (%d,%d,'%s','%s',%d,'%s')", $node->nid, $node->lstlicense, $node->type, 'license', 1, '' );
+      }
+      break;
+    case 'load':
+      //if (variable_get('rdolicense_'. $node->type, 0)) {
+
+//      $sql = sprintf( "SELECT ToNode, LinkBlob FROM {PC_NodeLink} WHERE FromNode=%d AND ToType='%s' AND LinkIndex = %d",$node->nid,'license', $counter );
+//        $oResult = db_query("SELECT ToNode, LinkBlob FROM {PC_NodeLink} WHERE FromNode=%d AND ToType='%s'",$node->nid,'license');
+//        while ($oRow = db_fetch_object($oResult)) {
+//          $aLoad['lstlicense'][] = $oRow->ToNode;
+//        }
+        //return $aload;
+      //}
+      break;
+    case 'prepare':
+      break;
+    case 'view':
+      break;
+    case 'update':
+      break;
+    case 'delete revision':
+      break;
+    case 'submit':
+      break;
+  }
+}
+
+
+// Implementation of hook_help().
+function artmob_license_help($section) {
+  switch ($section) {
+    case 'admin/help#description':
+      return t('Enables the creation of licenses.');
+      break;
+    case 'admin/modules#description':
+      return t('Enables the creation of licenses.');
+      break;
+    case 'admin/node/add#license':
+      return t('A license. Use this page to add a license.');
+      break;
+  }
+}
+
+function artmob_license_build_license_list() {
+  $return = array();
+  //$return[0] = 'None';  
+  $return[0] = sprintf(ARTMOB_LICENSE_NO_LICENSE_TEXT,'item');
+  $result = db_query("SELECT a.*, n.* FROM {am_license} a LEFT JOIN {node}
+                      n on a.nid = n.nid WHERE status = 1
+                      ORDER BY n.title");
+
+  while ( $data = db_fetch_object($result)) {
+    $return[$data->nid] = $data->title;
+  }
+  return $return;
+
+}
+
+function artmob_license_build_contributor_list( $add_none = False, $none_text = 'None' ) {
+  if ( module_exists( 'artmob_contributor' ) ) {
+    //Changed to fix L9
+    //$contributor_query = db_query( "SELECT * FROM {am_contributor}");
+    $contributor_query = db_query( "SELECT distinct c.contributor_id, last_name, first_name FROM {am_citation_license} l
+                                    left join {am_contributor} c on l.contributor_id = c.contributor_id
+                                    where NOT(IsNull(c.contributor_id))
+                                    order by last_name" );
+  }
+  else {
+    //Changed to fix L9
+    //$contributor_query = db_query( "SELECT key_name as last_name, am_copyright_holders.* FROM {am_copyright_holders}");
+    $contributor_query = db_query( "SELECT distinct c.contributor_id, first_name, key_name as last_name FROM {am_citation_license} l
+                                    left join {am_copyright_holders} c on l.contributor_id = c.contributor_id
+                                    where NOT(IsNull(c.contributor_id))
+                                    order by key_name" );
+  }
+
+  $license_contributors = array();
+  if ( $add_none ) {
+    $license_contributors[0] = $none_text;
+  }
+
+  while ($contributor_row = db_fetch_object($contributor_query)) {
+    $cid = $contributor_row->contributor_id;
+        $license_contributors[$cid] = $contributor_row->first_name .' '. $contributor_row->last_name;
+  }
+
+  return $license_contributors;
+
+}
+
+function artmob_license_add_license( &$form, $node ) {
+  $options = artmob_license_build_license_list();
+  $form['nid'] = array(
+    '#type' => 'hidden',
+    '#value' => $node->nid
+  );
+
+  $form['license'] = array(
+    '#type' => 'fieldset',
+    '#tree' =>  FALSE,
+    '#title' => 'license',
+    '#collapsible'  => TRUE,
+    '#collapsed'  => FALSE,
+    '#weight' => -4,
+  );
+
+  $form['license']['lstlicense'] = array(
+      '#type'     => 'select',
+      '#title'    => 'license',
+      '#options'    => $options,
+  );
+  //'#default_value' => $form['#node']->lstlicense
+
+  $form['license']['widgetcontributor1'] = array(
+    '#type' => 'artmob_contributor_widget',
+    '#title' => '',
+    '#process' => array('artmob_contributor_widget_expand' => array($node) )
+  );
+
+  $form['submit'] = array(
+    '#type'     => 'submit',
+    '#value'    => t('Save'),
+    '#submit'   => True,
+    '#weight'   => 2
+  );
+
+ return $form;
+}
+
+function artmob_license_add_license_submit($form_id, $form_values) {
+  if ( $form_values['op'] == 'Save' ) {
+
+  }
+}
+
+function artmob_license_get_id_from_nid( $nid ) {
+  $result = db_result( db_query( "SELECT license_id from {am_license}
+                                  WHERE nid = %d", $nid ));
+  return $result;
+}
+
+function artmob_license_get_license_array_for_node( $nid ) {
+  //query am_node_license to get all of the licenses
+  //for this node.  It is further keyed on the contributor ids
+  //so that we can get
+  $result = array();
+  $contributor = array();
+  if ( module_exists( 'artmob_contributor' ) ) {
+    $query = db_query( "SELECT r.widget_name, r.sequence, r.contributor_id as contributor_id, r.contributor_id as id,r.license_id,
+                         r.node_nid as nid, r.node_nid as node_nid, c.nid as contributor_nid,c.first_name as first_name,
+                         c.last_name as last_name,c.first_name as firstname, c.last_name as lastname,
+                         l.nid as license_nid, l.source, l.version, n.title,
+                         v.body, v.format, cite.work_type
+                         from {am_node_license} r
+                         left join {am_contributor} c on r.contributor_id = c.contributor_id
+                         left join {am_license} l on r.license_id = l.license_id
+                         left join {node} n on l.nid = n.nid
+                         left join {node_revisions} v on n.vid = v.vid
+                         left join {am_citation} cite on l.nid = cite.nid
+                         where r.node_nid = %d
+                         order by license_id, sequence", $nid );
+  } 
+  else {
+    $query = db_query( "SELECT r.widget_name, r.sequence,  r.contributor_id as contributor_id, r.contributor_id as id,r.license_id,
+                         r.node_nid as nid, r.node_nid as node_nid, c.contributor_nid as contributor_nid,c.first_name as first_name,
+                         c.key_name as last_name,c.first_name as firstname, c.key_name as lastname,
+                         l.nid as license_nid, l.source, l.version, n.title,
+                         v.body, v.format, cite.work_type
+                         from {am_node_license} r
+                         left join {am_copyright_holders} c on r.contributor_id = c.contributor_id
+                         left join {am_license} l on r.license_id = l.license_id
+                         left join {node} n on l.nid = n.nid
+                         left join {node_revisions} v on n.vid = v.vid
+                         left join {am_citation} cite on l.nid = cite.nid
+                         where r.node_nid = %d
+                         order by license_id, sequence", $nid );
+  }
+
+  while ($row = db_fetch_array($query)) {
+    $license = array();
+    $license['license_id'] = $row['license_id'];
+    $license['license_nid'] = $row['license_nid'];
+    $license['node_nid'] = $row['node_nid'];
+    $license['source'] = $row['source'];
+    $license['version'] = $row['version'];
+    $license['title'] = $row['title'];
+    $license['name'] = $row['title'];
+    $license['description'] = $row['body'];
+    $license['format'] = $row['format'];
+    $license['work_type'] = $row['work_type'];
+
+    $contributor[$row['license_id']][$row['contributor_id']] = $row;
+    $license['contributors'] = $contributor[$row['license_id']];
+    $result[$row->license_id]= $license;
+  }
+  return $result;
+}
+
+function theme_artmob_license_site_link($link, $external=FALSE, $name=NULL, $title=NULL) {
+  if (!$link) { 
+    return; 
+  }
+
+  if (strpos($link, 'http://') === FALSE) {
+    $link = 'http://'. $link;
+  }
+
+  $attributes = array();
+
+  if ($external) {
+    $attributes['rel'] = 'external';
+
+    if (variable_get('display_external_links', 0) == 1) {
+      $attributes['target'] = '_blank';
+    }
+  }
+
+  if ($title) {
+    $attributes['title'] = $title;
+  }
+
+  $name = $name ? $name : $link;
+
+  return l($name, $link, $attributes);
+
+}
+

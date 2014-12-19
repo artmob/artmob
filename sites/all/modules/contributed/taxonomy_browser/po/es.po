@@ -1,0 +1,203 @@
+# Spanish translation of Drupal (taxonomy_browser.module)
+# Manuel Garcia <manuel.drupal@gmail.com>, 2008.
+msgid ""
+msgstr ""
+"Project-Id-Version: Spanish translation of Drupal (taxonomy_browser.module) \n"
+"POT-Creation-Date: 2008-04-23 12:17-0400\n"
+"PO-Revision-Date: 2008-05-06 04:23+0200\n"
+"Last-Translator: Manuel Garcia <manuel.drupal@gmail.com>\n"
+"Language-Team: SPANISH\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms:  nplurals=2; plural=(n != 1);\n"
+"X-Generator: KBabel 1.11.4\n"
+
+#: taxonomy_browser.module:24;213 taxonomy_browser5.module:30 taxonomy_browser.install:18 taxonomy_browser.info:0;0
+msgid "Taxonomy Browser"
+msgstr "Navegador de Categorías"
+
+#: taxonomy_browser.module:25 taxonomy_browser5.module:31
+msgid "Set usage guidelines and included vocabularies."
+msgstr "Seleccionar directrices y vocabularios a incluir."
+
+#: taxonomy_browser.module:34 taxonomy_browser5.module:22
+msgid "Category Browser"
+msgstr "Navegador de Categorías"
+
+#: taxonomy_browser.module:37
+msgid "Find content on your own terms."
+msgstr "Encuentra contenido en tus propios términos"
+
+#: taxonomy_browser.module:53 taxonomy_browser5.module:50
+msgid "An interface for viewing content grouped by arbitrary taxonomy terms."
+msgstr "Una interfaz para ver contenido agrupado por terminos de taxonomía arbitrarios."
+
+#: taxonomy_browser.module:57
+msgid "<a href=\"!url\">Taxonomy Browser settings</a>"
+msgstr "<a href=\"!url\">Opciones del Navegador de Categorías</a>"
+
+#: taxonomy_browser.module:84 taxonomy_browser5.module:65
+msgid "You do not have the node_type_filter module installed. This means that the \"restrict search by content type\" option will not be available on the category browser page."
+msgstr "No tiene el modulo node_type_filter instalado. Esto significa que la opción \"restringir busqueda por tipo de contenido\" no estará disponible en la página del navegadorde categorías."
+
+#: taxonomy_browser.module:88 taxonomy_browser5.module:69
+msgid "Guidelines"
+msgstr "Directrices"
+
+#: taxonomy_browser.module:92 taxonomy_browser5.module:73
+msgid "Instructions which should appear at top of the category browser main page"
+msgstr "Instrucciones que aparecerán encima de la página principal del navegador de categorías"
+
+#: taxonomy_browser.module:96 taxonomy_browser5.module:77
+msgid "Selection type"
+msgstr "Tipo de selección"
+
+#: taxonomy_browser.module:100 taxonomy_browser5.module:81
+msgid "This option determines whether the user will see a selection list or check boxes."
+msgstr "Esta opción determina si el usuario verá una lista de selección o check boxes"
+
+#: taxonomy_browser.module:104 taxonomy_browser5.module:85
+msgid "Show node count"
+msgstr "Mostrar contador de nodos"
+
+#: taxonomy_browser.module:107 taxonomy_browser5.module:88
+msgid "Do you want to display the count of nodes tagged with each term? This can be SQL-intensive."
+msgstr "Desea mostrar el contador de nodos usados para cada término? Esto puede ser intensivo en SQL."
+
+#: taxonomy_browser.module:111 taxonomy_browser5.module:92
+msgid "Show unused terms"
+msgstr "Mostrar términos sin usar"
+
+#: taxonomy_browser.module:114 taxonomy_browser5.module:95
+msgid "Do you want to display the term if no nodes are tagged with that term? This requires \"Show node count\" to be selected."
+msgstr "Desea mostrar el término si no hay nodos usando ese término? Esto requiere que \"Mostrar contador de nodos\" esté seleccionado."
+
+#: taxonomy_browser.module:118
+msgid "Allow child terms to be included"
+msgstr "Permitir que los terminos hijos sean incluidos"
+
+#: taxonomy_browser.module:121
+msgid "Do you want the user to see a check box to include child terms (sub-terms)?"
+msgstr "Desea que el usuario vea una check box para incluir terminos hijos (sub-terminos)?"
+
+#: taxonomy_browser.module:125
+msgid "Requires permission"
+msgstr "Requiere permiso"
+
+#: taxonomy_browser.module:128
+msgid "Do you want to require permission to see the browser page?"
+msgstr "Desea requerir permiso para ver la pagina de navegación?"
+
+#: taxonomy_browser.module:137 taxonomy_browser5.module:103
+msgid "Included Vocabularies"
+msgstr "Vocabularios incluidos"
+
+#: taxonomy_browser.module:141 taxonomy_browser5.module:108
+msgid "Select the vocabularies the user can select from on the category browser page."
+msgstr "Seleccione los vocabularios entre los que el usuario podrá seleccionar en la página del navegador de categorías."
+
+#: taxonomy_browser.module:151 taxonomy_browser5.module:118
+msgid "Omit content types"
+msgstr "Omitir tipos de contenido"
+
+#: taxonomy_browser.module:156 taxonomy_browser5.module:123
+msgid "If any of these types is selected, it will be omitted from the list on the \"Category Browser\" page."
+msgstr "Si cualquiera de estos tipos es seleccionado, será omitido de la lista en la página \"Navegador de Categorías\"."
+
+#: taxonomy_browser.module:166
+msgid "\"Show unused\" requires \"count nodes.\""
+msgstr "\"Mostrar sin usar\" requiere \"contador de nodos.\""
+
+#: taxonomy_browser.module:194 taxonomy_browser5.module:150
+msgid "Scope"
+msgstr "Alcance"
+
+#: taxonomy_browser.module:213
+msgid "Unknown content type found: @type"
+msgstr "Tipo de contenido desconocido encontrado: @type"
+
+#: taxonomy_browser.module:227 taxonomy_browser5.module:176
+msgid "Restrict search by content type"
+msgstr "Restringir busqueda por tipo de contenido"
+
+#: taxonomy_browser.module:232
+msgid "Not selecting any type is the same as selecting all types. The total count of all types is !count."
+msgstr "No seleccionar ninguno es lo mismo que seleccionarlos todos. El numero total de tipos es !count."
+
+#: taxonomy_browser.module:238 taxonomy_browser5.module:184
+msgid "Items containing"
+msgstr "Artículos que contengan"
+
+#: taxonomy_browser.module:239 taxonomy_browser5.module:185
+msgid "<strong>all</strong> terms"
+msgstr "<strong>todos</strong> los términos"
+
+#: taxonomy_browser.module:239 taxonomy_browser5.module:185
+msgid "<strong>any</strong> terms"
+msgstr "<strong>cualquiera</strong> de los términos"
+
+#: taxonomy_browser.module:250
+msgid "Include Children"
+msgstr "Incluir Hijos"
+
+#: taxonomy_browser.module:256
+msgid "Automatically include children (sub-terms)"
+msgstr "Automáticamente incluir hijos (sub-terminos)"
+
+#: taxonomy_browser.module:257
+msgid "If you select a term with children (sub-terms), do you want those child terms automatically included in the search? This requires that \"Items containing\" be \"any.\""
+msgstr "Si seleccona un termino con hijos (sub-terminos), desea esos hijos automaticamente incluidos en la busqueda? Esto requiere que \"Articulos que contengan\" sea \"cualquiera.\""
+
+#: taxonomy_browser.module:269 taxonomy_browser5.module:193
+msgid "Categories"
+msgstr "Categorías"
+
+#: taxonomy_browser.module:326
+msgid "\"!name\" is used for: !types."
+msgstr "\"!name\" es utilizado para: !types"
+
+#: taxonomy_browser.module:339 taxonomy_browser5.module:239
+msgid "Search"
+msgstr "Buscar"
+
+#: taxonomy_browser.module:354 taxonomy_browser5.module:254
+msgid "You must select the vocabularies to display from the <a href=\"%link\">taxonomy browser settings page</a>."
+msgstr "Tiene que seleccionar los vocabularios a mostrar en la <a href=\"%link\">página de opciones del navegador de categorías</a>."
+
+#: taxonomy_browser.module:373
+msgid "You must use \"Items containing <strong>any</strong>\" to include child terms."
+msgstr "Tiene que usar \"Artículos que contengan <strong>cualquiera</strong>\" para incluir terminos hijos."
+
+#: taxonomy_browser.module:377 taxonomy_browser5.module:269
+msgid "You must select at least one category in your search."
+msgstr "Ha de seleccionar al menos una categoría en su busqueda."
+
+#: taxonomy_browser.module:384 taxonomy_browser5.module:275
+msgid "No posts match your criteria."
+msgstr "No hay artículos que conicidan con el criterio de busqueda seleccionado."
+
+#: taxonomy_browser.module:510 taxonomy_browser5.module:373
+msgid "<p>You may select multiple items from each list by holding down the <code>Ctrl</code> (Mac: <code>command</code>) key while left-clicking each item.</p>"
+msgstr "<p>Puede seleccionar múltiples términos de cada lista manteniendo pulsado la tecla <code>Ctrl</code> (Mac: <code>command</code>) mientras hace clic con el botón izquierdo en cada término.</p>"
+
+#: taxonomy_browser.module:68
+msgid "access taxonomy browser"
+msgstr "acceder al navegador de categorías"
+
+#: taxonomy_browser.module:0
+msgid "taxonomy_browser"
+msgstr "navegador_categorias"
+
+#: taxonomy_browser5.module:156
+msgid "all"
+msgstr "todos"
+
+#: taxonomy_browser.install:18
+msgid "Taxonomy Browser module uninstalled by uid @user."
+msgstr "Navegador de Taxonomías desinstalado por @user."
+
+#: taxonomy_browser.install:19
+msgid "The Taxonomy Browser module has been uninstalled."
+msgstr "El Navegador de Taxonomías ha sido desinstalado."
+

@@ -1,0 +1,37 @@
+<?php
+// $Id: artmob_articles install,v 1.0 2007/05/16 01:30:00 drumm Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function artmob_articles_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      db_query("CREATE TABLE {am_articles} (
+        cid integer unsigned auto_increment primary key,
+        vid int unsigned NOT NULL default '0',
+        nid int unsigned NOT NULL default '0'
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+      db_query("CREATE TABLE {am_articles_association} (
+        cid integer unsigned auto_increment primary key,
+        nid int unsigned NOT NULL default '0',
+        article_nid int unsigned NOT NULL default '0',
+        node_type text
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+
+      break;
+    case 'pgsql':
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function artmob_articles_uninstall() {
+  db_query('DROP TABLE {am_articles}');
+}
+?>

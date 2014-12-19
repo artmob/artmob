@@ -1,0 +1,63 @@
+<?php
+// $Id: imageapi.install,v 1.3.2.3 2009/01/06 00:19:08 drewish Exp $
+
+/**
+ *  Implementation of hook_requirements().
+ */
+define('IMAGEAPI_MINIMUM_PHP', '5.1');
+define('IMAGEAPI_RECOMMENDED_PHP', '5.2');
+
+function imageapi_requirements($phase) {
+  $requirements = array();
+  // Ensure translations don't break at install time
+  $t = get_t();
+
+  // Check this at runtime rather than install time because the order of
+  // installation doesn't take dependencies into account. ImageAPI may have
+  // been installed by not loaded and if we report a requirement error
+  // because we can't find its function or no toolkit is enabled modules that
+  // depend on us will still be enabled but will have a missing dependency.
+  // Seems like a better idea to let everything get enabled and then inform
+  // them of the problem.
+  if ($phase == 'runtime') {
+    if (count(imageapi_get_available_toolkits()) == 0) {
+      $requirements['imageapi_toolkits'] = array(
+        'title' => $t('ImageAPI Toolkit'),
+        'value' => $t('No ImageAPI toolkits available'),
+        'severity' => REQUIREMENT_ERROR,
+        'description' => $t('ImageAPI requires a Toolkit such as ImageAPI GD or ImageAPI ImageMagick to function. Goto !modules and enable one of them.', array(
+'!modules' => l('admin/build/modules', 'admin/build/modules'))),
+      );
+    }
+  }
+
+  if (version_compare(phpversion(), IMAGEAPI_RECOMMENDED_PHP) < 0) {
+     $requirements['imageapi_php'] = array(
+      'title' => $t('ImageAPI PHP'),
+      'description' => $t('ImageAPI recommends at least PHP %version. Older versions of PHP are not supported but may function.', array('%version' => IMAGEAPI_RECOMMENDED_PHP)),
+      'severity' => REQUIREMENT_WARNING,
+    );
+  }
+  if (version_compare(phpversion(), IMAGEAPI_MINIMUM_PHP) < 0) {
+    $requirements['imageapi_php'] = array(
+      'title' => $t('ImageAPI PHP'),
+      'description' => $t('ImageAPI requires at least PHP %version.', array('%version' => IMAGEAPI_MINIMUM_PHP)),
+      'severity' => REQUIREMENT_ERROR,
+    );
+  }
+  
+  return $requirements;
+}
+
+
+function imageapi_install() {
+}
+
+function imageapi_uninstall() {
+}
+
+function imageapi_enable() {
+}
+
+function imageapi_disable() {
+}

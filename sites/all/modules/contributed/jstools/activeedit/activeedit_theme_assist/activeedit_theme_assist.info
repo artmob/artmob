@@ -1,0 +1,11 @@
+; $Id: activeedit_theme_assist.info,v 1.2 2007/06/18 22:53:46 dww Exp $
+name =  Activeedit Theme Assist
+description = Helper module for theming Active Edit selectors.
+package = Javascript tools
+dependencies = activeedit
+
+; Information added by drupal.org packaging script on 2008-11-07
+version = "5.x-1.2"
+project = "jstools"
+datestamp = "1226023222"
+

@@ -1,0 +1,25 @@
+li.activemenu-processed {
+  cursor: pointer;
+  cursor: hand;
+  min-width: 0; /* Harmless hack to give IE7 hasLayout */
+}
+
+li.activemenu-processed ul {
+  cursor: default;
+}
+
+li.activemenu-processed.expanded {
+  background: transparent url(../minus.png) no-repeat 0px .35em;
+}
+
+li.activemenu-processed.collapsed {
+  background: transparent url(../plus.png) no-repeat 0px .35em;
+}
+
+li.activemenu-processed.loading {
+  background: transparent url(../status-active.gif) no-repeat 0px .35em;
+}
+
+li.collapsed ul {
+  display: none;
+}

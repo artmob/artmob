@@ -1,0 +1,404 @@
+<?php
+
+/**
+ * Implementation of hook_help().
+ */
+function todos_help($section) {
+  switch ($section) {
+    case 'admin/help#todos':
+      $output = '<p>'. t('Create dynamic todo lists') .'</p>';
+      return $output;
+  }
+}
+
+/**
+ * Implementation of hook_node_info().
+ */
+function todos_node_info() {
+  return array(
+    'todos' => array(
+      'name' => t('Todo List'),
+      'module' => 'todos',
+      'description' => t("A todo list."),
+      'title_label' => t('List Title'),
+      'has_body' => FALSE,
+    )
+  );
+}
+
+/**
+ * hook_menu - incremental update needs its own entry point
+ */
+function todos_menu($may_cache) {
+	$items = array();
+	if ($may_cache) {
+		$items[] = array(
+	      'path' => 'todos/todos_update_js',
+	      'callback' => '_todos_update_js',
+	      'access' => TRUE,
+	      'type' => MENU_CALLBACK,
+		);
+	}
+	return $items;
+}
+
+/**
+ * Implementation of hook_access().
+ */
+function todos_access($op, $node) {
+  if ($op == 'create') {
+    return user_access('create todo lists');
+  }
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function todos_perm() {
+  return array('create todo lists');
+}
+
+function todos_form ($node) {
+//	drupal_set_message( "poll_form: node: " . count($node) . ", form_values: " . count( $form_values ) );
+  $type = node_get_types('type', $node);
+  $form['title'] = array(
+    '#type' => 'textfield',
+    '#title' => check_plain($type->title_label),  
+    '#required' => TRUE,
+    '#default_value' => $node->title,
+    '#weight' => -1,
+  );
+  
+  // items wrapper
+ 	$form['items'] = array (
+  	  '#type' => 'item',
+  	  '#theme' => 'todos_items_subform',
+	    '#ahah_bindings' => array( 
+	    	array (
+	    		'selector' => 'input.todos_item_remove',
+	    		'event' => 'click',
+	    		'wrapper' => 'todos_items_wrapper',
+	  			'path' => 'todos/todos_update_js',
+	    	),
+	    	array (
+	    		'selector' => 'select.todos_item_weight',
+	    		'event' => 'change',
+	    		'wrapper' => 'todos_items_wrapper',
+	  			'path' => 'todos/todos_update_js',
+	    	),
+	    ),	    	
+	);
+	// actually build the widget and put it in the wrapper
+//  $form['items'] += todos_items_subform( $node, $form_values );
+	if( module_exists ('ahah_forms') ) {
+    $form['items'] += dynamic_subform_get_embedded('todos_node_form', 'todos_items_subform', $node);
+	}
+	else { // for non-ahah	
+    $form['items'] += todos_items_subform ($node);
+	}
+//  $form['#multistep'] = TRUE;
+  
+  return $form;  
+}
+
+/**
+ * @node: initial values coming in from db
+ * @form_values: sanitized posted form values
+ * @pass: set by dynamic_subform_get: 
+ * 		validate_pass: building to sanitize $_POST -  never use #value.
+ * 		render_pass: building to render to html - ok to use #value.
+ */
+function todos_items_subform($node, $form_values=null, $pass=null) {
+	if( is_array( $node ) ) drupal_set_message( "todos_items_subform: missing node!");
+	if( !empty($form_values) && !is_array($form_values)) drupal_set_message( "todos_items_subform: bad form_values" );
+
+	// get the pre-existing items - can be in either $edit or $node
+	$items = _todos_extract_items($form_values, $node);
+//		drupal_set_message( "Extracted item Count: " . count($items) );
+	// process add and remove commands - modifies $items
+	$items = _todos_process_commands($form_values, $items);
+//		drupal_set_message( "After commands item Count: " . count($items) );
+	// expand the $items array into form elements - modifies $element
+	$todos = _todos_expand_items($items);
+	// add a control block for adding new items - modifies $element
+//	drupal_set_message( "Add controls " . print_r( $form_values, true ) .' : '. print_r( $multistep, true ));
+	$todos += _todos_add_control($form_values, $pass);
+	
+	return $todos;
+}
+
+/**
+ * Extract the items from the form_values array or
+ * If post is empty, we may be doing an edit -> load into node
+ * Or fresh add with no todoss
+ */
+function _todos_extract_items(&$edit, $node) {
+  $items = array();
+	if( is_array( $edit['items'] ) ) {
+		$items = $edit['items'];
+	}
+	elseif( is_array($node->items) ) {
+		// todoss have been loaded into node (by apinode:load)
+		$items = $node->items;
+		$edit['next_id'] = $node->next_id;
+	}
+	return $items;
+}
+
+/**
+ * Modify the items array based on commands in the $edit
+ */
+function _todos_process_commands( &$edit, $items ) {
+	if( is_array($edit) && count($edit) > 0 ) {
+		// process the potention addition
+    if( $edit['op'] == t( 'Add New Item' ) ) {
+			$new_item = $edit['new_item'];
+			if( $new_item['text'] ) { // we are good to do add
+					$item_id = $edit['next_id']; // get distinct id for item 
+          $edit['next_id'] = $edit['next_id'] + 1;
+					$items[$item_id] = $new_item;
+					// remove from params, so it doesn't show up on the form (consume), but only on successful add
+					unset( $edit['new_item'] );
+			}
+    }
+		// now process the removes
+		foreach( $items as $item_id => $item ) {
+//		  drupal_set_message( "ckecking item $item_id : ". $item['remove'] );
+			if( isset( $item['remove'] ) && $item['remove'] == 1 )  {
+				unset( $items[$item_id] );
+			}
+		}
+	}
+	return $items;
+}
+
+/**
+ * Expand the items into form elements
+ */
+function _todos_expand_items( $items ) {
+	$element['items'] = array (
+	  	'#tree' => TRUE,
+	    '#id' => 'todos_items',
+	    '#theme' => 'todos_items',
+	);
+	foreach( $items as $item_id => $item ) {
+		$element['items'][$item_id] = array(
+		  	'#tree' => TRUE,
+		);
+		$element['items'][$item_id]['text'] = array(
+		  	'#type' => 'textfield',
+		  	'#default_value' => $item['text'],
+		);
+		$element['items'][$item_id]['weight'] = array(
+		  	'#type' => 'weight',
+		  	'#default_value' => $item['weight'],
+		    '#attributes' => array( 'class' => 'todos_item_weight' ),
+		);
+		$element['items'][$item_id]['remove'] = array(
+		  	'#type' => 'checkbox',
+		  	'#default_value' => $item['remove'],
+		    '#attributes' => array( 'class' => 'todos_item_remove' ),
+		);
+	}
+	return $element;
+}
+
+/**
+ * control to add item to todos
+ * @param $edit: values posted from the form
+ * @param $pass: 
+ *  	validate_pass: building to sanitize $_POST -  never use #value, only #default_value.
+ * 		render_pass: building to render to html - ok to use #value. 
+ */
+function _todos_add_control($edit, $pass=null) {
+	$element['new_item'] = array (
+	    '#type' => 'fieldset',
+	    '#title' => t( 'Add Item' ),
+	    '#theme' => 'todos_new_item_control',
+	    '#tree' => TRUE,
+	);
+	$element['new_item']['text'] = array (
+	    '#type' => 'textfield',
+	    '#title' => t( 'Text' ),
+	    '#size' => 40,
+	    '#maxlength' => 128,
+	);
+	$element['new_item']['weight'] = array (
+	    '#type' => 'weight',
+	    '#title' => t( 'Weight' ),
+	    '#delta' => 10, 
+	);
+	if ($pass=='render_pass') {
+		$element['new_item']['text']['#value'] = $edit['new_item']['text'];
+		$element['new_item']['weight']['#value'] = empty($edit['new_item']['weight']) ? 0 : $edit['new_item']['weight'];
+	}
+	$element['new_item']['add_item_button'] = array (
+	    '#type' => 'button',
+	    '#value' => t( 'Add New Item' ),
+	    '#id' => 'todos_add_item_button', 
+	    '#ahah_bindings' => array ( 
+    		array( 
+		    	'wrapper' => 'todos_items_wrapper',
+	 				'event' => 'click',
+	  			'path' => 'todos/todos_update_js',
+  			),
+  		),
+	);
+	$element['next_id'] = array( 
+    '#type' => 'hidden',
+    '#value' => isset( $edit['next_id'] ) ? $edit['next_id'] : 0,
+  );	
+	
+	return $element;
+}
+
+// ************************************************************************************
+// DATABASE INTERACTION FUNCTIONS
+// ************************************************************************************
+
+function todos_load($node) {
+//  $ids = array();
+	$additions['items'] = array();
+	$result = db_query(	'SELECT item_id, ttext, torder ' .
+	                   	'FROM {todos} ' .
+	                   	'WHERE nid = %d '.
+						  			 	'ORDER BY torder', $node->nid);
+	while ($row = db_fetch_array($result)) {
+		$item_id = $row['item_id'];
+		$ids[] = $item_id;
+		$additions['items'][$item_id] = array (
+	    	'text' => $row['ttext'],
+	    	'weight' => $row['torder'],
+		);
+	}
+	$additions['next_id'] = !empty($ids) ? max( $ids ) + 1 : 0;
+	return $additions;
+}
+
+function todos_update($node) {
+  // keep it simple
+  todos_delete($node);
+  todos_insert($node);
+}
+
+// sort items by weight & then alphbetically by item text
+// help map between order(node) and weight(form)
+function todos_sort($a, $b) {
+	if ($a['weight'] == $b['weight']) {
+		return strcmp( $a['text'], $b['text'] );
+	}
+	return ($a['weight'] < $b['weight']) ? -1 : 1;
+}
+
+function todos_insert($node) {
+  if( !empty( $node->items ) ) { 
+	  uasort( $node->items, 'todos_sort' );
+	  foreach ($node->items as $item_id => $item) {
+	    if ( !empty($item['text']) ) {
+	      db_query( "INSERT INTO {todos} (nid, item_id, ttext, torder) ".
+	      			"VALUES (%d, %d, '%s', %d)", 
+	      			$node->nid, $item_id, $item['text'], $i++);
+	    }
+	  }
+  }
+}
+
+function todos_delete($node) {
+    db_query("DELETE FROM {todos} WHERE nid = %d", $node->nid);
+}
+
+// ************************************************************************************
+// THEMING FUNCTIONS
+// ************************************************************************************
+
+
+function todos_view(&$node, $teaser, $page, $block) {
+  $output .= theme( 'todos_items_view', $node->items );
+  $node->content['body'] = array(
+      '#value' => $output,
+  );
+  return $node;
+}
+
+function theme_todos_items_view($items) {
+  if( !empty( $items ) ) {
+	  uasort( $items, 'todos_sort' );
+		foreach ($items as $item_id => $item) {
+			$row = array();
+			$row[] = $item['text'];
+			$rows[] = array( 'data' => $row, 'class' => 'sortableitem' );
+		}
+		if( count($rows) > 0 ) {
+			$header = array( t('Todo') );
+			$output = theme('table', $header, $rows, array( 'class' => 'sortable' ) );
+		}
+		return $output;
+  }
+}
+
+function theme_todos_items_subform($form) {
+  $group = '<div id="todos_items_wrapper">';
+  $group .= drupal_render( $form );
+  $group .= '</div>'; 
+  $output .= theme('fieldset', array(
+		'#title' => t('Todo List'), 
+		'#children' => $group,
+    '#collapsible' => true, 
+		'#collapsed' => false,
+  ));
+  return $output;
+}
+
+/**
+ * Theme the add new items subform as a single row.
+ */
+function theme_todos_new_item_control(&$form) {
+	$rows = array();
+	$row = array();
+	$row[] = drupal_render($form['text']);
+	$row[] = drupal_render($form['weight']);
+	$rows[] = $row;
+	$output = theme('table', array(), $rows);
+	$output .= drupal_render($form);
+	return $output;
+}
+
+function todos_sort_by_weight($a, $b) {
+	if ($a['weight'] == $b['weight']) {
+		return 0;
+	}
+	return ($a['weight'] < $b['weight']) ? -1 : 1;
+}
+
+/**
+ * Theme all the items as a table, one item per row
+ */
+function theme_todos_items(&$form) {
+	foreach (element_children($form) as $key) {
+		$row = array();
+		$row[] = drupal_render($form[$key]['remove']);
+		$row[] = drupal_render($form[$key]['text']);
+		$row[] = drupal_render($form[$key]['weight']);
+		$weight = $form[$key]['weight']['#value'];
+		$rows[] = array( 'data' => $row, 'class' => 'sortableitem', 'weight' => $weight );
+	}
+	if( count($rows) > 0 ) {
+		usort( $rows, todos_sort ); // sort the items by weight
+		$header = array(t('Done'), t('Todo'), t('Weight'));
+		$output = theme('table', $header, $rows, array( 'class' => 'sortable', 'id' => $form['#attributes']['id'] ) );
+	}
+	$output .= drupal_render($form);
+	return $output;
+}
+
+// ****************************************************************
+// JAVASCRIPT FUNCTION
+// ****************************************************************
+
+/**
+ * Called by javascript to do AJAH based form updating
+ */
+function _todos_update_js() {
+	$items = dynamic_subform_get_prepped( 'todos_node_form', 'todos_items_subform', null	);	
+	print theme('status_messages') . drupal_render($items);
+}

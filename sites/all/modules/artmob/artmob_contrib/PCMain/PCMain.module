@@ -1,0 +1,889 @@
+<?php
+// $Id: PCMain.info,v 1.0 2007/08/07 20:55:33 dries Exp $
+
+/**
+ * @file
+ * ADDDOCUMENTATION
+ */
+ 
+//----------------------------------------------
+// CONSTANTS
+//----------------------------------------------
+define (SECONDSPERDAY, 86400 );
+define (SECONDSPERHOUR, 3600 );
+
+//----------------------------------------------
+/**
+ * Implementation of hook_help().
+ */
+function pcmain_help($section) {
+  switch ($section) {
+    case 'admin/help#PCMain':
+      $output = '<p>'. t('The PCMain module contains general global functions') .'</p>';
+      return $output;
+    case 'admin/modules#description':
+    case 'admin/settings/PCMain':
+      return (t('Contains general global functions.'));
+  }
+}
+
+//----------------------------------------------
+/**
+ * Implementation of hook_menu().
+ */
+function pcmain_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+    $items[] = array(
+      'path'                            => 'admin/PC',
+      'title'                           => t('PC Settings'),
+      'description'     => t('Adjust settings for PC modules'),
+      'position'                        => 'right',
+      'weight'                          => -7,
+      'callback'                        => 'system_admin_menu_block_page',
+      'access'                          => user_access('administer site configuration')
+    );
+
+  }
+        else {
+    $items[] = array(
+      'path'                                            => 'admin/PC/Standin',
+      'title'                                           => t('Stand In Page'),
+      'description'                     => t('Enable the use of a stand-in page'),
+      'weight'                                          => -7,
+      'callback'                                        => 'drupal_get_form',
+      'callback arguments' => array( 'pcmain_admin_settings'),
+      'access'                                          => user_access('administer site configuration')
+    );
+
+    $items[] = array(
+      'path'                                            => 'admin/user/welcome',
+      'title'                                           => t('Welcome Message'),
+      'description'                     => t('Adjust the welcome message'),
+      'weight'                                          => 5,
+      'callback'                                        => 'drupal_get_form',
+      'callback arguments' => array( 'pcmain_user_welcome_settings'),
+      'access'                                          => user_access('administer site configuration')
+    );
+
+        }
+  return $items;
+}
+
+//----------------------------------------------
+function pcmain_admin_settings() {
+  $form['PCMain_Standin'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Stand-in page settings'),
+    '#weight' => -1,
+    '#collapsed' => TRUE
+  );
+
+  $form['PCMain_Standin']['PCMain_UseStandin'] = array(
+    '#type'          => 'checkbox',
+    '#title'         => t( 'Use Stand-in Pages?' ),
+    '#description'   => t( 'Enable the use of stand-in pages' ),
+    '#default_value' => variable_get('PCMain_UseStandin', 0 ),
+    '#tree'          => 'FALSE',
+    '#weight'        => -5
+  );
+
+  return system_settings_form($form);
+}
+
+//--------------------------------------------------------------------
+function pcmain_user_welcome_settings() {
+  $form['PCMain_welcome'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Welcome Message'),
+    '#weight' => -1,
+    '#collapsed' => TRUE
+  );
+
+  $form['PCMain_welcome']['user_welcome_text'] = array(
+    '#type'          => 'textarea',
+    '#title'         => t('Welcome Message'),
+    '#default_value' => variable_get('user_welcome_text', '' ),
+    '#description'   => 'Enter the welcome message',
+    '#tree'          => 'FALSE',
+    '#rows'          => 10,
+    '#required'      => False
+  );
+  $form['PCMain_welcome']['user_welcome_format'] = filter_form(variable_get('user_welcome_format', 0 ), NULL, array('user_welcome_format'));
+
+  return system_settings_form($form);
+}
+
+
+//--------------------------------------------------------------------
+//This hook is used to add form fields to the forms
+//of other module's add node screens.  The fields
+//are defined here just as they were in the hook_form hook.
+function pcmain_form_alter($form_id, &$form) {
+  // boilerplate code to determine the node type of the form
+  if (isset($form['type'])) {
+    $type = $form['type']['#value'];
+  }
+  elseif (isset($form['orig_type'])) {
+    $type = $form['orig_type']['#value'];
+  }
+  else {
+    return;
+  }
+
+
+  $enabled = variable_get('PCMain_UseStandin', 0);
+  $enabledparentpage = variable_get('IsUseParentPage_'. $type, 0);
+
+  switch ($form_id) {
+    // Form addition to all Enabled node types.
+    case $type .'_node_form':
+      $enabled = variable_get('PCMain_UseStandin', 0 );
+      if ($enabled) {
+
+        if ($form['nid']['#value'] > 0) {
+          $item = db_fetch_array(db_query("SELECT * FROM {PC_MainStandin} WHERE nid = %d", $form['nid']['#value']));
+        } 
+        else {
+          $item['MainUseStandin'] = 0;
+          $item['MainStandinText'] =  '';
+          $item['MainStandinFormat'] =  0;
+        }
+
+        $form['PCMain_Standin'] = array(
+          '#type' => 'fieldset',
+          '#tree' =>  FALSE,
+          '#title' => t( 'Stand-in' ),
+          '#collapsible'  => TRUE,
+          '#collapsed'    => TRUE,
+          '#weight'        => 50
+        );
+
+        $form['PCMain_Standin']['MainUseStandin'] = array(
+          '#type'          => 'checkbox',
+          '#title'         => t( 'Use Stand-in?' ),
+          '#description'   => t( 'Enable the use of stand-in for this item' ),
+          '#default_value' => $item['MainUseStandin'],
+          '#tree'          => 'FALSE',
+          '#weight'        => -5
+        );
+
+        $form['PCMain_Standin']['Main']['MainStandinText'] = array(
+               '#type'          => 'textarea',
+               '#title'         => t('Stand-in text'),
+               '#default_value' => $item['MainStandinText'],
+               '#description'   => 'Enter the Stand-in text',
+               '#tree'          => 'FALSE',
+               '#rows'          => 10,
+               '#required'      => False
+        );
+        $form['PCMain_Standin']['Main']['MainStandinFormat'] = filter_form($item['MainStandinFormat']);
+      }
+
+      $form['weight_frame'] = array(
+        '#type'          => 'fieldset',
+        '#title'         => t('Item Weight'),
+        '#weight'        => 3,
+        '#collapsible'   => TRUE,
+        '#collapsed'     => TRUE
+      );
+
+      $item = db_fetch_array(db_query("SELECT * FROM {PC_MainWeight} WHERE nid = %d", $form['nid']['#value']));
+      $form['weight_frame']['PCWeight'] = array(
+              '#type' => 'weight',
+              '#title' => t('Weight'),
+              '#default_value' => $item['PCWeight'],
+              '#delta' => 10,
+              '#description' => t('In listings, the heavier content will sink and the lighter content will be postioned nearer the top.'),
+      );
+      break;
+    case 'node_type_form':
+      break;
+    }
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ *
+*/
+function pcmain_nodeapi(&$onode, $op, $teaser=NULL, $page=NULL) {
+  switch ($op) {
+                case 'update':
+                        $bupdate = TRUE;
+
+                        //Fall through, with flag.  Therefore with every update we delete
+                        //the old associated records and then resave the new ones
+
+                case 'delete':
+                        db_query('DELETE FROM {PC_MainStandin} WHERE nid=%d', $onode->nid);
+                        db_query('DELETE FROM {PC_MainWeight} WHERE nid=%d', $onode->nid);
+
+                        if (!$bupdate) {
+                                break;
+                        }
+
+                case 'insert':
+                        db_query("INSERT INTO {PC_MainStandin} (nid, MainUseStandin, MainStandinText, MainStandinFormat) VALUES (%d, %d, '%s', %d)", $onode->nid, $onode->MainUseStandin, $onode->MainStandinText, $onode->MainStandinFormat );
+                        db_query("INSERT INTO {PC_MainWeight} (nid, PCWeight) VALUES (%d, %d)", $onode->nid, $onode->PCWeight );
+
+                        break;
+                case 'load':
+
+       if (variable_get('PCMain_UseStandin', 0 )) {
+
+                                $oresult = db_query("SELECT * FROM {PC_MainStandin} WHERE nid = %d ", $onode->nid);
+                                while ($orow = db_fetch_object($oresult)) {
+                                        $aload['MainUseStandin'] = $orow->MainUseStandin;
+                                        $aload['MainStandinText'] = $orow->MainStandinText;
+                                        $aload['MainStandinFormat'] = $orow->MainStandinFormat;
+                                }
+                        }
+
+                        $oresult = db_query("SELECT * FROM {PC_MainWeight} WHERE nid = %d ", $onode->nid);
+                        while ($orow = db_fetch_object($oresult)) {
+                                $aload['PCWeight'] = $orow->PCWeight;
+                        }
+
+                return $aload;
+                        break;
+    case 'prepare':
+      break;
+    case 'view':
+                        if ( $onode->MainUseStandin ) {
+        $onode->content[$onode->type] = '  ';
+                                $onode->content['MainStandinText'] = array('#value' => theme( 'pcmain_basic_view', $onode, True ));
+                        }
+
+     break;
+
+
+    case 'delete revision':
+      break;
+    case 'submit':
+      break;
+  }
+}
+
+//----------------------------------------------
+function theme_pcmain_basic_view( &$node, $page ) {
+  $content = check_markup( $node->MainStandinText, $node->MainStandinFormat, FALSE );
+  return $content;
+}
+
+//----------------------------------------------
+function pcmain_user($op, &$edit, &$currentuser) {
+        global $user;
+  switch ($op) {
+                case 'load':
+                case 'view':
+                case 'form':
+        };
+}
+
+//----------------------------------------------
+//These are some date functions that came from the forums
+//DateToTimeStamp takes a Drupal field date and converts it to
+//a timestamp which gets saved to the database
+//ie pcmain_date_to_timestamp($node->StartDate)
+function pcmain_date_to_timestamp($date = 1) {
+   return mktime(0, 0, 0, (int)$date['month'], (int)$date['day'], (int)$date['year']);
+}
+
+//----------------------------------------------
+//TimeStampToDate converts a TimeStamp and converts it to
+//a Drupal field date
+function pcmain_timestamp_todate($timestamp = 1) {
+  $day = date('j', $timestamp);
+  $month = date('n', $timestamp);
+  $year = date('Y', $timestamp);
+  $hour = date('G', $timestamp);
+  $minutes = date('i', $timestamp );
+  $seconds = date('s', $timestamp );
+  return array('day' => $day, 'month' => $month, 'year' => $year, 'hour' => $hour, 'minutes' => $minutes, 'seconds' => $seconds);
+}
+
+//----------------------------------------------
+// This converts a timestamp to a drupal date removing
+// the time component then converts it back to a timestamp
+// and returns it
+function pcmain_truncate_timestamp($timestamp = 1) {
+        $drupal_date = pcmain_timestamp_todate( $timestamp );
+        return pcmain_date_to_timestamp( $drupal_date );
+}
+
+//----------------------------------------------
+//converts a time stamp to a string of a full date (ie January 31, 2007)
+function pcmain_timestamp_todisplay($timestamp) {
+        return format_date( $timestamp, 'custom', 'F j, Y' );
+}
+
+//----------------------------------------------
+//Will set the date to today if it equals 1.
+//Used for default field settings
+function pcmain_setdate( $timestamp = NULL ) {
+  if ($timestamp == NULL) {
+    return time();
+  }
+  else{
+    return $timestamp;
+  }
+}
+
+//--------------------------------------------------------------------
+//This function should be called at the top of a cron run
+//when using poormanscron to avoid the cron from
+//running a second time while the first cron is still running.
+//Use PCMain_poormanscron_unlock when done to release the lock
+function pcmain_poormanscron_lock() {
+  if ($GLOBALS['db_type'] == 'mysql' or $GLOBALS['db_type'] == 'mysqli') {
+                $query = db_query("select get_lock('poormanscron_lock_', 1) as get_lock");
+                $result = db_fetch_array($query);
+                if (empty($result['get_lock'])) {
+                        return FALSE;
+                }
+        } 
+        else {
+                $lock = variable_get('poormanscron_lock', FALSE);
+                if ($lock) {
+                        return FALSE;
+                }
+                variable_set('poormanscron_lock', time());
+        }
+        return TRUE;
+}
+
+//--------------------------------------------------------------------
+//This function should be called at the bottom of a cron run
+//when using poormanscron to release the lock
+//added with PCMain_poormanscron_lock
+function pcmain_poormanscron_unlock() {
+        if ($GLOBALS['db_type'] == 'mysql' or $GLOBALS['db_type'] == 'mysqli') {
+                $query = db_query("select release_lock('poormanscron_lock_')");
+        } 
+        else {
+                variable_set('poormanscron_lock', FALSE);
+        }
+}
+
+//--------------------------------------------------------------------
+function pcmain_max( $a, $b ) {
+        if ( is_numeric($a) and is_numeric($b) ) {
+                if ($a > $b ) {
+                        return $a;
+                } 
+                else {
+                        return $b;
+                }
+        } 
+        else {
+                return 0;
+        }
+}
+
+//--------------------------------------------------------------------
+function pcmain_min( $a, $b ) {
+        if ( is_numeric($a) and is_numeric($b) ) {
+                if ($a < $b ) {
+                        return $a;
+                } 
+                else {
+                        return $b;
+                }
+        } 
+        else {
+                return 0;
+        }
+}
+
+//--------------------------------------------------------------------
+//This returns the vid for the vocabulary with this name
+function pcmain_taxonomy_get_vocabulary_by_name( $vname ) {
+        $result = db_result( db_query( "SELECT vid FROM {vocabulary} WHERE name = '%s'", $vname ));
+        return $result;
+}
+
+//--------------------------------------------------------------------
+//This returns an associative array with the tid as the key and the name as the value
+function pcmain_taxonomy_get_terms_by_vocabulary_name( $vname ) {
+        $vid = pcmain_taxonomy_get_vocabulary_by_name( $vname );
+        if ( $vid ) {
+                return pcmain_taxonomy_get_terms_by_vocabulary( $vid );
+        } 
+        else {
+                return array();
+        }
+}
+
+//--------------------------------------------------------------------
+//This returns an associative array with the tid as the key and the name as the value
+function pcmain_taxonomy_get_terms_by_vocabulary( $vid ) {
+        $output = array();
+        $result =  db_query( "SELECT tid, name FROM {term_data} WHERE vid = %d", $vid );
+        while ($row = db_fetch_object($result)) {
+                //This would output the entire term object
+                //$output [] = taxonomy_get_term ( $row->tid );
+                $output[$row->tid] = $row->name;
+        }
+        return $output;
+}
+
+//--------------------------------------------------------------------
+//This function returns a resultset containing the titles
+//of the nodes of type $nodetype that are attached to the term $tid
+function pcmain_taxonomy_term_get_related_section( $tid, $nodetype ) {
+        $return = db_query( "SELECT n.title FROM {term_node} t
+                             LEFT JOIN {node} n ON t.nid = n.nid
+                                                                                         WHERE tid = %d
+                                                                                         AND n.type = '%s'
+                       AND n.status = 1
+                                                                                          ORDER BY n.title", $tid, $nodetype );
+        return $return;
+
+}
+
+//--------------------------------------------------------------------
+//This function returns a resultset containing the entire node
+//of the nodes of type $nodetype that are attached to the term $tid
+function pcmain_taxonomy_term_get_related_section_node( $tid, $nodetype ) {
+        $return = db_query( "SELECT n.* FROM {term_node} t
+                             LEFT JOIN {node} n ON t.nid = n.nid
+                                                                                         WHERE tid = %d
+                                                                                         AND n.type = '%s'
+                                                                                         AND n.status = 1
+                                                                                          ORDER BY n.title", $tid, $nodetype );
+        return $return;
+
+}
+
+//--------------------------------------------------------------------
+//This function returns a resultset containing the entire node
+//of the nodes of type $nodetype that are attached to the term $tid by user uid
+function pcmain_taxonomy_term_get_related_section_node_by_user( $tid, $nodetype, $uid ) {
+        $return = db_query( "SELECT n.* FROM {term_node} t
+                             LEFT JOIN {node} n ON t.nid = n.nid
+                                                                                         WHERE tid = %d
+                                                                                         AND n.type = '%s'
+                                                                                         AND n.uid = $uid
+                                                                                          ORDER BY n.title", $tid, $nodetype, $uid );
+        return $return;
+
+}
+
+//--------------------------------------------------------------------
+
+function pcmain_taxonomy_add_term_to_vocabulary_by_name( $vname, $module, $term_name, $term_description, &$vid, $term_weight = 0 ) {
+        //This function will see if a vocabulary $vname from module $module exists.
+        //If it doesn't then it will create it.
+        //It will check to see if vocabulary $vname has a term called $term_name
+        //If it doesn't then it will create one
+        //Note that it assumes that a $vid variable is passed in which it will
+        //change it to the $vid it either found or created.
+  $vid = pcmain_taxonomy_add_vocabulary( $vname, $module );
+        //Then we want to add a new term that matches the name of our module
+  $term = array(
+                'name' => $term_name,
+                'description' => $term_description,
+                'weight' => $term_weight,
+                'vid' => $vid
+        );
+
+        //First check to see if this term name already exists inside this vocabulary
+        $tid = '';
+        $term_result = taxonomy_get_term_by_name($term_name);
+        foreach ($term_result as $term_object) {
+                if ($term_object->vid == $vid) {
+                $tid = $term_object->tid;
+        }
+        }
+
+        //If the term does not exist in this vocabulary then save it
+        if ( empty( $tid ) ) {
+        $result = taxonomy_save_term( $term ); //unfortunately, this does NOT return the tid so we have to query to get it using taxonomy_get_term_by_name
+        $term_result = taxonomy_get_term_by_name($term_name);
+        foreach ($term_result as $term_object) {
+                $tid = $term_object->tid;
+        }
+  } 
+  else {
+                $term['tid'] = $tid;
+        $result = taxonomy_save_term( $term ); 
+  }
+  return $tid;
+}
+
+//--------------------------------------------------------------------
+function pcmain_taxonomy_del_term_from_vocabulary_by_name( $vname, $term_name ) {
+        //This function will see if a vocabulary $vname from module $module exists.
+        //If it exists then it checks for the term_name
+        //it then deletes the term with term_name inside of this vocabulary
+        $vid = pcmain_taxonomy_get_vocabulary_by_name( $vname );
+        if ( $vid ) {
+
+        //Then we want to add a new term that matches the name of our module
+    $term = array(
+                'name' => $term_name,
+                'description' => $term_description,
+                'vid' => $vid
+        );
+
+        $tid = '';
+        $term_result = taxonomy_get_term_by_name($term_name);
+        foreach ($term_result as $term_object) {
+                if ($term_object->vid == $vid) {
+                $tid = $term_object->tid;
+                taxonomy_del_term( $tid );
+        }
+        }
+  }
+}
+
+//--------------------------------------------------------------------
+function pcmain_taxonomy_add_vocabulary( $vname, $module) {
+        //This function will create a vocabulary with the name $vname
+        //and tagged with module $module. Note there exists a vocabulary
+        //with this name or from this module, then that $vid will be returned
+        $vid = pcmain_taxonomy_get_vocabulary_by_name( $vname );
+  if (!$vid) {
+                //Check to see if a vocabulary for this module exists
+                $vid = db_result(db_query("SELECT vid FROM {vocabulary} WHERE module = '%s'", $module));
+                if (!$vid) {
+                        $vocabulary = array(
+                                'name' => $vname,
+                                'multiple' => '0',
+                                'required' => '0',
+                                'hierarchy' => '1',
+                                'relations' => '0',
+                                'module' => $module,
+                                'nodes' => array($module => 1 )
+                  );
+                  taxonomy_save_vocabulary($vocabulary);
+                  $vid = $vocabulary['vid'];
+      pcmain_taxonomy_add_all_types_to_vocabulary( $vid );
+                }
+  }
+  return $vid;
+}
+
+//--------------------------------------------------------------------
+function pcmain_taxonomy_add_all_types_to_vocabulary( $vid ) {
+        $name_array = array();
+        $name_array = node_get_types('names');
+        foreach ($name_array as $key => $value ) {
+    pcmain_taxonomy_add_type_to_vocabulary( $vid, $key );
+  }
+}
+
+//--------------------------------------------------------------------
+function pcmain_taxonomy_add_type_to_vocabulary( $vid, $type ) {
+  $result = db_query( "SELECT * FROM {vocabulary_node_types} WHERE vid = %d and type = '%s'", $vid, $type );
+  if ( db_num_rows($result) == 0 ) {
+        db_query( "INSERT INTO {vocabulary_node_types} (vid, type) VALUES ( %d, '%s' )", $vid, $type );
+  }
+}
+
+//--------------------------------------------------------------------
+function pcmain_taxonomy_select_nodes( $input ) {
+        //this version takes a parameter of a comma delimited string
+        //instead of an array like the drupal version (which kicks back an error for me ).
+        if ($input <> '') {
+          $sql = 'SELECT DISTINCT (n.nid), n.sticky, n.title, n.created
+                        FROM {node} n INNER JOIN {term_node} tn ON n.nid = tn.nid
+                                                WHERE tn.tid IN ('. $input .') AND n.status = 1
+                                                ORDER BY n.title';
+                return db_query( $sql );
+        } 
+        else {
+                return NULL;
+        }
+}
+
+//--------------------------------------------------------------------
+function pcmain_taxonomy_select_nodes_by_type( $input, $inclusionlist = '', $exclusionlist = '' ) {
+        //this version takes a parameter of a comma delimited string
+        //instead of an array like the drupal version (which kicks back an error for me ).
+        //$input is the list of tids
+        if ($input <> '') {
+    $where = pcmain_build_inclusion_exclusion_string( $inclusionlist, $exclusionlist, 'TYPE' );
+
+          $sql = "SELECT DISTINCT (n.nid), n.sticky, n.title, n.created
+                        FROM {node} n INNER JOIN {term_node} tn ON n.nid = tn.nid".
+                        $where .
+                                                " AND tn.tid IN (". $input .") AND n.status = 1
+                                                ORDER BY n.title";
+                return db_query( $sql );
+        } 
+        else {
+                return NULL;
+        }
+}
+
+//--------------------------------------------------------------------
+function pcmain_taxonomy_select_nodes_by_type_as_array( $input, $inclusionlist = '', $exclusionlist = '' ) {
+  $contentarray = array();
+  $result = pcmain_taxonomy_select_nodes_by_type( $input, $inclusionlist, $exclusionlist );
+  while ( $data = db_fetch_object($result)) {
+    $output_node = node_load( $data->nid );
+    $contentarray[] = $output_node;
+  }
+  return $contentarray;
+}
+
+//--------------------------------------------------------------------
+function pcmain_build_inclusion_exclusion_string( $inclusionlist = '', $exclusionlist = '', $fieldname ) {
+  if ( is_array($inclusionlist) ) {
+    $include = implode("','", $inclusionlist );
+  } 
+  else {
+    $include = $inclusionlist;
+  }
+
+  if ( $include == '' ) {
+    $where = '';
+  } 
+  else {
+    $include = "'". $include ."'";
+    $where = $fieldname .' IN ('. $include .')';
+  }
+
+  if ( is_array($exclusionlist) ) {
+    $exclude = implode("','", $exclusionlist );
+  } 
+  else {
+    $exclude = $exclusionlist;
+  }
+
+  if ($exclude <> '') {
+    $exclude = "'". $exclude ."'";
+    if ($where <> '' ) {
+      $where .= ' AND ';
+    }
+    $where .= $fieldname .' NOT IN ('. $exclude .') ';
+  }
+
+  if ($where <> '' ) {
+    $where = ' WHERE '. $where;
+  }
+
+  return $where;
+}
+
+//--------------------------------------------------------------------
+function pcmain_taxonomy_is_node_in_vocabulary_by_name( $nid, $vname ) {
+        $vid = pcmain_taxonomy_get_vocabulary_by_name( $vname );
+        if ($vid) {
+        return pcmain_taxonomy_is_node_in_vocabulary( $nid, $vid );
+  } 
+  else {
+                return FALSE;
+        }
+}
+
+//--------------------------------------------------------------------
+function pcmain_taxonomy_is_node_in_vocabulary( $nid, $vid ) {
+        //if there are any node with any term in this vocabulary then return TRUE
+        $result = db_query( "SELECT t.tid FROM {term_node} t LEFT JOIN {term_data} d ON t.tid = d.tid
+                                 WHERE t.nid = %d AND d.vid = %d", $nid, $vid );
+        return db_num_rows($result);
+}
+
+//--------------------------------------------------------------------
+function pcmain_taxonomy_get_terms_node_in_vocabulary_by_name( $nid, $vname ) {
+  $result_array = array();
+  $vid = pcmain_taxonomy_get_vocabulary_by_name( $vname );
+        if ($vid) {
+        return PCMain_taxonomy_get_terms_node_in_vocabulary( $nid, $vid );
+  } 
+  else {
+                return $result_array;
+        }
+}
+
+//--------------------------------------------------------------------
+function pcmain_taxonomy_get_terms_node_in_vocabulary( $nid, $vid ) {
+  $result_array = array();
+        //if there are any node with any term in this vocabulary then return an array of term objects
+        $result = db_query( "SELECT t.tid FROM {term_node} t LEFT JOIN {term_data} d ON t.tid = d.tid
+                                 WHERE t.nid = %d AND d.vid = %d", $nid, $vid );
+        while ($row = db_fetch_object($result)) {
+    $term = taxonomy_get_term( $row->tid );
+    $result_array[] = $term;
+        }
+        return $result_array;
+}
+//--------------------------------------------------------------------
+//The get_types functions will get all of the node types that
+//this vocabulary is attached to.  It will return the results
+//as a CSV string, an array or a $result
+function pcmain_taxonomy_get_types_in_vocabulary_as_string( $vname ) {
+  $result_array = array();
+  $result_array = pcmain_taxonomy_get_types_in_vocabulary_as_array( $vname );
+  $return = implode("','", $result_array );
+  return $return;
+}
+
+//--------------------------------------------------------------------
+function pcmain_taxonomy_get_types_in_vocabulary_as_array( $vname ) {
+  $result_array = array();
+  $result = pcmain_taxonomy_get_types_in_vocabulary_as_result( $vname );
+  while ($row = db_fetch_object($result)) {
+    $result_array[] = $row->type;
+  }
+  return $result_array;
+}
+
+//--------------------------------------------------------------------
+function pcmain_taxonomy_get_types_in_vocabulary_as_result( $vname ) {
+  $vid = pcmain_taxonomy_get_vocabulary_by_name( $vname );
+        if ($vid) {
+    $result = db_query( "SELECT t.type FROM {vocabulary} v
+                         LEFT JOIN vocabulary_node_types t
+                         ON v.vid = t.vid
+                         WHERE v.vid = %d", $vid );
+        }
+        return $result;
+}
+//--------------------------------------------------------------------
+function pcmain_get_nid($href) {
+        $args = explode('/', $href);
+        
+    if ($args[0] == 'node' && is_numeric($args[1]) && !$args[2]) {
+                $nid = $args[1];
+     } 
+     else {
+     
+        $oresult = db_query_range("SELECT * FROM {url_alias} WHERE dst='%s' AND src LIKE 'node%' LIMIT", $href, 0, 1);
+        
+        while ($orow = db_fetch_object($oresult)) {
+                $src = $orow->src;
+        }
+        
+        if ($src) {
+                $nid = pcmain_get_nid($src);
+        }
+     }
+
+        return $nid ? $nid : FALSE;
+}
+
+//--------------------------------------------------------------------
+//This function will remove an item ($path) from a menu
+//It is very useful to remove unwanted tabs
+function pcmain_remove_menu_item( $path ) {
+//      drupal_set_message( 'removing menu item, path = '.$path );
+        global $_menu;
+
+        $mitems = $_menu['items'];
+  $b_is_found = FALSE;
+        foreach ($mitems as $mid => $mvalue ) {
+//        drupal_set_message('$mid = '.$mid);
+//    drupal_set_message('$mvalue->path'.$mvalue['path'] );
+    if ( strtolower($mvalue['path']) == $path ) {
+                        $b_is_found = TRUE;
+                        break;
+    }
+  }
+
+//  drupal_set_message( '$mid = '.$mid );
+
+        if ( $b_is_found ) {
+                unset( $_menu['items'][$mid] );
+                return TRUE;
+        } 
+        else {
+                return FALSE;
+        }
+}
+
+
+//--------------------------------------------------------------------
+function pcmain_make_list_from_nodearray( $nodearray ) {
+        $result = '<ul>';
+        foreach ( $nodearray as $node ) {
+                $result .= '<li>'. l($node->title, 'node/'. $node->nid ) .'</li>';
+        }
+        $result .= '</ul>';
+        return $result;
+}
+
+//--------------------------------------------------------------------
+function pcmain_check_current_node_type( $type = '' ) {
+  if (arg(0) == 'node') {
+    $node = node_load(array('nid' => arg(1)));
+    return $node->type == $type;
+  } 
+  else {
+                return False;
+        }
+}
+
+//--------------------------------------------------------------------
+//This builds a user list that can be used as the options property
+//in a select box
+function pcmain_build_user_list( $bincludenone = False, $none_text = 'None' ) {
+  $return = array();
+  if ( $bincludenone ) {
+    $return[0] = $none_text;
+  }
+  $result = db_query("SELECT uid, name FROM {users} where status = 1 order by name");
+  while ( $data = db_fetch_object($result)) {
+    $return[$data->uid] = $data->name;
+  }
+  return $return;
+}
+
+//--------------------------------------------------------------------
+function pcmain_Get_Node_Title( $nid ) {
+  return db_result(db_query("SELECT title FROM {node} WHERE nid = %d", $nid ) );
+}
+
+//--------------------------------------------------------------------
+function pcmain_Get_User_Name( $uid ) {
+  return db_result(db_query("SELECT name FROM {users} WHERE uid = %d", $uid ) );
+}
+
+//--------------------------------------------------------------------
+//This is used to add the PCWeight field from the PC_MainWeight table
+//to views
+function pcmain_views_tables() {
+  $tables["PC_MainWeight"] = array(
+    'name' => 'PC_MainWeight',
+    'join' => array(
+      'left' => array(
+        'table' => 'node',
+        'field' => 'nid'
+      ),
+      'right' => array(
+        'field' => 'nid'
+      ),
+    ),
+    'sorts' => array(
+      'PCWeight' => array(
+        'name' => t('PCMain: Item Weight'),
+        'help' => t('Sort by the item weight'),
+      ),
+    ),
+  );
+  return $tables;
+}
+
+//--------------------------------------------------------------------
+// This is used to return a specific menu for theming. Returns a 
+// standardized link array.
+
+function pcmain_get_menu_by_pid($pid) {
+  $menu = menu_get_menu();
+  $links = array();
+  if ($pid && is_array($menu['visible'][$pid]) && isset($menu['visible'][$pid]['children'])) {
+    $count = 1;
+    foreach ($menu['visible'][$pid]['children'] as $cid) {
+      $index = "menu-$start_level-$count-$pid";
+      if (menu_in_active_trail_in_submenu($cid, $pid)) {
+        $index .= "-active";
+      }
+      $links[$index] = menu_item_link($cid, FALSE);
+      $count++;
+    }
+  }
+  return $links;
+}

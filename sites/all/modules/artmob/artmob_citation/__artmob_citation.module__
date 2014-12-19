@@ -1,0 +1,4135 @@
+<?php
+// $Id: citation.info,v 1.0 2008/03/13 20:55:33 dries Exp $
+
+/**
+ * @file
+ * ADDDOCUMENTATION
+ */
+
+
+define('ARTMOB_SEQUENCE_TYPE_INTEGER', 'I');
+define('ARTMOB_SEQUENCE_TYPE_TIMECODE', 'T');
+
+
+/**
+ * hook_elements - define the widget type
+ */
+function artmob_citation_elements() {
+  $type = array();
+  //$type['artmob_date_widget'] = array( '#input' => TRUE, );
+  //$type['artmob_identifier'] = array( '#input' => TRUE, );
+  //$type['artmob_dc_description'] = array( '#input' => TRUE, );
+  //$type['artmob_measurement'] = array( '#input' => TRUE, );
+  //$type['artmob_annotation'] = array( '#input' => TRUE, );
+  //$type['artmob_series_contributor'] = array( '#input' => TRUE, );
+  //$type['artmob_contributor_widget'] = array( '#input' => TRUE, );
+  return $type;
+}
+
+//* Implementation of hook_node_info().
+function artmob_citation_node_info() {
+  return array(
+    'citation' => array(
+      'name' => t('Citation'),
+      'module' => 'artmob_citation',
+      'description' => t("This allows a user to enter a new citation")
+    ),
+  );
+}
+
+//* Implementation of hook_help().
+function artmob_citation_help($section) {
+  switch ($section) {
+    case 'admin/help#artmob_citation':
+      $output = '<p>'. t('The Citation module holds citations for all nodes') .'</p>';
+      return $output;
+    case 'admin/modules#description':
+    case 'admin/settings/artmob_citation':
+      return (t('Contains a wrapper for the image module.'));
+  }
+}
+
+function artmob_citation_init() {
+   $fd_path = drupal_get_path('module', 'artmob_fair_dealing');
+   $citation_path = drupal_get_path('module', 'artmob_citation');
+
+   $fd_js = $fd_path .'/js';
+   $fd_css = $fd_path .'/css';
+
+   $citation_js = $citation_path .'/js';
+   $citation_css = $citation_path .'/css';
+
+   $fd_scripts = array('jquery-min-14.js', 'artmob_compat.js', 'fairdealing_var.js', 'fairdealing_ui.js');
+   $citation_scripts = array('artmob_citation.js');
+   //$citation_base_scripts = array( 'datewidget.js', 'annotationwidget.js','identifierwidget.js', 'contributorwidget.js', 'descriptionwidget.js', 'measurewidget.js', 'serieswidget.js', 'form.js','highlightFade.js' ); //'datewidget.js',
+   //$citation_scripts = array('artmob_citation.js', 'datewidget.js', 'descriptionwidget.js', 'widget.js', 'form.js');
+
+   $arg0 = arg(0);
+   $arg1 = arg(1);
+   $arg2 = arg(2);
+
+   if ($arg0 == 'node' && is_numeric($arg1) && $arg2 == 'citation') {
+     $db_query = db_query("SELECT title, type FROM {node} WHERE nid=%d", $arg1);
+
+     $nobj = db_fetch_object($db_query);
+
+     /* Left for compatibility with artmob media.  Types now handled through Content Type edit menu. */
+
+     $filetypes = array(
+       'DigitizedWorks' => '1',
+       'amDocument' => '1', // forward compatibility
+       'amVideo' => '2',
+       'amPicture' => '3',
+       'audio' => '4',
+       'amAudio' => '4', //forward compatibility
+     );
+
+     $media_type = variable_get('media_type_'. $nobj->type, ARTMOB_FD_MEDIA_TYPE_NONE);
+
+
+     $filetype = $work_type ? $work_type : $filetypes[$nobj->type];
+
+     drupal_add_css($citation_css ."/citation.css");
+     drupal_add_css($fd_path ."/css/artmob_works.css");
+
+
+
+     if ($filetype) {
+       artmob_citation_verify_encapsulated_works_tree( $arg1 );
+
+       $report = artmob_fair_dealing_build_report( $arg1 );
+       $existing = (count($report['works']) > 0) ? json_encode($report) : NULL;
+
+       foreach ($fd_scripts as $js) {
+         drupal_add_js($fd_js ."/". $js, 'module');
+       }
+
+
+       $artmob_fair_dealing_settings = array(
+         'filetype' => $filetype,
+         'nid' => $arg1,
+         'cid' => 1,  // TO DO: Top level Citation ID.
+         'existingreport' => $existing,
+         'worksmodel' => theme('afd_worksmodel'),
+         'worksmenumodel'  => theme('afd_worksmenu_model'),
+         'addworkmodel' => theme('afd_addwork_model'),
+         'nonestedworks' => theme('afd_no_nested_works'),
+         'ffcontributors' => theme('afd_formfields_contributors'),
+         'ffinfofields' => theme('afd_formfields_infofields'),
+         'citationtable' => theme('afd_citation_table'),
+         'infotable' => theme('afd_info_table'),
+         'edcit' => user_access('Edit Citation')
+       );
+
+       drupal_add_js(array('afd' => $artmob_fair_dealing_settings), "setting");
+
+      foreach ($citation_scripts as $js) {
+        drupal_add_js($citation_js ."/". $js, 'module');
+       }
+
+
+      drupal_set_title("Citation: " . $nobj->title);
+
+
+     }
+   }
+
+
+   if ($arg0 == 'node' && is_numeric($arg1) && ($arg2 == 'edit' || $arg == 'add')) {
+     $nid = $arg1;
+     $type = db_result( db_query( "select type from {node} where nid = %d", $nid ));
+     if ( $type == 'citation' ){
+       /*
+       foreach ($citation_base_scripts as $js) {
+         //drupal_add_js($citation_path ."/". $js, 'module');
+         drupal_add_js($citation_js ."/". $js, 'module');
+       }
+       */
+     }
+   }
+}
+
+//* Implementation of hook_perm().
+function artmob_citation_perm() {
+    return array('Add Citation', 'Edit Citation', 'Delete Citation', 'View Citation');
+}
+
+//* Implementation of hook_access().
+function artmob_citation_access($op, $node) {
+  global $user;
+
+  if ($op == 'create') {
+    return user_access('Add Citation');
+  }
+
+  else if ($op == 'update') {
+    return user_access('Edit Citation');
+  }
+  else if ($op == 'delete') {
+    return user_access('Delete Citation');
+  }
+  else if ($op == 'view') {
+    return user_access('View Citation');
+  }
+  else {
+    return FALSE;
+  }
+}
+
+// * Implementation of hook_menu().
+function artmob_citation_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+  }
+  else {
+    $items[] = array(
+        'path' => 'artmob_citation_measurement/artmob_citation_measurement_update_js',
+        'callback' => '_artmob_citation_measurement_update_js',
+        'access' => TRUE,
+        'type' => MENU_CALLBACK,
+    );
+
+    $items[] = array(
+        'path' => 'artmob_citation_identifier/artmob_citation_identifier_update_js',
+        'callback' => '_artmob_citation_identifier_update_js',
+        'access' => TRUE,
+        'type' => MENU_CALLBACK,
+    );
+
+    $items[] = array(
+      'access' => TRUE,
+      'callback'           => 'artmob_citation_identifier_autocomplete_identifier_name',
+      'path'               => 'js/artmob_citation_identifier_name/autocomplete',
+      'title'              => t('identifier name autocomplete'),
+      'type'               => MENU_CALLBACK,
+    );
+
+    $items[] = array(
+        'path' => 'artmob_citation_annotation/artmob_citation_annotation_update_js',
+        'callback' => '_artmob_citation_annotation_update_js',
+        'access' => TRUE,
+        'type' => MENU_CALLBACK,
+    );
+
+    $items[] = array(
+        'path' => 'artmob_citation_contributor/artmob_citation_contributor_update_js',
+        'callback' => '_artmob_citation_contributor_update_js',
+        'access' => TRUE,
+        'type' => MENU_CALLBACK,
+    );
+
+    $items[] = array(
+        'path' => 'artmob_citation_series_contributor/artmob_citation_series_contributor_update_js',
+        'callback' => '_artmob_citation_series_contributor_update_js',
+        'access' => TRUE,
+        'type' => MENU_CALLBACK,
+    );
+
+    $items[] = array(
+      'path'              => 'admin/artmob/citation',
+      'title'             => t('Convert citation entries'),
+      'description'       => t('Convert citation records'),
+      'weight'            => -7,
+      'callback'          => 'drupal_get_form',
+      'callback arguments' => array( 'artmob_citation_admin_convert'),
+      'access'            => user_access('administer site configuration')
+    );
+
+    $items[] = array(
+      'path'              => 'admin/artmob/citation_settings',
+      'title'             => t('Citation Settings'),
+      'description'       => t('Modify citation settings'),
+      'weight'            => -7,
+      'callback'          => 'drupal_get_form',
+      'callback arguments' => array( 'artmob_citation_admin_settings'),
+      'access'            => user_access('administer site configuration')
+    );
+
+    $items[] = array(
+      'access'             => user_access('Add Citation'),
+      'callback'           => 'artmob_citation_autocomplete_identifier_name',
+      'path'               => 'js/identifier_name/autocomplete',
+      'title'              => t('identifier name autocomplete'),
+      'type'               => MENU_CALLBACK,
+    );
+
+    $items[] = array(
+      'access' => TRUE,
+      'callback'           => 'artmob_citation_autocomplete_series_title',
+      'path'               => 'js/series_title/autocomplete',
+      'title'              => t('series titele autocomplete'),
+      'type'               => MENU_CALLBACK,
+    );
+
+    $items[] = array(
+      'access'             => user_access('Add Citation'),
+      'callback'           => 'artmob_citation_autocomplete_set_title',
+      'path'               => 'js/set_title/autocomplete',
+      'title'              => t('set title autocomplete'),
+      'type'               => MENU_CALLBACK,
+    );
+
+    $items[] = array(
+      'access'             => user_access('Add Citation'),
+      'callback'           => 'artmob_citation_autocomplete_set_title_without_prefix',
+      'path'               => 'js/set_title_without_prefix/autocomplete',
+      'title'              => t('set title autocomplete'),
+      'type'               => MENU_CALLBACK,
+    );
+
+    $items[] = array(
+      'access'             => user_access('Add Citation'),
+      'callback'           => 'artmob_citation_autocomplete_genre',
+      'path'               => 'js/genre/autocomplete',
+      'title'              => t('genre autocomplete'),
+      'type'               => MENU_CALLBACK,
+    );
+
+    $items[] = array(
+      'access'             => user_access('View Citation'),
+      'callback'           => 'citation_tab',
+      'title'              => t('Citation'),
+      'type'               => MENU_LOCAL_TASK,
+    );
+
+     $arg0 = arg(0);
+     $arg1 = arg(1);
+
+     if ($arg0 == 'node' && is_numeric($arg1)) {
+       $node = node_load($arg1);
+       if (artmob_citation_has_citation($node)) {
+         $items[] = array('path' => 'node/'. $arg1 .'/citation',
+          'title' => t('Cite'),
+          'callback' => 'artmob_citation_tab',
+          'callback arguments' => array($node),
+          'access' => TRUE,
+          'type' => MENU_LOCAL_TASK,
+          'weight' => 0,
+         );
+      }
+    }
+
+    if (arg(0) == 'artmob_citation_comment' && arg(1) == 'reply' && is_numeric(arg(2))) {
+      $node = node_load(arg(2));
+      if ($node->nid) {
+        $items[] = array('path' => 'artmob_citation_comment/reply', 'title' => t('Reply to comment'),
+          'callback' => 'artmob_citation_comment_reply', 'access' => True, 'type' => MENU_CALLBACK);
+      }
+    }
+
+    $items[] = array(
+        'path' => 'artmob_citation_order_submit',
+        'callback' => '_artmob_citation_order_submit',
+        'access' => TRUE,
+        'type' => MENU_CALLBACK,
+    );
+
+    $items[] = array(
+        'path' => 'artmob_citation_order_delete',
+        'callback' => '_artmob_citation_order_delete',
+        'access' => TRUE,
+        'type' => MENU_CALLBACK,
+    );
+
+
+    $items[] = array(
+      'access' => TRUE,
+      'callback'           => 'artmob_identifier_autocomplete_identifier_name',
+      'path'               => 'js/artmob_identifier_name/autocomplete',
+      'title'              => t('identifier name autocomplete'),
+      'type'               => MENU_CALLBACK,
+    );
+
+    $items[] = array(
+        'path' => 'artmob_date/widget_update_js',
+        'callback' => '_artmob_date_update_js',
+        'access' => TRUE,
+        'type' => MENU_CALLBACK,
+    );
+    $items[] = array(
+      'path' => 'artmob_dc_description/widget_update_js',
+      'callback' => '_artmob_dc_description_update_js',
+      'access' => TRUE,
+      'type' => MENU_CALLBACK,
+    );
+
+    $items[] = array(
+        'path' => 'artmob_identifier/widget_update_js',
+        'callback' => '_artmob_identifier_update_js',
+        'access' => TRUE,
+        'type' => MENU_CALLBACK,
+    );
+
+    $items[] = array(
+      'path' => 'artmob_measurement/widget_update_js',
+      'callback' => '_artmob_measurement_update_js',
+      'access' => TRUE,
+      'type' => MENU_CALLBACK,
+    );
+
+    $items[] = array(
+      'path' => 'artmob_annotation/widget_update_js',
+      'callback' => '_artmob_annotation_update_js',
+      'access' => TRUE,
+      'type' => MENU_CALLBACK,
+    );
+
+    $items[] = array(
+      'path' => 'artmob_series_contributor/widget_update_js',
+      'callback' => '_artmob_series_contributor_update_js',
+      'access' => TRUE,
+      'type' => MENU_CALLBACK,
+    );
+    $items[] = array(
+        'path' => 'artmob_contributor/widget_update_js',
+        'callback' => '_artmob_contributor_update_js',
+        'access' => TRUE,
+        'type' => MENU_CALLBACK,
+    );
+  }
+  return $items;
+}
+
+function artmob_citation_create_citation( $nid, $work_type, $citation_title = '', $is_redirect = True ) {
+  $node = node_load( $nid );
+  $count = db_result( db_query ( "SELECT * from {am_encapsulated_works} where nid = %d", $nid));
+  if ( $count ){
+    $query = db_query ( "SELECT * from {am_encapsulated_works} where nid = %d order by eid desc", $nid);
+    $row = db_fetch_object($query);
+    $eid_array = explode( "_", $row->eid );
+    $eid_id = array_pop( $eid_array ) + 1;
+    $eid = $nid.'_'.$eid_id;
+    $parent_eid = $nid.'_1';
+    $sequence = 1;
+    $tree_level = 1;
+    $title = $citation_title;
+  } else {
+    $eid = $node->nid .'_1';
+    $parent_eid = 0;
+    $sequence = 1;
+    $tree_level = 0;
+    $title = $node->title;
+  }
+
+  $citation = new stdClass();
+  $citation->uid = $node->uid;
+  $citation->link_nid = $node->nid;
+  $citation->link_eid = $eid;
+  $citation->type = 'citation';
+  $citation->status = 1;
+  $citation->title = $title ;
+  if ( $parent_eid == 0 ){
+    $citation->citation_title = $node->type.' Citation:'.$title;
+  } else {
+    $citation->citation_title = $title ;
+  }
+  watchdog( 'joe citation', 'create citation title = '.$citation->citation_title );
+  $citation->nid = '';
+  $citation->work_type = $work_type;
+  node_save( $citation );
+  $citation_id = artmob_citation_get_citation_id( $citation->nid );
+
+  db_query( "INSERT INTO {am_encapsulated_works} set
+               eid = '%s', nid = %d,
+               citation_id = %d, parent_eid = '%s',
+               sequence = %d, tree_level = %d",
+               $eid, $node->nid, $citation_id, $parent_eid,
+               $sequence, $tree_level);
+
+  if ( $is_redirect ){
+    drupal_goto( 'node/'. $nid .'/citation' );
+  }
+
+}
+
+function artmob_citation_admin_settings() {
+  $form['citation_settings'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Citation Settings'),
+    '#weight' => -2
+    );
+
+  $form['citation_settings']['citation_default'] = array(
+    '#type' => 'checkbox',
+    '#title' => t("Add citation entry"),
+    '#description' => t('Add citation entry to new content by default.'),
+    '#weight' => 3,
+    '#default_value' => variable_get('citation_default', 1 ),
+  );
+
+  return system_settings_form($form);
+}
+
+function artmob_citation_admin_convert() {
+  $form['citation_convert'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Citation Settings'),
+    '#weight' => -2
+    );
+
+  $form['citation_convert']['Convert'] = array(
+    '#type'     => 'submit',
+    '#value'    => t('convert all citation information'),
+    '#submit'   => True,
+    '#weight'   => 2
+  );
+
+  return system_settings_form($form);
+}
+
+function artmob_citation_admin_convert_submit($form_id, $form_values) {
+  global $user;
+  if ( $form_values['op'] == 'convert all citation information' ) {
+    convert_citations();
+    drupal_set_message( t('The information has been converted'));
+  }
+}
+
+function artmob_citation_insert($node) {
+  $node->title = $node->citation_title;
+  $node->archival_date = time();
+  watchdog( 'joe citation', 'insert citation title = '.$node->citation_title );
+  db_query("INSERT INTO {am_citation} (nid, copyright_date,
+            citation_title,
+            title_without_prefix,subtitle,series_title,series_number,
+            series_year,series_description,edition,set_title,
+            set_title_without_prefix,set_item_number,number_of_pages,
+            publication_publisher_name,publication_imprint_name,
+            publication_print_run,genre,citation_style,citation_text,
+            catalogue_description,features_and_distinctions,publication_notes,
+            catalogue_description_format,features_and_distinctions_format,publication_notes_format,
+            publication_date, archival_date, first_publication_date,
+            link_nid,uid, corporate_contributor, running_time, link_eid, work_type,
+            language, medium, sequence_type, sequence_value, sequence_description,
+            sequence_description_format, subject)
+
+            VALUES (%d, %d, '%s', '%s', '%s', '%s', '%s', '%s',
+                    '%s', '%s', '%s', '%s', '%s', '%s', '%s',
+                    '%s', '%s', '%s', '%s', '%s', '%s',
+                    '%s', '%s', %d, %d, %d, %d, %d, %d,
+                    %d, %d, '%s', '%s', '%s', '%s',
+                    '%s', '%s', '%s', '%s', '%s', %d, '%s' )",
+       $node->nid,
+       pcmain_date_to_timestamp($node->copyright_date),
+       $node->citation_title,
+       $node->title_without_prefix,
+       $node->subtitle,
+       $node->series_title,
+       $node->series_number,
+       $node->series_year,
+       $node->series_description,
+       $node->edition,
+       $node->set_title,
+       $node->set_title_without_prefix,
+       $node->set_item_number,
+       $node->number_of_pages,
+       $node->publication_publisher_name,
+       $node->publication_imprint_name,
+       $node->publication_print_run,
+       $node->genre,
+       $node->citation_style,
+       $node->citation_text,
+       $node->catalogue_description,
+       $node->features_and_distinctions,
+       $node->publication_notes,
+       $node->catalogue_description_format,
+       $node->features_and_distinctions_format,
+       $node->publication_notes_format,
+       pcmain_date_to_timestamp($node->publication_date),
+       time(),
+       pcmain_date_to_timestamp($node->first_publication_date),
+       $node->link_nid,
+       $node->uid,
+       $node->corporate_contributor,
+       $node->running_time,
+       $node->link_eid,
+       $node->work_type,
+       $node->language,
+       $node->medium,
+       $node->sequence_type,
+       $node->sequence_value,
+       $node->sequence_description,
+       $node->sequence_description_format,
+       $node->subject
+  );
+
+  artmob_citation_save_citation_dates( $node );
+}
+
+function artmob_citation_get_others_in_set(&$node) {
+
+   if (!$node->set_title) {
+     return FALSE;
+   }
+
+   $db_query = db_query("SELECT c.link_nid, c.set_item_number, n.title FROM {am_citation} AS c, {node} AS n WHERE c.link_nid=n.nid AND c.set_title='%s' ORDER BY c.set_item_number ASC", $node->set_title);
+
+   if (db_num_rows($db_query) == 0) {
+     return FALSE;
+   }
+
+   $set_array = array();
+
+   while ($row = db_fetch_object($db_query)) {
+
+      $set_array[$row->set_item_number] = array('nid' => $row->link_nid, 'title' => $row->title);
+
+      if ($row->link_nid == $node->nid) {
+        $set_array[$row->set_item_number]['class'] = 'active';
+      }
+   }
+
+   return $set_array;
+}
+
+function artmob_citation_insert_node_record( $node ) {
+  $node->vid = db_next_id('{node_revisions}_vid');
+  $updated = time();
+  db_query("INSERT INTO {node} (nid, vid, type, uid, status, created, changed)
+            values( %d, %d, '%s', %d, %d, %d, %d )",
+            $node->nid,
+            $node->vid,
+            'citation',
+            $node->uid,
+            1,
+            $updated,
+            $updated
+  );
+
+  db_query("INSERT INTO {node_access} (nid, realm, grant_view, grant_update, grant_delete)
+            values ( %d, '%s', %d, %d, %d )",
+            $node->nid,
+            'all',
+            1,
+            0,
+            0
+  );
+
+  db_query("INSERT INTO {node_revisions} (nid, vid, uid, timestamp)
+            values ( %d, %d, %d, %d )",
+            $node->nid,
+            $node->vid,
+            $node->uid,
+            $updated
+  );
+
+}
+
+function artmob_citation_save_citation_dates( $node ) {
+  //save the citation_dates array
+  $citation_id = db_result( db_query( "select citation_id from {am_citation} where link_eid = '%s'", $node->link_eid ));
+  db_query( "delete from  {am_citation_dates} where citation_id = %d", $citation_id );
+  if ( is_array( $node->citation_dates ) ) {
+    $citation_dates = $node->citation_dates;
+    $sequence = 0;
+    foreach ( $citation_dates as $date_name => $date_value ) {
+      $sequence ++;
+      $date_type_id = db_result( db_query( "select date_type_id from {am_date_type} where date_name = '%s'", $date_name ));
+      if ( $date_type_id ) {
+        //let's convert a date_value into day month and year
+        artmob_citation_convert_date_value( $date_value, $day, $month, $year, $date_order );
+        db_query( "insert into {am_citation_dates} set citation_id = %d,
+                   date_type_id = %d, date_timestamp = '%s',
+                   widget_name = 'widgetdate1', sequence = %d,
+                   date_day = %d, date_month = %d, date_year = '%s',
+                   date_order = %d",
+                   $citation_id, $date_type_id, $date_value, $sequence,
+                   $day, $month, $year, $date_order );
+      }
+    }
+  }
+}
+
+function artmob_citation_update($node) {
+  $node->title = $node->citation_title;
+  db_query("UPDATE {am_citation} set
+            copyright_date = %d,
+            citation_title = '%s',
+            title_without_prefix = '%s',
+            subtitle = '%s',
+            series_title = '%s',
+            series_number = '%s',
+            series_year = '%s',
+            series_description = '%s',
+            edition = '%s',
+            set_title = '%s',
+            set_title_without_prefix = '%s',
+            set_item_number = '%s',
+            number_of_pages = '%s',
+            publication_publisher_name = '%s',
+            publication_imprint_name = '%s',
+            publication_print_run = '%s',
+            genre = '%s',
+            citation_style = '%s',
+            citation_text = '%s',
+            catalogue_description = '%s',
+            features_and_distinctions = '%s',
+            publication_notes = '%s',
+            catalogue_description_format = %d,
+            features_and_distinctions_format = %d,
+            publication_notes_format = %d,
+            publication_date = %d,
+            first_publication_date = %d,
+            link_nid = %d,
+            uid = %d,
+            corporate_contributor = '%s',
+            running_time = '%s',
+            link_eid = '%s',
+            work_type = '%s',
+            language = '%s',
+            medium = '%s',
+            sequence_type = '%s',
+            sequence_value = '%s',
+            sequence_description = '%s',
+            sequence_description_format = %d,
+            subject = '%s'
+            where nid = %d",
+
+            pcmain_date_to_timestamp($node->copyright_date),
+            $node->citation_title,
+            $node->title_without_prefix,
+            $node->subtitle,
+            $node->series_title,
+            $node->series_number,
+            $node->series_year,
+            $node->series_description,
+            $node->edition,
+            $node->set_title,
+            $node->set_title_without_prefix,
+            $node->set_item_number,
+            $node->number_of_pages,
+            $node->publication_publisher_name,
+            $node->publication_imprint_name,
+            $node->publication_print_run,
+            $node->genre,
+            $node->citation_style,
+            $node->citation_text,
+            $node->catalogue_description,
+            $node->features_and_distinctions,
+            $node->publication_notes,
+            $node->catalogue_description_format,
+            $node->features_and_distinctions_format,
+            $node->publication_notes_format,
+            pcmain_date_to_timestamp($node->publication_date),
+            pcmain_date_to_timestamp($node->first_publication_date),
+            $node->link_nid,
+            $node->uid,
+            $node->corporate_contributor,
+            $node->running_time,
+            $node->link_eid,
+            $node->work_type,
+            $node->language,
+            $node->medium,
+            $node->sequence_type,
+            $node->sequence_value,
+            $node->sequence_description,
+            $node->sequence_description_format,
+            $node->subject,
+            $node->nid
+  );
+
+  db_query( "delete from {am_citation_dates} where citation_id = %d", $node->citation_id );
+  artmob_citation_save_citation_dates( $node );
+}
+
+//* Implementation of hook_submit().
+function artmob_citation_submit(&$node) {
+  global $user;
+  // Set default values for non-administrators.
+  if (!user_access('administer nodes')) {
+    $node->revision = 1;
+    $node->uid = $user->uid;
+  }
+
+  if (!$node->nid) {
+    $node->archival_date = time();
+  }
+}
+
+//* Implementation of hook_load().
+function artmob_citation_load($node) {
+  $t = db_fetch_object(db_query('SELECT * FROM {am_citation} WHERE nid = %d', $node->nid));
+
+  /*
+  for ( $counter = 1; $counter <= 5; $counter += 1) {
+    $oResult = db_query("SELECT ToNode, LinkBlob FROM {PC_NodeLink} WHERE FromNode=%d AND ToType='%s' AND LinkIndex = %d",$node->nid,'Contributor', $counter);
+    while ($oRow = db_fetch_object($oResult)) {
+      $temp = 'Contributor'.$counter;
+      $t->$temp = $oRow->ToNode;
+      $temp = 'ContributorRole'.$counter;
+      $t->$temp = unserialize( $oRow->LinkBlob );
+    }
+  }
+  */
+  $citation_dates = artmob_citation_load_citation_dates( $node->citation_id );
+  $t->citation_dates = $citation_dates;
+
+  return $t;
+}
+
+function artmob_citation_load_citation_dates( $citation_id ) {
+  //Load citation dates
+  $citation_dates = array();
+  $query = db_query( "select d.*, t.* from {am_citation_dates} d
+                      left join {am_date_type} t on d.date_type_id = t.date_type_id
+                      where citation_id = %d", $node->citation_id );
+  while ($row = db_fetch_object($query)) {
+    $citation_dates[$row->date_name] = $row->date_timestamp;
+  }
+  return $citation_dates;
+}
+
+function artmob_citation_delete($node) {
+  //First delete from the am_citation table
+  //then delete from the PC_NodeLink table
+  db_query("DELETE FROM {am_citation}
+             where nid = %d",
+             $node->nid);
+  /*
+  db_query("DELETE FROM {PC_NodeLink}
+             where FromNode = %d",
+             $node->nid);
+  */
+}
+
+function artmob_citation_save_contributor_links( $node ) {
+  /*
+  db_query('DELETE FROM {PC_NodeLink} WHERE FromNode=%d AND ToType="%s"', $node->nid, "Contributor");
+
+  db_query("INSERT INTO {PC_NodeLink} (FromNode, ToNode, FromType, ToType, LinkIndex, LinkBlob ) VALUES (%d,%d,'%s','%s',%d,'%s')", $node->nid, $node->Contributor1, 'artmob_citation', 'artmob_contributor', 1, serialize( $node->ContributorRole1 ) );
+  db_query("INSERT INTO {PC_NodeLink} (FromNode, ToNode, FromType, ToType, LinkIndex, LinkBlob ) VALUES (%d,%d,'%s','%s',%d,'%s')", $node->nid, $node->Contributor2, 'artmob_citation', 'artmob_contributor', 2, serialize( $node->ContributorRole2 ) );
+  db_query("INSERT INTO {PC_NodeLink} (FromNode, ToNode, FromType, ToType, LinkIndex, LinkBlob ) VALUES (%d,%d,'%s','%s',%d,'%s')", $node->nid, $node->Contributor3, 'artmob_citation', 'artmob_contributor', 3, serialize( $node->ContributorRole3 ) );
+  db_query("INSERT INTO {PC_NodeLink} (FromNode, ToNode, FromType, ToType, LinkIndex, LinkBlob ) VALUES (%d,%d,'%s','%s',%d,'%s')", $node->nid, $node->Contributor4, 'artmob_citation', 'artmob_contributor', 4, serialize( $node->ContributorRole4 ) );
+  db_query("INSERT INTO {PC_NodeLink} (FromNode, ToNode, FromType, ToType, LinkIndex, LinkBlob ) VALUES (%d,%d,'%s','%s',%d,'%s')", $node->nid, $node->Contributor5, 'artmob_citation', 'artmob_contributor', 5, serialize( $node->ContributorRole5 ) );
+  */
+}
+
+//* Implementation of hook_form().
+function artmob_citation_form(&$node) {
+  $type = node_get_types('type', $node);
+  $form['#node'] = $node;
+
+  $form['citation'] = array(
+    '#type'          => 'fieldset',
+    '#title'         => t('Citation'),
+    '#weight'        => -5,
+    '#collapsible'   => TRUE,
+    '#collapsed'     => TRUE
+  );
+
+  $form['citation']['body'] = array(
+    '#type'          => 'textarea',
+    '#title'         => t('Description'),
+    '#default_value' => $node->body,
+    '#description'   => t('enter the description'),
+    '#tree'          => 'FALSE',
+    '#rows'          => 3,
+    '#required'      => True
+  );
+  $form['citation']['format'] = filter_form($node->format);
+
+
+  $form = artmob_citation_get_citation_form( &$form, $node );
+  return $form;
+}
+
+//--------------------------------------------------------------------
+function artmob_citation_form_alter($form_id, &$form) {
+  // boilerplate code to determine the node type of the form
+  if (isset($form['type'])) {
+      $type = $form['type']['#value'];
+    }
+  elseif (isset($form['orig_type'])) {
+      $type = $form['orig_type']['#value'];
+    }
+  else {
+    return;
+  }
+
+  if (($form['#node_type']->type == 'citation') || ($type == 'citation')) {
+    $enabled = 0;
+    //variable_set('rdo_citation_'. $type, 1 );
+  }
+  else{
+    //$enabled = variable_get('rdo_citation_'. $type, 0);
+    $enabled = variable_get( 'rdo_license_options_'.$type, ARTMOB_LICENSE_MODE_NONE ) == ARTMOB_LICENSE_MODE_FULL;
+  }
+
+  switch ($form_id) {
+    case $type .'_node_form':
+      if (($enabled) ) {
+        $form = artmob_citation_get_citation_form( $form, $form['#node'], True );
+      }
+      break;
+    case 'node_type_form':
+      /*
+      if ($form['#node_type']->type != 'artmob_citation') {
+        $form['artmob']['rdo_citation'] = array(
+          '#type' => 'radios',
+          '#title' => t('Attach Citations'),
+          '#default_value' => $enabled,
+          '#options' => array(0 => t('Disabled'), 1 => t('Enabled')),
+          '#description' => t('Should this node allow users to attach citations?'),
+          );
+        //Add our custom submit to the #submit array so we can save to vocabulary_node_types
+        $form['#submit']['artmob_citation_node_type_custom_submit'] = array();
+      }
+      */
+      break;
+  }
+}
+
+function artmob_citation_node_type_custom_submit( $form, $form_value ) {
+  //we couldn't use hook_node_type because the variables were not set yet
+  $type = trim($form_value['type']);
+  //OLD -
+  //$is_citation = $form_value['rdo_citation'];
+  $is_citation = variable_get( 'rdo_license_options_'.$type, ARTMOB_LICENSE_MODE_NONE ) == ARTMOB_LICENSE_MODE_FULL;
+  if ( $is_citation ) {
+    artmob_citation_add_citations_by_nodetype( $type );
+  }
+}
+
+function artmob_citation_has_citation(&$node) {
+  if ( $node->type == 'artmob_citation' || !$node->nid) {
+    return 0;
+  }
+
+  if (!variable_get( 'rdo_license_options_'.$node->type, ARTMOB_LICENSE_MODE_NONE ) == ARTMOB_LICENSE_MODE_FULL) {
+    return 0;
+  }
+
+  $result = db_query( "SELECT * FROM {am_citation} where link_nid = %d", $node->nid );
+
+  if ( db_num_rows( $result ) ) {
+    return 1;
+  }
+  else {
+    return 0;
+  }
+}
+
+function artmob_citation_has_citation_fd( &$node ) {
+  if ( $node->type == 'artmob_citation' || !$node->nid) { 
+    return 0;
+  }
+
+  $result = db_query( "SELECT * FROM {am_citation} where link_nid = %d", $node->nid );
+
+  if ( db_num_rows( $result )) {
+    return 1;
+  }
+  else {
+    return 0;
+  }
+}
+
+function artmob_citation_get_citation_form( &$form, &$node, $is_hide = False ) {
+
+  $form['citation'] = array(
+    '#type' => 'fieldset',
+    '#tree' =>  FALSE,
+    '#title' => 'Citation',
+    '#collapsible'  => TRUE,
+    '#collapsed'  => TRUE,
+  );
+
+  if ( $node->type != 'citation' ) {
+
+    $default = artmob_citation_has_citation($node);
+
+    $default = $default ? $default : variable_get('citation_default', 1 );
+
+    $form['citation']['citation_include'] = array(
+      '#type' => 'checkbox',
+      '#title' => t("Add citation records"),
+      '#description' => t('Citation records enable accurate and detailed entry of attribution information for this item. Selecting this checkbox will make a citation tab appear, from which you can add, delete or reorder individual records.  Records can also be created using the Attribution tab, which provides a guided process for citing individual works.'),
+      '#weight' => -12,
+      '#default_value' => $default,
+    );
+  }
+
+  if ( !$is_hide ) {
+
+    $form['citation']['widgetdate1'] = array(
+      '#type' => 'artmob_date_widget',
+      '#title' => '',
+      '#process' => array('artmob_date_widget_expand' => array($node) )
+    );
+
+    $form['citation']['widgetidentifier1'] = array(
+      '#type' => 'artmob_identifier',
+      '#title' => '',
+      '#process' => array('artmob_identifier_expand' => array($node) )
+    );
+
+    $form['citation']['widgetdescription1'] = array(
+      '#type' => 'artmob_dc_description',
+      '#title' => '',
+      '#process' => array('artmob_dc_description_expand' => array($node) )
+    );
+
+    $form['citation']['citation_info'] = array(
+      '#type' => 'fieldset',
+      '#tree' =>  FALSE,
+      '#title' => 'Citation Information',
+      '#collapsible'  => TRUE,
+      '#collapsed'  => FALSE,
+    );
+
+    $form['citation']['citation_info']['citation_title'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Citation Title'),
+      '#default_value' => $node->citation_title,
+      '#description'   => t('Enter the citation title.'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 1,
+      '#weight'        => -10,
+      '#required'      => False
+    );
+
+    $form['citation']['citation_info']['title_without_prefix'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('title without prefix'),
+      '#default_value' => $node->title_without_prefix,
+      '#description'   => t('Enter the title without the prefix. Used for sorting purposes.'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 1,
+      '#weight'        => -8,
+      '#required'      => False
+    );
+
+    $form['citation']['citation_info']['subtitle'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('subtitle'),
+      '#default_value' => $node->subtitle,
+      '#tree'          => 'FALSE',
+      '#rows'          => 1,
+      '#weight'        => -6,
+      '#required'      => False
+    );
+
+    $options = artmob_citation_build_work_types( True );
+    $form['citation']['citation_info']['work_type'] = array(
+          '#type'          => 'select',
+          '#title'         => t('Work Type'),
+          '#default_value' => $node->work_type,
+          '#description'   => t('Select the type of work'),
+          '#tree'          => 'FALSE',
+          '#required'      => False,
+          '#weight'        => -4,
+          '#options'       => $options
+    );
+
+    $form['citation']['citation_info']['edition'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Edition'),
+      '#default_value' => $node->edition,
+      '#description'   => t('Enter the edition.'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 1,
+      '#weight'        => -2,
+      '#required'      => FALSE
+    );
+
+    $form['citation']['widgetcontributor1'] = array(
+      '#type' => 'artmob_contributor_widget',
+      '#title' => '',
+      '#process' => array('artmob_contributor_widget_expand' => array($node) )
+    );
+
+
+    $form['citation']['widgetlicensecontributor1'] = array(
+      '#type' => 'artmob_license_contributor_widget',
+      '#title' => '',
+      '#process' => array('artmob_license_contributor_widget_expand' => array($node) )
+    );
+
+
+    $form['citation']['corporate_contributor'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Corporate Contributor'),
+      '#default_value' => $node->corporate_contributor,
+      '#description'   => t('Enter the corporate contributor.'),
+      '#tree'          => 'FALSE',
+      '#required'      => FALSE
+    );
+
+    $form['citation']['series'] = array(
+      '#type' => 'fieldset',
+      '#tree' =>  FALSE,
+      '#title' => 'Series',
+      '#collapsible'  => TRUE,
+      '#collapsed'  => TRUE,
+      '#description'  => "Part of a serialized group of works, such as a magazine.",
+    );
+
+    $form['citation']['series']['series_title'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Title of Series'),
+      '#default_value' => $node->series_title,
+      '#description'   => t('Enter the title of the series.'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 1,
+      '#autocomplete_path' => 'js/series_title/autocomplete',
+      '#required'      => FALSE
+    );
+
+    $form['citation']['series']['series_number'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Number within Series'),
+      '#default_value' => $node->series_number,
+      '#description'   => t('Enter the number within the series.'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 1,
+      '#required'      => FALSE
+    );
+
+    $form['citation']['series']['series_year'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Year of Annual'),
+      '#default_value' => $node->series_year,
+      '#description'   => t('Enter the year of the annual (4 digits).'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 1,
+      '#required'      => FALSE
+    );
+
+    $form['citation']['series']['series_description'] = array(
+      '#type'          => 'textarea',
+      '#title'         => t('Series Description'),
+      '#default_value' => $node->series_description,
+      '#description'   => t('Enter the series description.'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 5,
+      '#required'      => False
+    );
+
+    $form['citation']['series']['widgetsc1'] = array(
+      '#type' => 'artmob_series_contributor',
+      '#title' => '',
+      '#process' => array('artmob_series_contributor_expand' => array($node) )
+    );
+
+    $form['citation']['set'] = array(
+      '#type' => 'fieldset',
+      '#tree' =>  FALSE,
+      '#title' => 'Set',
+      '#collapsible'  => TRUE,
+      '#collapsed'  => TRUE,
+      '#description'  => "Part of a named set of items that are usually grouped together, such as an album."
+    );
+
+    $form['citation']['set']['set_title'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Title of Set'),
+      '#default_value' => $node->set_title,
+      '#description'   => t('Enter the title of the set.'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 1,
+      '#autocomplete_path' => 'js/set_title/autocomplete',
+      '#required'      => FALSE
+    );
+
+    $form['citation']['set']['set_title_without_prefix'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Title of Set without prefix'),
+      '#default_value' => $node->set_title_without_prefix,
+      '#description'   => t('Enter the title of the set without prefix.'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 1,
+      '#autocomplete_path' => 'js/set_title_without_prefix/autocomplete',
+      '#required'      => FALSE
+    );
+
+    $form['citation']['set']['set_item_number'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Item Number within Set'),
+      '#default_value' => $node->set_item_number,
+      '#description'   => t('Enter the item number within the set, such as the track number in an album.'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 1,
+      '#required'      => FALSE
+    );
+
+    $form['citation']['extents'] = array(
+      '#type' => 'fieldset',
+      '#tree' =>  FALSE,
+      '#title' => 'Audio and Video',
+      '#collapsible'  => TRUE,
+      '#collapsed'  => TRUE,
+    );
+
+    $form['citation']['extents']['running_time'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Running Time'),
+      '#default_value' => $node->running_time,
+      '#description'   => t('Enter the running time.'),
+      '#tree'          => 'FALSE',
+      '#required'      => FALSE
+    );
+
+    $form['citation']['widgetam1'] = array(
+      '#type' => 'artmob_measurement',
+      '#title' => '',
+      '#process' => array('artmob_measurement_expand' => array($node) )
+    );
+
+    $form['citation']['publication'] = array(
+      '#type' => 'fieldset',
+      '#tree' =>  FALSE,
+      '#title' => 'Digital Documents',
+      '#collapsible'  => TRUE,
+      '#collapsed'  => TRUE,
+    );
+
+    $form['citation']['publication']['publication_publisher_name'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Publisher Name'),
+      '#default_value' => $node->publication_publisher_name,
+      '#description'   => t('Enter the publisher name.'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 1,
+      '#required'      => FALSE
+    );
+
+    $form['citation']['publication']['publication_imprint_name'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Imprint Name'),
+      '#default_value' => $node->publication_imprint_name,
+      '#description'   => t('Enter the imprint name.'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 1,
+      '#required'      => FALSE
+    );
+
+    $form['citation']['publication']['publication_print_run'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Print Run'),
+      '#default_value' => $node->publication_print_run,
+      '#description'   => t('Number of copies of this edition.'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 1,
+      '#required'      => FALSE
+    );
+
+    //New August 21, 2011
+    $language_options = artmob_citation_build_language_array();
+    $form['citation']['publication']['language'] = array(
+        '#type'          => 'select',
+        '#title'         => t('Language'),
+        '#default_value' => $node->language,
+        '#description'   => t('Select Language' ),
+        '#tree'          => 'FALSE',
+        '#required'      => False,
+        '#options'       => $language_options
+    );
+
+    //New August 21, 2011
+    $form['citation']['publication']['medium'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Medium'),
+      '#default_value' => $node->medium,
+      '#description'   => t('Enter the medium'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 1,
+      '#required'      => FALSE
+    );
+
+    $form['citation']['publication']['number_of_pages'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Number of Pages'),
+      '#default_value' => $node->number_of_pages,
+      '#description'   => t('Enter the number of pages.'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 1,
+      '#required'      => FALSE
+    );
+
+    //New August 21, 2011
+    $form['citation']['publication']['running_time'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Running Time'),
+      '#default_value' => $node->running_time,
+      '#description'   => t('Enter the running time ( in hh:mm format )'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 1,
+      '#required'      => FALSE
+    );
+
+    //New August 21, 2011
+    $sequence_type_options = artmob_citation_build_sequence_type_array();
+    $form['citation']['publication']['sequence_type'] = array(
+        '#type'          => 'select',
+        '#title'         => t('Sequence Type'),
+        '#default_value' => $node->sequence_type,
+        '#description'   => t('Select The Sequence Type' ),
+        '#tree'          => 'FALSE',
+        '#required'      => False,
+        '#options'       => $sequence_type_options
+    );
+
+    //New August 21, 2011
+    $form['citation']['publication']['sequence_value'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Sequence Value'),
+      '#default_value' => $node->sequence_value,
+      '#description'   => t('Enter the value either an integer or a timecode (HH:MM:SS) depending on the sequence type chosen above'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 1,
+      '#required'      => FALSE
+    );
+
+    //New August 21, 2011
+    $form['citation']['publication']['sequence_description'] = array(
+      '#type'          => 'textarea',
+      '#title'         => t('Sequence Description'),
+      '#default_value' => $node->sequence_description,
+      '#description'   => t('The description of the sequence'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 3,
+      '#required'      => False
+    );
+    $form['citation']['publication']['sequence_description_format'] = filter_form($node->sequence_description_format, NULL, array('sequence_description_format'));
+
+    //New August 21, 2011
+    $form['citation']['publication']['subject'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Subject'),
+      '#default_value' => $node->subject,
+      '#description'   => t('Enter all subjects that apply separated by a comma'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 1,
+      '#required'      => FALSE
+    );
+
+    $form['citation']['genre'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Genre'),
+      '#default_value' => $node->genre,
+      '#description'   => t('Enter the genre of the work, e.g. "Fiction" or "Bluegrass". Separate multiple genres by commas.'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 1,
+      '#autocomplete_path' => 'js/genre/autocomplete',
+      '#required'      => FALSE
+    );
+
+    $form['citation']['full_citation'] = array(
+      '#type' => 'fieldset',
+      '#tree' =>  FALSE,
+      '#title' => 'Scholarly Reference',
+      '#collapsible'  => TRUE,
+      '#collapsed'  => TRUE,
+    );
+
+    $options = pclookup_build_lookup_array( 'CitationStyle' );
+    $form['citation']['full_citation']['citation_style'] = array(
+        '#type'          => 'select',
+        '#title'         => t('Citation Style'),
+        '#default_value' => $node->citation_style,
+        '#description'   => t('Select from <a href="http://en.wikipedia.org/wiki/MLA_style" onclick="return !window.open(this.href)">MLA</a> or <a href="http://en.wikipedia.org/wiki/The_Chicago_Manual_of_Style" onclick="return !window.open(this.href)">Chicago</a> style.'),
+        '#tree'          => 'FALSE',
+        '#required'      => False,
+        '#weight'        => 1,
+        '#options'       => $options
+    );
+
+    $form['citation']['full_citation']['citation_text'] = array(
+      '#type'          => 'textarea',
+      '#title'         => t('Citation'),
+      '#default_value' => $node->citation_text,
+      '#description'   => t('The full text of the citation.'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 5,
+      '#required'      => False
+    );
+
+    $form['citation']['citation_description'] = array(
+      '#type' => 'fieldset',
+      '#tree' =>  FALSE,
+      '#title' => 'Description',
+      '#collapsible'  => TRUE,
+      '#collapsed'  => TRUE,
+    );
+
+    $form['citation']['citation_description']['desc1']['catalogue_description'] = array(
+      '#type'          => 'textarea',
+      '#title'         => t('Catalogue Description'),
+      '#default_value' => $node->catalogue_description,
+      '#description'   => t('A description of the item suitable for cataloguing, including physical format, binding and dimensions.'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 5,
+      '#required'      => False
+    );
+    $form['citation']['citation_description']['desc1']['catalogue_description_format'] = filter_form($node->MainStandinFormat, NULL, array('catalogue_description_format'));
+
+    $form['citation']['citation_description']['desc2']['features_and_distinctions'] = array(
+      '#type'          => 'textarea',
+      '#title'         => t('Features and Distinctions'),
+      '#default_value' => $node->features_and_distinctions,
+      '#description'   => t('Unique features of the item, e.g. physical condition, presence of signatures and marginalia, etc.'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 5,
+      '#required'      => False
+    );
+    $form['citation']['citation_description']['desc2']['features_and_distinctions_format'] = filter_form($node->features_and_distinctions_format, NULL, array('features_and_distinctions_format'));
+
+    $form['citation']['citation_description']['desc3']['publication_notes'] = array(
+      '#type'          => 'textarea',
+      '#title'         => t('Publication Notes'),
+      '#default_value' => $node->publication_notes,
+      '#description'   => t('The circumstances of publication, including print runs and historical context.'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 5,
+      '#required'      => False
+    );
+    $form['citation']['citation_description']['desc3']['publication_notes_format'] = filter_form($node->publication_notes_format, NULL, array('publication_notes_format'));
+
+    $form['citation']['widgetannotation1'] = array(
+      '#type' => 'artmob_annotation',
+      '#title' => '',
+      '#process' => array('artmob_annotation_expand' => array($node) )
+    );
+  }
+
+  return $form;
+}
+
+//* Implementation of hook_nodeapi().
+function artmob_citation_nodeapi(&$node, $op, $teaser=NULL, $page=NULL) {
+  /*
+  $aload = array();
+  $bload = array();
+  $cload = array();
+  $dload = array();
+  $eload = array();
+  $fload = array();
+  $gload = array();
+  if ( variable_get( 'artmob_date_widget_'. $node->type, FALSE ) ) {
+    switch ($op) {
+      // info flow db -> node -> form -> node -> db
+      case load: // Load Widgets in from db
+        $aload = artmob_date_widget_load_widgets( $node, &$widget_name );
+        break;
+      case view:
+        break;
+      case update:
+        $citation_id = artmob_citation_get_citation_id( $node->nid );
+        db_query("DELETE FROM {am_citation_dates} WHERE citation_id = '%d'", $citation_id );
+      case insert:
+        if ( count( $node->date_widget_names ) ) {
+          foreach ( $node->date_widget_names as $widget_name ) {
+            $widget = $node->$widget_name;
+            if (count( $widget['subwidgets'] ) != 0 ) {
+              foreach ( $widget['subwidgets'] as $subwidget_id => $subwidget ) {
+                if ( $citation_id <> 0 ) {
+                  $date_order = artmob_date_widget_build_date_order( $subwidget['date_day'], $subwidget['date_month'], $subwidget['date_year'] );
+                  $date_timestamp = $subwidget['date_day'] .'/'. $subwidget['date_month'] .'/'. $subwidget['date_year'];
+                  db_query("INSERT INTO {am_citation_dates} ".
+                      "(citation_id, date_type_id, date_day, date_month,
+                        date_year, date_order, widget_name, sequence, date_timestamp) ".
+                      " VALUES (%d, %d, %d, %d, '%s', %d, '%s', %d, '%s')",
+                      $citation_id, $subwidget['date_type_id'], $subwidget['date_day'],
+                      $subwidget['date_month'], $subwidget['date_year'],
+                      $date_order, $widget_name, $subwidget_id, $date_timestamp
+                  );
+                }
+              }
+            }
+          }
+        }
+        break;
+    }
+  }
+  if ( variable_get( 'artmob_identifier_'. $node->type, FALSE ) ) {
+    switch ($op) {
+      // info flow db -> node -> form -> node -> db
+      case load: // Load Widgets in from db
+        $widget_name = '';
+        $aload = artmob_identifier_load_widgets( $node, &$widget_name );
+        //$aload = array_merge( $aload, $bload );
+        break;
+      case view:
+        break;
+      case update:
+        // keep life simple and do update by just deleting and then inserting
+        db_query("DELETE FROM {am_citation_identifier} WHERE nid = %d", $node->nid );
+      case insert:
+        if ( count( $node->identifier_widget_names ) ) {
+          foreach ( $node->identifier_widget_names as $widget_name ) {
+            $widget = $node->$widget_name;
+            if (count( $widget['subwidgets'] ) != 0 ) {
+              foreach ( $widget['subwidgets'] as $subwidget_id => $subwidget ) {
+                db_query("INSERT INTO {am_citation_identifier} ".
+                    "(nid, widget_name, subwidget_id, identifier_type_code, identifier_type_name, identifier_type_value) ".
+                    " VALUES (%d, '%s', %d, '%s', '%s', '%s')",
+                    $node->nid, $widget_name, $subwidget_id,
+                    $subwidget['identifier_type_code'], $subwidget['identifier_type_name'], $subwidget['identifier_type_value']
+                );
+              }
+            }
+          }
+        }
+        break;
+    }
+  }
+
+  if ( variable_get( 'artmob_dc_description_'. $node->type, FALSE ) ) {
+    switch ($op) {
+      case prepare:
+        break;
+                        // info flow db -> node -> form -> node -> db
+      case load: // Load Widgets in from db
+        $widget_name = '';
+        $cload = artmob_dc_description_load_widgets( $node, &$widget_name );
+        $aload = array_merge( $aload, $cload );
+        break;
+      case view:
+        break;
+      case update:
+        // keep life simple and do update by just deleting and then inserting
+        db_query("DELETE FROM {am_citation_dc_description} WHERE nid = '%d'", $node->nid );
+      case insert:
+        if ( count( $node->dc_description_widget_names ) ) {
+          foreach ( $node->dc_description_widget_names as $widget_name ) {
+            $widget = $node->$widget_name;
+            if (count( $widget['subwidgets'] ) != 0 ) {
+              foreach ( $widget['subwidgets'] as $subwidget_id => $subwidget ) {
+                db_query("INSERT INTO {am_citation_dc_description} ".
+                        "(nid, widget_name, subwidget_id, citation_description_type, citation_description )".
+                        " VALUES (%d, '%s', %d, '%s', '%s')",
+                    $node->nid, $widget_name, $subwidget_id,
+                     $subwidget['citation_description_type'], $subwidget['citation_description']);
+              }
+            }
+          }
+        }
+        break;
+    }
+  }
+
+  if ( variable_get( 'artmob_measurement_'. $node->type, FALSE ) ) {
+    switch($op) {
+      // info flow db -> node -> form -> node -> db
+      case load: // Load Widgets in from db
+        $widget_name = '';
+        $dload = artmob_measurement_load_widgets( $node, &$widget_name );
+        $aload = array_merge( $aload, $dload );
+        break;
+      case view:
+        break;
+      case update:
+        // keep life simple and do update by just deleting and then inserting
+        db_query("DELETE FROM {am_citation_measurement} WHERE nid = '%d'", $node->nid );
+      case insert:
+        if ( count( $node->measure_widget_names ) ) {
+          foreach ( $node->measure_widget_names as $widget_name ) {
+            $widget = $node->$widget_name;
+            if (count( $widget['subwidgets'] ) != 0 ) {
+              foreach ( $widget['subwidgets'] as $subwidget_id => $subwidget ) {
+                db_query("INSERT INTO {am_citation_measurement} ".
+                         "(nid, widget_name, subwidget_id, measurement_type_code, measurement_unit_code, measurement_value) ".
+                         " VALUES (%d, '%s', %d, '%s', '%s', '%s')",
+                         $node->nid, $widget_name, $subwidget_id,
+                         $subwidget['measurement_type_code'], $subwidget['measurement_unit_code'], $subwidget['measurement_value']
+                );
+              }
+            }
+          }
+        }
+        break;
+    }
+  }
+
+  if ( variable_get( 'artmob_annotation_'. $node->type, FALSE ) ) {
+    switch ($op) {
+      // info flow db -> node -> form -> node -> db
+      case load: // Load Widgets in from db
+        $widget_name = '';
+        $eload = artmob_annotation_load_widgets( $node, &$widget_name );
+        $aload = array_merge( $aload, $eload );
+        break;
+      case view:
+        break;
+      case update:
+        // keep life simple and do update by just deleting and then inserting
+        db_query("DELETE FROM {am_annotation} WHERE nid = '%d'", $node->nid );
+      case insert:
+        if ( count( $node->annotation_widget_names ) ) {
+          foreach ( $node->annotation_widget_names as $widget_name ) {
+            $widget = $node->$widget_name;
+            if (count( $widget['subwidgets'] ) != 0 ) {
+              foreach ( $widget['subwidgets'] as $subwidget_id => $subwidget ) {
+                db_query("INSERT INTO {am_annotation} ".
+                         "(nid, widget_name, subwidget_id, annotator_nid, annotation, annotation_format) ".
+                         " VALUES (%d, '%s', %d, %d, '%s', %d)",
+                         $node->nid, $widget_name, $subwidget_id,
+                         $subwidget['annotator_nid'], $subwidget['annotation'], $subwidget['annotation_format']
+                );
+              }
+            }
+          }
+        }
+        break;
+    }
+  }
+
+  if ( variable_get( 'artmob_series_contributor_'. $node->type, FALSE ) ) {
+    switch ($op) {
+      // info flow db -> node -> form -> node -> db
+      case load: // Load Widgets in from db
+        $widget_name = '';
+        $fload = artmob_series_contributor_load_widgets( $node, &$widget_name );
+        $aload = array_merge( $aload, $fload );
+        break;
+      case view:
+        break;
+      case update:
+        // keep life simple and do update by just deleting and then inserting
+        db_query("DELETE FROM {am_citation_series_contributor} WHERE nid = '%d'", $node->nid );
+      case insert:
+        if ( count( $node->series_contributor_widget_names ) ) {
+          foreach ( $node->series_contributor_widget_names as $widget_name ) {
+            $widget = $node->$widget_name;
+            if (count( $widget['subwidgets'] ) != 0 ) {
+              foreach ( $widget['subwidgets'] as $subwidget_id => $subwidget ) {
+                db_query("INSERT INTO {am_citation_series_contributor} ".
+                        "(nid, widget_name, subwidget_id, series_contributor_nid, series_contributor_role) ".
+                        " VALUES (%d, '%s', %d, %d, '%s')",
+                $node->nid, $widget_name, $subwidget_id,
+                $subwidget['series_contributor_nid'], serialize( $subwidget['series_contributor_role'] )
+              );
+            }
+          }
+        }
+      }
+      break;
+    }
+  }
+
+  if ( variable_get( 'artmob_contributor_widget_'. $node->type, FALSE ) ) {
+    switch ($op) {
+      // info flow db -> node -> form -> node -> db
+      case load: // Load Widgets in from db
+        $widget_name = '';
+        $gload = artmob_contributor_widget_load_widgets( $node, &$widget_name );
+        $aload = array_merge( $aload, $gload );
+        break;
+      case view:
+        break;
+
+      case update:
+        // keep life simple and do update by just deleting and then inserting
+        //db_query("DELETE FROM {am_contributor_widget} WHERE nid = '%d'", $node->nid );
+        db_query("DELETE FROM {am_citation_roles} WHERE citation_id = '%d'", $node->citation_id );
+      case insert:
+        if ( count( $node->contributor_widget_names ) ) {
+          foreach ( $node->contributor_widget_names as $widget_name ) {
+  //          if ( $widget_name == 'widgetprice1' ) {
+            $widget = $node->$widget_name;
+            if (count( $widget['subwidgets'] ) != 0 ) {
+              foreach ( $widget['subwidgets'] as $subwidget_id => $subwidget ) {
+                if ( $subwidget['contributor_nid'] == 0 ) {
+                  $nid = 0;
+                  $result = db_query( "SELECT nid from {am_contributor} where first_name = '%s' and last_name = '%s'", $subwidget['firstname'], $subwidget['lastname'] );
+                  $query = sprintf("SELECT nid from {am_contributor} where first_name = '%s' and last_name = '%s'", $subwidget['firstname'], $subwidget['lastname'] );
+                  while ($row = db_fetch_object($result)) {
+                    $nid = $row->nid;
+                    break;
+                  }
+                  if ( $nid == 0 ) {
+                    //if it is a corporate contibutor then both names don't need to be filled
+                    if ((( $subwidget['firstname'] != '' ) && ( $subwidget['lastname'] != '' ))
+                       || (( $subwidget['contributor_type'] == CONTRIBUTOR_TYPE_CORPORATION ) &&
+                        (( $subwidget['firstname'] != '' ) || ( $subwidget['lastname'] != '' )) ) ) {
+                      //add this person as a contributor
+                      global $user;
+                      $contributor_node->nid = '';
+                      $contributor_node->uid = $user->uid;
+                      $contributor_node->type = 'Contributor';
+                      $contributor_node->status = 1;
+                      $contributor_node->first_name = $subwidget['firstname'];
+                      $contributor_node->last_name = $subwidget['lastname'];
+                      $contributor_node->title = $subwidget['firstname'] .' '. $subwidget['lastname'];
+                      $contributor_node->contributor_type = $subwidget['contributor_type'];
+                      node_save( $contributor_node);
+                      $nid = $contributor_node->nid;
+                      //$contributor_id = $contributor_node->contributor_id;
+                      $contributor_id = artmob_contributor_get_id_from_nid( $nid );
+                      //drupal_set_message( 'saved nid = '.$nid );
+                      //drupal_set_message( 'saved id = '.$contributor_id );
+                    }
+                  }
+                  else {
+                    $contributor_id = artmob_contributor_get_id_from_nid( $nid );
+                  }
+                }
+                else {
+                  $nid = $subwidget['contributor_nid'];
+                  $contributor_id = artmob_contributor_get_id_from_nid( $nid );
+                }
+                if ( $nid <> 0 ) {
+                  foreach ( $subwidget['contributor_role'] as $role_id => $role_value ) {
+                    db_query( "INSERT INTO {am_citation_roles}
+                               set contributor_id = %d,
+                               widget_name = '%s',
+                               sequence = %d,
+                               citation_id = %d,
+                               role_id = '%s'",
+                               $contributor_id,
+                               $widget_name,
+                               $subwidget_id,
+                               $node->citation_id,
+                               $role_id);
+                  }
+                }
+              }
+  //          }
+            }
+          }
+        }
+        break;
+    }
+  }
+  */
+
+  switch ($op) {
+    case 'update':
+      $bupdate = TRUE;
+      //Fall through, with flag.  Therefore with every update we delete
+      //the old associated records and then resave the new ones
+
+    case 'delete':
+
+      if (!$bupdate) {
+        break;
+      }
+
+    case 'insert':
+      //OLD -
+      //if (variable_get('rdo_citation_'. $node->type, 0)) {
+      if ( variable_get( 'rdo_license_options_'.$node->type, ARTMOB_LICENSE_MODE_NONE ) == ARTMOB_LICENSE_MODE_FULL ){
+        if ( $node->type <> 'citation') {
+          if ( $node->citation_include ) {
+            $result = db_query("SELECT * FROM {am_citation} WHERE link_nid = %d and link_eid = ''", $node->nid );
+            if ( db_num_rows($result )) {
+              $row = db_fetch_object( $result );
+              $citation_nid = $row->nid;
+              //Update the citation node
+              $citation = new stdClass();
+              $citation->type = 'citation';
+              $citation->nid = $row->nid;
+              $citation->uid = $node->uid;
+              $citation->link_nid = $node->nid;
+              $citation->status = 1;
+
+              $citation->copyright_date = $node->copyright_date;
+
+              $citation->title = $node->title;
+              if ( $node->citation_title == '' ) {
+                $citation->citation_title = $node->title;
+              }
+              else {
+                $citation->citation_title = $node->citation_title;
+              }
+
+              if ( $node->title_without_prefix == '' ) {
+                $citation->title_without_prefix = artmob_citation_trim_prefix($node->title);
+              }
+              else {
+                $citation->title_without_prefix = $node->title_without_prefix;
+              }
+
+              $citation->subtitle = $node->subtitle;
+              $citation->series_title = $node->series_title;
+              $citation->series_number = $node->series_number;
+              $citation->series_year = $node->series_year;
+              $citation->series_description = $node->series_description;
+              $citation->edition = $node->edition;
+              $citation->set_title = $node->set_title;
+              $citation->set_title_without_prefix = $node->set_title_without_prefix;
+              $citation->set_item_number = $node->set_item_number;
+              $citation->publication_publisher_name = $node->publication_publisher_name;
+              $citation->publication_imprint_name = $node->publication_imprint_name;
+              $citation->publication_print_run = $node->publication_print_run;
+              $citation->language = $node->language;
+              $citation->medium = $node->medium;
+              $citation->number_of_pages = $node->number_of_pages;
+              $citation->running_time = $node->running_time;
+              $citation->sequence_type = $node->sequence_type;
+              $citation->sequence_value = $node->sequence_value;
+              $citation->sequence_description = $node->sequence_description;
+              $citation->sequence_description_format = $node->sequence_description_format;
+              $citation->subject = $node->subject;
+              $citation->genre = $node->genre;
+              $citation->citation_style = $node->citation_style;
+              $citation->citation_text = $node->citation_text;
+              $citation->catalogue_description = $node->catalogue_description;
+              $citation->features_and_distinctions = $node->features_and_distinctions;
+              $citation->publication_notes = $node->publication_notes;
+              $citation->catalogue_description_format = $node->catalogue_description_format;
+              $citation->features_and_distinctions_format = $node->features_and_distinctions_format;
+              $citation->publication_notes_format = $node->publication_notes_format;
+              $citation->publication_date = $node->publication_date;
+              $citation->archival_date = $node->archival_date;
+              $citation->first_publication_date = $node->first_publication_date;
+              $citation->corporate_contributor = $node->corporate_contributor;
+
+              node_save( $citation );
+
+            }
+            else {
+              //Create a new citation node
+              $citation = new stdClass();
+              $citation->uid = $node->uid;
+              $citation->link_nid = $node->nid;
+              $citation->type = 'citation';
+              $citation->status = 1;
+              $citation->copyright_date = $node->copyright_date;
+              $citation->title = $node->title;
+
+              if ( $node->citation_title == '' ) {
+                //$citation->citation_title = $node->title;
+                $node_type_name = node_get_types( 'name', $node );
+                $citation->citation_title = $node_type_name.' Citation:'.$node->title;
+              }
+              else {
+                $citation->citation_title = $node->citation_title;
+              }
+
+              if ( $node->title_without_prefix == '' ) {
+                $citation->title_without_prefix = artmob_citation_trim_prefix($node->title);
+              }
+              else {
+                $citation->title_without_prefix = $node->title_without_prefix;
+              }
+              $citation->subtitle = $node->subtitle;
+              $citation->series_title = $node->series_title;
+              $citation->series_number = $node->series_number;
+              $citation->series_year = $node->series_year;
+              $citation->series_description = $node->series_description;
+              $citation->edition = $node->edition;
+              $citation->set_title = $node->set_title;
+              $citation->set_title_without_prefix = $node->set_title_without_prefix;
+              $citation->set_item_number = $node->set_item_number;
+              $citation->number_of_pages = $node->number_of_pages;
+              $citation->publication_publisher_name = $node->publication_publisher_name;
+              $citation->publication_imprint_name = $node->publication_imprint_name;
+              $citation->publication_print_run = $node->publication_print_run;
+              $citation->genre = $node->genre;
+              $citation->citation_style = $node->citation_style;
+              $citation->citation_text = $node->citation_text;
+              $citation->catalogue_description = $node->catalogue_description;
+              $citation->features_and_distinctions = $node->features_and_distinctions;
+              $citation->publication_notes = $node->publication_notes;
+              $citation->catalogue_description_format = $node->catalogue_description_format;
+              $citation->features_and_distinctions_format = $node->features_and_distinctions_format;
+              $citation->publication_notes_format = $node->publication_notes_format;
+              $citation->publication_date = $node->publication_date;
+              $citation->archival_date = $node->archival_date;
+              $citation->first_publication_date = $node->first_publication_date;
+              $citation->nid = db_next_id('{node}_nid');
+              $citation->corporate_contributor = $node->corporate_contributor;
+              $citation->running_time = $node->running_time;
+              $citation->nid = '';
+              node_save( $citation );
+              $citation_nid = $citation->nid;
+
+              $continue = False;
+              switch ($node->type) {
+                case 'DigitizedWorks';
+                  $work_type = ARTMOB_FD_MEDIA_TYPE_DOCUMENT;
+                  $continue = True;
+                  break;
+                case 'amVideo';
+                  $work_type = ARTMOB_FD_MEDIA_TYPE_VIDEO;
+                  $continue = True;
+                  break;
+                case 'amAudio';
+                  $work_type = ARTMOB_FD_MEDIA_TYPE_AUDIO;
+                  $continue = True;
+                  break;
+                case 'amPicture';
+                  $work_type = ARTMOB_FD_MEDIA_TYPE_IMAGE;
+                  $continue = True;
+                  break;
+              }
+
+              //Create a second citation and encapsulated_work for the work too
+              if ( $continue ){
+                $citation->nid = '';
+                $citation->work_type = $work_type;
+                $citation->link_eid = $node->nid.'_1';
+                node_save( $citation );
+                $citation_id = artmob_citation_get_citation_id( $citation->nid );
+                $eid = $node->nid .'_1';
+
+                db_query( "INSERT INTO {am_encapsulated_works} set
+                   eid = '%s', nid = %d,
+                   citation_id = %d, parent_eid = '%s',
+                   sequence = %d, tree_level = %d",
+                   $eid, $node->nid, $citation_id, 0,
+                   1, 0);
+              }
+
+            }
+          }
+          else {
+            $result = db_query("SELECT * FROM {am_citation} WHERE link_nid = %d", $node->nid );
+            if ( db_num_rows ($result) ) {
+              $row = db_fetch_object( $result );
+              $citation_nid = $row->nid;
+
+              //Delete any linked node information in case any is left behind (somebody went from
+              $result = db_query("DELETE FROM { am_citation } WHERE link_nid = %d", $node->nid );
+             // $result = db_query("DELETE FROM { node } WHERE nid = %d", $node->nid );
+            }
+          }
+        }
+      }
+
+      break;
+    case 'load':
+      //OLD -
+      //if (variable_get('rdo_citation_'. $node->type, 0)) {
+      if ( variable_get( 'rdo_license_options_'.$node->type, ARTMOB_LICENSE_MODE_NONE ) == ARTMOB_LICENSE_MODE_FULL ){
+        $oresult = db_query("SELECT * FROM {am_citation} WHERE link_nid = %d", $node->nid );
+        if ( db_num_rows( $oresult ) ) {
+          $row = db_fetch_object($oresult);
+          $aload['copyright_date'] = $row->copyright_date;
+          $aload['link_nid'] = $row->link_nid;
+          $aload['citation_nid'] = $row->nid;
+          $aload['citation_id'] = $row->citation_id;
+          $aload['citation_title'] = $row->citation_title;
+          $aload['title_without_prefix'] = $row->title_without_prefix;
+          $aload['subtitle'] = $row->subtitle;
+          $aload['series_title'] = $row->series_title;
+          $aload['series_number'] = $row->series_number;
+          $aload['series_year'] = $row->series_year;
+          $aload['series_description'] = $row->series_description;
+          $aload['edition'] = $row->edition;
+          $aload['set_title'] = $row->set_title;
+          $aload['set_title_without_prefix'] = $row->set_title_without_prefix;
+          $aload['set_item_number'] = $row->set_item_number;
+          $aload['number_of_pages'] = $row->number_of_pages;
+          $aload['publication_publisher_name'] = $row->publication_publisher_name;
+          $aload['publication_imprint_name'] = $row->publication_imprint_name;
+          $aload['publication_print_run'] = $row->publication_print_run;
+          $aload['genre'] = $row->genre;
+          $aload['citation_style'] = $row->citation_style;
+          $aload['citation_text'] = $row->citation_text;
+          $aload['catalogue_description'] = $row->catalogue_description;
+          $aload['features_and_distinctions'] = $row->features_and_distinctions;
+          $aload['publication_notes'] = $row->publication_notes;
+          $aload['catalogue_description_format'] = $row->catalogue_description_format;
+          $aload['features_and_distinctions_format'] = $row->features_and_distinctions_format;
+          $aload['publication_notes_format'] = $row->publication_notes_format;
+          $aload['publication_date'] = $row->publication_date;
+          $aload['archival_date'] = $row->archival_date;
+          $aload['first_publication_date'] = $row->first_publication_date;
+          $aload['identifier_type_code_1'] = $row->identifier_type_code_1;
+          $aload['identifier_type_name_1'] = $row->identifier_type_name_1;
+          $aload['identifier_type_value_1'] = $row->identifier_type_value_1;
+          $aload['identifier_type_code_2'] = $row->identifier_type_code_2;
+          $aload['identifier_type_name_2'] = $row->identifier_type_name_2;
+          $aload['identifier_type_value_2'] = $row->identifier_type_value_2;
+          $aload['corporate_contributor'] = $row->corporate_contributor;
+          $aload['running_time'] = $row->running_time;
+
+          $node->citation_id = $row->citation_id;
+          $citation_array = artmob_license_contributor_widget_load_widgets( $node, $widget_name );
+          if ( is_array( $citation_array ) ) {
+            $aload = array_merge( $aload, $citation_array );
+          }
+
+          $citation->copyright_date = $row->copyright_date;
+          $citation->link_nid = $row->link_nid;
+          $citation->nid = $row->nid;
+          $citation->citation_id = $row->citation_id;
+          $citation->citation_title = $row->citation_title;
+          $citation->title_without_prefix = $row->title_without_prefix;
+          $citation->subtitle = $row->subtitle;
+          $citation->series_title = $row->series_title;
+          $citation->series_number = $row->series_number;
+          $citation->series_year = $row->series_year;
+          $citation->series_description = $row->series_description;
+          $citation->edition = $row->edition;
+          $citation->set_title = $row->set_title;
+          $citation->set_title_without_prefix = $row->set_title_without_prefix;
+          $citation->set_item_number = $row->set_item_number;
+          $citation->publication_publisher_name = $row->publication_publisher_name;
+          $citation->publication_imprint_name = $row->publication_imprint_name;
+          $citation->publication_print_run = $row->publication_print_run;
+          $citation->language = $row->language;
+          $citation->medium = $row->medium;
+          $citation->sequence_type = $row->sequence_type;
+          $citation->sequence_value = $row->sequence_value;
+          $citation->sequence_description = $row->sequence_description;
+          $citation->sequence_description_format = $row->sequence_description_format;
+          $citation->subject = $row->subject;
+          $citation->number_of_pages = $row->number_of_pages;
+          $citation->running_time = $row->running_time;
+
+          $citation->genre = $row->genre;
+          $citation->citation_style = $row->citation_style;
+          $citation->citation_text = $row->citation_text;
+          $citation->catalogue_description = $row->catalogue_description;
+          $citation->features_and_distinctions = $row->features_and_distinctions;
+          $citation->publication_notes = $row->publication_notes;
+          $citation->catalogue_description_format = $row->catalogue_description_format;
+          $citation->features_and_distinctions_format = $row->features_and_distinctions_format;
+          $citation->publication_notes_format = $row->publication_notes_format;
+          $citation->publication_date = $row->publication_date;
+          $citation->archival_date = $node->created;   // changed by bk. TO DO: at some point archival_date and $node->created should be aligned throughout.
+          $citation->first_publication_date = $row->first_publication_date;
+          $citation->identifier_type_code_1 = $row->identifier_type_code_1;
+          $citation->identifier_type_name_1 = $row->identifier_type_name_1;
+          $citation->identifier_type_value_1 = $row->identifier_type_value_1;
+          $citation->identifier_type_code_2 = $row->identifier_type_code_2;
+          $citation->identifier_type_name_2 = $row->identifier_type_name_2;
+          $citation->identifier_type_value_2 = $row->identifier_type_value_2;
+          $citation->corporate_contributor = $row->corporate_contributor;
+          $citation->license = $citation_array;
+
+          $node->citation_id = $citation->citation_id;
+
+
+        }
+        $widget_license = artmob_license_contributor_widget_load_widgets( $node, $widget_name );
+        $citation->licenses = array();
+        $citation->licenses = $widget_licenses[$widget_name]['subwidgets'];
+
+        $widget_annotations= artmob_annotation_load_widgets( $node, $widget_name );
+        $citation->annotations = array();
+        $citation->annotations = $widget_annotations[$widget_name]['subwidgets'];
+
+        $widget_identifiers = artmob_identifier_load_widgets( $node, $widget_name );
+        $citation->identifiers = array();
+        $citation->identifiers = $widget_identifiers[$widget_name]['subwidgets'];
+
+        $widget_measurements = artmob_measurement_load_widgets( $node, $widget_name );
+        $citation->measurements = array();
+        $citation->measurements = $widget_measurements[$widget_name]['subwidgets'];
+
+        $widget_series_contributors = artmob_series_contributor_load_widgets( $node, $widget_name );
+        $citation->series_contributors = array();
+        $citation->series_contributors = $widget_series_contributors[$widget_name]['subwidgets'];
+
+        $widget_dates = artmob_date_widget_load_widgets( $node, $widget_name );
+        $citation->dates = array();
+        $citation->dates = $widget_dates[$widget_name]['subwidgets'];
+
+        $aload['citation'] = $citation;
+
+      }
+      return $aload;
+      break;
+    case 'prepare':
+      break;
+    case 'view':
+     break;
+    case 'delete revision':
+      break;
+    case 'submit':
+
+      break;
+  }
+}
+
+//----------------------------------------------
+function artmob_citation_user($op, &$edit, &$currentuser) {
+  global $user;
+  switch ($op) {
+    case 'load':
+    case 'view':
+    case 'form':
+  };
+}
+
+function artmob_citation_get_role_default( $default ) {
+  if ( $default ) {
+    return $default;
+  }
+  else {
+    return 'A01';
+  }
+}
+
+
+function artmob_citation_get_role_description($role_id) {
+        if (variable_get('artmob_citation_use_MARC', FALSE) == TRUE) { // NOT YET IMPLEMENTED
+                $field = 'MARC_relator_key';
+        }
+        else {
+                $field = 'role_id';
+        }
+        
+        $db_result = db_result(db_query("SELECT role_description FROM {am_roles} WHERE ". mysql_real_escape_string($field) ."='%s'", $role_id));
+        
+        return $db_result;
+}
+
+function convert_citations() {
+//-- THIS IS THE NEW CONVERT THAT WILL FIND ANY CITATION ENTRIES THAT
+//-- DON'T HAVE NODE ENTRIES AND WILL CREATE NODE ENTRIES FOR THEM.
+//-- THEN WE GO THROUGH EACH archival date and put it into the publication date
+  global $user;
+  $result = db_query( "SELECT nid from {am_citation} where link_nid <> 0 ORDER BY nid" );
+  while ($row = db_fetch_object($result)) {
+    $node_result = db_query( "SELECT nid FROM {node} where nid = %d", $row->nid );
+    //node record does not exist so we want to add one
+    if ( db_num_rows( $node_result ) == 0 ) {
+      $node->nid = $row->nid;
+      $node->uid = $user->uid;
+      artmob_citation_insert_node_record( $node );
+      drupal_set_message( "inserted node record $node->nid " );
+    }
+  }
+
+  include_once('./'. drupal_get_path('module', 'date') .'/date.inc');
+
+  $result = db_query( "SELECT * FROM {content_field_archival_date}");
+  while ($row = db_fetch_object($result)) {
+    drupal_set_message( "nid =  $row->nid " );
+    $archive_date = date_iso2unix($row->field_archival_date_value) + ( ( 60 * 60 * 24 ));
+    drupal_set_message( "archive_date =  $archive_date " );
+    db_query( "UPDATE {am_citation} SET publication_date = %d WHERE link_nid = %d",
+                 $archive_date, $row->nid );
+  }
+
+}
+
+function artmob_citation_BuildCode5List() {
+  $return = array();
+  $result = db_query("SELECT * FROM {am_citation_identifier_type}
+                      ORDER BY product_id");
+
+  while ( $data = db_fetch_object($result)) {
+    $return[$data->product_id] = $data->description;
+  }
+  return $return;
+
+}
+
+function artmob_citation_autocomplete_identifier_name($string = '') {
+  $matches = array();
+  if ($string) {
+    $result = db_query_range("SELECT identifier_type_name_1 FROM {am_citation} WHERE LOWER(identifier_type_name_1) LIKE LOWER('%s%%')", $string, 0, 10);
+    while ($data = db_fetch_object($result)) {
+      $matches[$data->identifier_type_name_1] = check_plain($data->identifier_type_name_1);
+    }
+
+    $result = db_query_range("SELECT identifier_type_name_2 FROM {am_citation} WHERE LOWER(identifier_type_name_2) LIKE LOWER('%s%%')", $string, 0, 10);
+    while ($data = db_fetch_object($result)) {
+      $matches[$data->identifier_type_name_2] = check_plain($data->identifier_type_name_2);
+    }
+
+  }
+  print drupal_to_js($matches);
+  exit();
+}
+
+function artmob_citation_autocomplete_series_title($string = '') {
+  $matches = array();
+  if ($string) {
+    $result = db_query_range("SELECT series_title FROM {am_citation} WHERE LOWER(series_title) LIKE LOWER('%s%%')", $string, 0, 10);
+    while ($data = db_fetch_object($result)) {
+      $matches[$data->series_title] = check_plain($data->series_title);
+    }
+  }
+  print drupal_to_js($matches);
+  exit();
+}
+
+function artmob_citation_autocomplete_set_title($string = '') {
+  $matches = array();
+  if ($string) {
+    $result = db_query_range("SELECT set_title FROM {am_citation} WHERE LOWER(set_title) LIKE LOWER('%s%%')", $string, 0, 10);
+    while ($data = db_fetch_object($result)) {
+      $matches[$data->set_title] = check_plain($data->set_title);
+    }
+  }
+  print drupal_to_js($matches);
+  exit();
+}
+
+function artmob_citation_autocomplete_set_title_without_prefix($string = '') {
+  $matches = array();
+  if ($string) {
+    $result = db_query_range("SELECT set_title_without_prefix FROM {am_citation} WHERE LOWER(set_title_without_prefix) LIKE LOWER('%s%%')", $string, 0, 10);
+    while ($data = db_fetch_object($result)) {
+      $matches[$data->set_title_without_prefix] = check_plain($data->set_title_without_prefix);
+    }
+  }
+  print drupal_to_js($matches);
+  exit();
+}
+
+function artmob_citation_autocomplete_genre($string = '') {
+  //we will assume that the string is a comma delimited string
+  //The way that the autocomplete works is that
+  //the index of $matches is what will be placed into the box
+  //after the item is selected and the value of $matches at that
+  //index is what will show in the pop up box.
+  //So to keep the entire delimited list we pop off the last
+  //element to search on and then keep what is remaining
+  //appended to their choice.
+  $matches = array();
+
+  if ( $string ) {
+    $params = explode( ',', $string );
+    $last_string = trim(array_pop( $params ));
+    $list = implode(',', $params ) .',';
+    if ($last_string) {
+      $result = db_query_range("SELECT genre FROM {am_citation} WHERE LOWER(genre) LIKE LOWER('%s%%')", $last_string, 0, 10);
+      while ($data = db_fetch_object($result)) {
+        $matches[$list . $data->genre] = check_plain($data->genre);
+      }
+    }
+  }
+  print drupal_to_js($matches);
+  exit();
+}
+
+//* Implementation of hook_views_tables()
+function artmob_citation_views_tables() {
+  $tables['am_citation'] = array(
+    "name" => "am_citation",
+    "join" => array(
+      "left" => array(
+        "table" => "node",
+        "field" => "nid"
+      ),
+      "right" => array(
+        "field" => "nid"
+      ),
+    ),
+    "fields" => array(
+      "citation_title" => array(
+        'name' => "Citation: Title",
+        'handler' => '',
+        'sortable' => TRUE
+      ),
+      "title_without_prefix" => array(
+        'name' => "Citation: Title without prefix",
+        'handler' => '',
+        'sortable' => TRUE
+      ),
+      "corporate_contributor" => array(
+        'name' => "Citation: Corporate Contributor",
+        'handler' => '',
+        'sortable' => TRUE
+      ),
+      "series_title" => array(
+        'name' => "Citation: Series Title",
+        'handler' => '',
+        'sortable' => TRUE
+      ),
+      "set_title_without_prefix" => array(
+        'name' => "Citation: Set title without prefix",
+        'handler' => '',
+        'sortable' => TRUE
+      ),
+      "publication_publisher_name" => array(
+        'name' => "Citation: Publisher Name",
+        'handler' => '',
+        'sortable' => TRUE
+      ),
+      "publication_imprint_name" => array(
+        'name' => "Citation: Imprint Name",
+        'handler' => '',
+        'sortable' => TRUE
+      ),
+      "genre" => array(
+        'name' => "Citation: Genre",
+        'handler' => '',
+        'sortable' => TRUE
+      ),
+      "copyright_date" => array(
+        'name' => "Citation: Copyright Date",
+        'handler' => views_handler_field_dates(),
+        'sortable' => TRUE,
+        'option' => 'string',
+      ),
+      "publication_date" => array(
+        'name' => "Citation: Publication Date",
+        'handler' => views_handler_field_dates(),
+        'sortable' => TRUE,
+        'option' => 'string',
+      ),
+      "archival_date" => array(
+        'name' => "Citation: Archival Date",
+        'handler' => views_handler_field_dates(),
+        'sortable' => TRUE,
+        'option' => 'string',
+      ),
+    ),
+    "sorts" => array(
+      "citation_title" => array('name' => t("Citation: Title")),
+      "title_without_prefix" => array('name' => t("Citation: Title without prefix")),
+      "corporate_contributor" => array('name' => t("Citation: Corporate Contributor")),
+      "series_title" => array('name' => t("Citation: Series Title")),
+      "set_title_without_prefix" => array('name' => t("Citation: Set title without prefix")),
+      "publication_publisher_name" => array('name' => t("Citation: Publisher Name")),
+      "publication_imprint_name" => array('name' => t("Citation: Imprint Name")),
+      "genre" => array('name' => t("Citation: Genre")),
+      'copyright_date' => array(
+        'name' => t('Citation: Copyright Date'),
+        'handler' => 'views_handler_sort_date',
+        'option' => views_handler_sort_date_options(),
+       ),
+      'publication_date' => array(
+        'name' => t('Citation: Publication Date'),
+        'handler' => 'views_handler_sort_date',
+        'option' => views_handler_sort_date_options(),
+       ),
+      'archival_date' => array(
+        'name' => t('Citation: Archival Date'),
+        'handler' => 'views_handler_sort_date',
+        'option' => views_handler_sort_date_options(),
+       ),
+    ),
+    "filters" => array(
+      "citation_title" => array(
+        'name' => "Citation: Title",
+        'operator' => 'views_handler_operator_eqneq',
+        'option' => 'string',
+      ),
+      "title_without_prefix" => array(
+        'name' => "Citation: Title without prefix",
+        'operator' => 'views_handler_operator_eqneq',
+        'option' => 'string',
+      ),
+      "corporate_contributor" => array(
+        'name' => "Citation: Corporate Contributor",
+        'operator' => 'views_handler_operator_eqneq',
+        'option' => 'string',
+      ),
+      "series_title" => array(
+        'name' => "Citation: Series Title",
+        'operator' => 'views_handler_operator_eqneq',
+        'option' => 'string',
+      ),
+      "set_title_without_prefix" => array(
+        'name' => "Citation: Set title without prefix",
+        'operator' => 'views_handler_operator_eqneq',
+        'option' => 'string',
+      ),
+      "publication_publisher_name" => array(
+        'name' => "Citation: Publisher Name",
+        'operator' => 'views_handler_operator_eqneq',
+        'option' => 'string',
+      ),
+      "publication_imprint_name" => array(
+        'name' => "Citation: Imprint Name",
+        'operator' => 'views_handler_operator_eqneq',
+        'option' => 'string',
+      ),
+      "genre" => array(
+        'name' => "Citation: Genre",
+        'operator' => 'views_handler_operator_eqneq',
+        'option' => 'string',
+      ),
+      "copyright_date" => array(
+        'name' => "Citation: Copyright Date",
+        'operator' => 'views_handler_operator_gtlt',
+        'value' => views_handler_filter_date_value_form(),
+        'handler' => 'views_handler_filter_timestamp',
+        'option' => 'string',
+      ),
+      "publication_date" => array(
+        'name' => "Citation: Publication Date",
+        'operator' => 'views_handler_operator_gtlt',
+        'value' => views_handler_filter_date_value_form(),
+        'handler' => 'views_handler_filter_timestamp',
+        'option' => 'string',
+      ),
+      "archival_date" => array(
+        'name' => "Citation: Archival Date",
+        'operator' => 'views_handler_operator_gtlt',
+        'value' => views_handler_filter_date_value_form(),
+        'handler' => 'views_handler_filter_timestamp',
+        'option' => 'string',
+      ),
+    )
+  );
+  return $tables;
+}
+
+function artmob_citation_views_handler_operator_or() {
+  return array('OR' => t('Show only from...'), 'NOR' => t('Show all but...'));
+}
+
+function artmob_citation_trim_prefix( $string = '' ) {
+  $result = trim($string);
+  if ( strlen( $string ) > 3 ) {
+    $check = strtolower(mb_substr( $string, 0, 4 ));
+    if ($check == 'the ' ) {
+      return substr( $string, 4 );
+    }
+  }
+  if ( strlen( $string ) > 2 ) {
+    $check = strtolower(mb_substr( $string, 0, 3 ));
+    if ($check == 'an ' ) {
+      return substr( $string, 3 );
+    }
+  }
+  if ( strlen( $string ) > 1 ) {
+    $check = strtolower(mb_substr( $string, 0, 2 ));
+    if ($check == 'a ' ) {
+      return substr( $string, 2 );
+    }
+  }
+  return $result;
+}
+
+function artmob_citation_tab(&$node) {
+ return theme('artmob_citation_tab_node_view', $node);
+}
+
+function theme_artmob_citation_summary(&$node) {
+  $postdate = format_date($node->created, 'custom', 'F, Y');
+
+  if ($node->publication_date) {
+    $date = format_date($node->publication_date, 'custom', 'Y');
+  }
+
+
+  $output .= "<div class='asset-sidebar-content citation-summary'>";
+
+  $output .= theme('artmob_identifier_get_identifiers', $node);
+
+  if ($node->contributors_by_role) {
+    $output .= "<h3>Known contributors</h3>";
+    $output .= theme('artmob_contributor_widget_build_contributors_as_list', $node, 'h4', array('By'));
+  }
+
+  $output .= $node->publication_date ? "<h3>Year Created</h3><p>{$date}</p>" : '';
+
+  $output .= $node->name ? "<h3>Submitted by</h3><p>". ucfirst($node->name) ." in {$postdate}</p>" : '';
+
+  $output .= "<div class='summary-tab-link'><p>". l('View full citation', "node/{$node->nid}/citation") ."</p></div>";
+
+  $output .= "</div>";
+  return $output;
+}
+
+// function artmob_citation_tab_basic_view_preprocess (&$node) {
+//     $vars = array();
+//
+//     $vars['citation_fields'] = array(   // additional fields to display in citation tab
+//     'series title' => 'series_title',
+//     'series number' => 'series_number',
+//     'series year' => 'series_year',
+//     'series description' => 'series_description',
+//     'edition' => 'edition',
+//     'number of pages' => 'number_of_pages',
+//     'publication publisher name' => 'publication_publisher_name',
+//     'publication imprint name' => 'publication_imprint_name',
+//     'publication print run' => 'publication_print_run',
+//     'corporate contributor' => 'corporate_contributor',
+//     'genre' => 'genre',
+//     'features and distinctions' => 'features_and_distinctions',
+//     'publication notes' => 'publication_notes',
+//     'running time' => 'running_time'
+//   );
+//
+//   return $vars;
+// }
+
+function theme_artmob_citation_tab_node_view(&$node) {
+  $content .= "<div class='citation-module'>\n";
+  $content .= "<p>Here is what we know about this ({$node->title}).  If you have additional information to share or would like to correct the information<script type='text/javascript'>glossaryPlaceInlineEntry('Adding or Correcting Information','Tell us what you know about this item by using the forms below.  Your information will be submitted to the site administrator for review.')</script> found here, please use the <a href='#respond'>form below</a>.</p>\n";
+  $content .= "\n";
+  $content .= '<div id="work-collection-init"></div>';
+  $content .= '<div id="processing" style="display:none"></div>';
+
+  $content .= "<a name='respond'></a>";
+  $content .= theme( 'artmob_citation_create_citation_area', $node );
+  //$content .= correct_citation_tab(  (array)$node );
+  $content .= _artmob_citation_tab_view( $node );
+  $content .= artmob_citation_get_discussion( $node );
+  $content .= "</div>";
+
+  return $content;
+
+}
+
+function theme_artmob_citation_create_citation_area( $node ) {
+  // no nested work then add a link that
+  //will create one and reload the page
+  $result = '';
+  if ( user_access('Add Citation') ) {
+    //if ( artmob_citation_associated_works_count( $node->nid ) == 0 ) {
+      return drupal_get_form( 'artmob_citation_create_citation_form', $node );
+    //}
+  }
+  return $result;
+}
+
+function artmob_citation_create_citation_form( $node  ) {
+  global $user;
+  $op = isset($_POST['op']) ? $_POST['op'] : '';
+
+  $form =array();
+
+  $form['citation'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Create Citation'),
+    '#weight' => -2
+  );
+
+  $form['citation']['nid'] = array(
+    '#type'  => 'hidden',
+    '#value'  => $node->nid,
+  );
+
+  $options = artmob_citation_build_work_types();
+  $form['citation']['work_type'] = array(
+        '#type'          => 'select',
+        '#title'         => t('Work Type'),
+        '#default_value' => 'Aa',
+        '#description'   => t('Select the type of work'),
+        '#tree'          => 'FALSE',
+        '#required'      => False,
+        '#weight'        => 5,
+        '#options'       => $options
+  );
+
+  if ( artmob_citation_associated_works_count( $node->nid ) <> 0 ){
+    $form['citation']['citation_title'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Citation Title'),
+      '#default_value' => '',
+      '#description'   => t('Enter the citation title.'),
+      '#tree'          => 'FALSE',
+      '#rows'          => 1,
+      '#weight'        => 7,
+      '#required'      => False
+    );
+  } else {
+    $form['citation']['citation_title'] = array(
+      '#type'  => 'hidden',
+      '#value'  => '',
+    );
+  }
+
+  $form['citation']['create_citation'] = array(
+    '#type'     => 'submit',
+    '#value'    => t('Create Citation'),
+    '#submit'   => True,
+    '#weight'   => 10
+  );
+
+  return $form;
+
+}
+
+function artmob_citation_create_citation_form_submit( $form_id, $form_values) {
+  artmob_citation_create_citation( $form_values['nid'], $form_values['work_type'], $form_values['citation_title'] );
+}
+
+function artmob_citation_build_work_types( $include_none = False, $none_text = 'None') {
+//This list will  now be built from the
+//am_work_type table sot that it is dynamic
+
+  if ( $include_none ){
+    $list[''] = $none_text;
+  }
+
+  $query = db_query ( "Select * from {am_work_type}" );
+  while ($row = db_fetch_object($query)) {
+    $list[$row->work_type_id] = $row->work_type;
+  }
+  return $list;
+/*
+  $list['Aa'] = 'Literary Work';
+  $list['Ab'] = 'Literary Compilation';
+  $list['Ba'] = 'Choreagraphed Work';
+  $list['Bb'] = 'Play/Script/Screenplay';
+  $list['Bc'] = 'Film (Cinema/Animation/Documentary/Found Footage)';
+  $list['Ca'] = 'Musical Composition';
+  $list['Cb'] = 'Musical Recording';
+  $list['Cc'] = 'Muscial Broadcast';
+  $list['Da'] = "Photograph";
+  $list['Db'] = "Painting";
+  $list['Dc'] = "Drawing";
+  $list['Dd'] = "Engraving";
+  $list['De'] = "Sculpture";
+  $list['Df'] = "Architectural Work";
+  $list['Dg'] = "Map/Plan/Chart";
+  $list['Dh'] = "Artistic Compilation";
+  $list['Di'] = "Design";
+  $list ['Ea'] = "Performance";
+  return $list;
+*/
+}
+
+// function theme_artmob_citation_tab_basic_view(&$node) {
+//     /* pre processing */
+//     $vars = artmob_citation_tab_basic_view_preprocess($node);
+//
+//     foreach($vars as $var => $value) { // cast keys as variables;
+//       ${$var} = $value;
+//     }
+//
+//   $content .= "<div class='citation-module'>\n";
+//   $content .= "<p>This page is a listing of the known information about this content.  If you have additional information to share or would like to correct the information found here, please use the <a href='#respond'>form below</a>.</p>\n";
+//   $content .= "\n";
+//   $content .= "<h2 class='citation-PostNotesTitle'>{$node->title}";
+//   $content .= $node->subtitle ? "<br /><span class='PostNotesSubtitle'>{$node->subtitle}</span>": "";
+//   $content .= "</h2>\n";
+//
+//   if (is_array($node->identifiers_by_type)) {
+//     $iblocks = array();
+//     $content .= "<h3>Record Identifiers</h3>\n";
+//
+//     foreach($node->identifiers_by_type as $type => $value) {
+//       $block = '';
+//       $block .= "<table class='citationTable citation-table-ids'>\n";
+//       $block .= "<tr><th>{$value['name']}</th></tr>\n";
+//       $block .= "<tr><td class='column1'>{$value['value']}</td></tr>\n";
+//       $block .= "</table>\n";
+// 
+//       $iblocks[$role_name] = $block;
+// 
+//     }
+// 
+//     $content .= display_columnize($iblocks,2,"citationTable");
+//   }
+//
+//   if (is_array($node->contributors_by_role)) {
+//     $cblocks = array();
+//     $content .= "<h3>Known Contributors</h3>\n";
+// 
+//     foreach ($node->contributors_by_role as $role_name => $contributors) {
+// 
+//       $block = '';
+//       $block .= "<table class='citationTableInner'>\n";
+//       $block .= "<tr><th>{$role_name}</th></tr>\n";
+// 
+//       if (is_array($contributors)) {
+//         foreach ($contributors as $cnid=>$contributor) {
+//           $block .= "<tr><td class='column1'>" . l($contributor,"node/{$cnid}",array(),NULL,NULL,FALSE,TRUE) . "</td></tr>\n";
+//         }
+//       }
+// 
+//       $block .= "</table>\n";
+// 
+//       $cblocks[$role_name] = $block;
+//     }
+// 
+//     $content .= display_columnize($cblocks,2,"citationTable");
+//   }
+// 
+//   $cblocks = array();
+//   $content .= "<h3>Citations</h3>\n";
+// 
+//   $citation_list = artmob_citation_get_all_citations_for_node( $node->nid );
+//   foreach ( $citation_list as $citation_nid=>$citation_id ){
+//     $row = db_fetch_object(db_query( "select * from {am_citation} where citation_id = %d", $citation_id ));
+//     $block = '';
+//     $block .= "<table class='citationTableInner'>\n";
+//     $block .= "<tr><th>{$row->citation_title}</th></tr>\n";
+// 
+//     $block .= "<tr><td class='column1'>" . l($row->citation_title,"node/{$citation_nid}/edit", array(), 'destination=node/'.$node->nid.'/citation/') . "</td></tr>\n";
+//
+//     $block .= "</table>\n";
+// 
+//     $cblocks[$citation_id] = $block;
+//   }
+//   $content .= display_columnize($cblocks,2,"citationTable");
+// 
+//   //--------------------------------------
+// 
+// 
+//   if (is_array($node->dates)) {
+//     $dblocks = array();
+//     $content .= "<h3>Dates</h3>\n";
+// 
+//     foreach($node->dates as $label => $value) {
+//       $block = '';
+//       $block .= "<table class='citationTableInner citation-table-date'>\n";
+//       $block .= "<tr><th>{$label}</th></tr>\n";
+//       $block .= "<tr><td class='column1'>{$value}</td></tr>\n";
+//       $block .= "</table>\n";
+// 
+//       $dblocks[$label] = $block;
+// 
+//     }
+//     
+//     $content .= display_columnize($dblocks,2,"citationTable");
+//   }
+//   
+//   if ($node->citation_text) {
+//       $style = $node->citation_style = '1209' ? 'MLA' : 'Chicago Manual of Style';
+//     $content .= "<h3>{$style} Citation</h3>\n";
+//     $content .= "<div class='citation-mlaCitation'>\n";
+//     $content .= "<p>{$node->citation_text}</p>";
+//     //$content .= " <input id='' class='form-submit' type='submit' value='Copy To Clipboard' name='' />\n";
+//     $content .= "</div>\n";
+//   }
+// 
+//   if ($node->catalogue_description) {
+//     $content .= "<h3>Catalogue Description</h3>\n";
+//     $content .= "<div class='citation-mlaCitation'>\n";
+//     $content .= "<p>{$node->catalogue_description}</p>";
+//     $content .= "</div>\n";
+//   }
+//
+//   
+//   $set_mates = artmob_citation_get_others_in_set($node);
+// 
+// 
+//     if (is_array($set_mates)) {
+//     $content .= "<h3>Others from the set {$node->set_title}</h3>\n";
+//     $content .= "<p>";
+// 
+//     foreach($set_mates as $number => $info) {
+//       $content .= $number . '. '. l($info['title'],"node/" . $info['nid'],array('class'=>$info['class'])) . "<br />";
+//     }
+// 
+//       $content .= "</p>";
+//     }
+// 
+//     if (is_array($citation_fields)) {
+// 
+//     $cblocks = array();
+//
+//     foreach($citation_fields as $field) {
+// 
+//       if (empty($node->$field)) { continue; } // no value;
+// 
+//         $label = ucfirst(str_replace('_',' ',$field));
+//         $value = $node->$field;
+// 
+//         $block = '';
+//         $block .= "<table class='citationTable citation-table-{$field}'>\n";
+//         $block .= "<tr><th>{$label}</th></tr>\n";
+//         $block .= "<tr><td class='column1'>{$value}</td></tr>\n";
+//         $block .= "</table>\n";
+// 
+//         $cblocks[$label] = $block;
+// 
+//       }
+//       if (count($cblocks) > 0) {
+//         $content .= "<h3>Other Information</h3>\n";
+//         $content .= display_columnize($cblocks,2,"citationTable");
+//       }
+//     }
+// 
+//   $content .= "<a name='respond'></a>";
+//   //$content .= correct_citation_tab(  (array)$node );
+//   $content .= _artmob_citation_tab_view( $node );
+//   $content .= artmob_citation_get_discussion( $node );
+// 
+// 
+//   return $content;
+// }
+
+function _artmob_citation_tab_view( $node ) {
+  $content = '';
+  foreach (module_implements('citation_tab_view') as $name) {
+    $function = $name .'_citation_tab_view';
+    $content .= $function($node);
+  }
+  return $content;
+}
+
+function artmob_citation_get_discussion( $node ) {
+  $sql = 'select * from {am_citation_ticket} t left join {node} n on t.nid = n.nid where ticket_link_nid = %d';
+  $args = $node->nid;
+  if ( !user_access('View private citation comments') ) {
+    $sql .= ' and is_public = 1';
+  }
+  $sql .= ' order by created desc';
+  $query = db_query( $sql, $args );
+  $node_array = array();
+  while ($row = db_fetch_object($query)) {
+    $nid = $row->nid;
+    $temp = array();
+    $temp['node'] = node_load( $nid );
+
+    //Gather all comments
+    $comments = array();
+    $query_comment = db_query('SELECT * FROM {comments} WHERE nid = %d ORDER BY SUBSTRING(thread, 1, (LENGTH(thread) - 1))', $nid );
+     while ($row_comment = db_fetch_object($query_comment)) {
+       $comments[$row_comment->cid] = $row_comment;
+    }
+    $temp['comments'] = $comments;
+    $node_array[$nid] = $temp;
+  }
+  return theme( 'artmob_citation_get_discussion', $node_array, $node );
+}
+
+function theme_artmob_citation_get_discussion( $node_array = array(), $node) {
+  //This node array is different than usual
+  //The key is the nid
+  //The result is made up of two parts
+  //1. 'node' contains the $node object
+  //2. 'comments' contains an array of comment objects attached to this node.
+
+  $output = "<div class='threaded-discussion' id='citation-threaded-discussion'>\n";
+  $output .= '<h2>Previous Additions or Corrections</h2>';
+
+  if (count($node_array) < 1) {
+    $output .= "<p>No additions or corrections have been supplied for this citation.</p>";
+    $output .= "</div>";
+    return $output;
+  }
+
+  foreach ( $node_array as $key => $value ) {
+    $license_node = $value['node'];
+    $comments = array();
+    $comments = $value['comments'];
+
+    if ($license_node->uid > 0) {
+      $node_comment_user = user_load( array( 'uid' => $license_node->uid ));
+      $node_comment->name = $node_comment_user->name;
+      $node_comment->uid = $node_comment_user->uid;
+    } 
+    else {
+        $node_comment->name = $license_node->ticket_name;
+        $node_comment->uid = 0;
+    }
+
+    $word_array = explode(' ', $license_node->body);
+    $truncated_array = array_slice($word_array, 0, 10);
+
+    $node_comment->subject = join(' ', $truncated_array);
+
+    if (count($word_array) > count($truncated_array)) {
+      $node_comment->subject .= ' ... ';
+    }
+
+    $node_comment->nid = $license_node->nid;
+    $node_comment->comment = $license_node->body;
+    $node_comment->format = $license_node->format;
+    $node_comment->timestamp = $license_node->created;
+    $node_comment->cid = $license_node->nid;
+
+    $output .= theme('comment_view', $node_comment);
+    $output .= theme('links', $node_comment->links);
+
+    $output .= '<div class="indented">';
+    $output .= comment_render($license_node);
+    $output .= "</div>";
+  }
+
+  $output .= "</div>";
+
+  return $output;
+}
+
+/////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+//  The following code was copied over from the comment module
+/// It was changed to work with the citation tab
+/// Basically when a comment is made, it gets attached to the
+//  license it's referring to and not the actual node
+//  furthermore, when submitting the comment the page
+/// will be redirected back here instead of to the license node view.
+/////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+
+/**
+ * This function is responsible for generating a comment reply form.
+ * There are several cases that have to be handled, including:
+ *   - replies to comments
+ *   - replies to nodes
+ *   - attempts to reply to nodes that can no longer accept comments
+ *   - respecting access permissions ('access comments', 'post comments', etc.)
+ *
+ * The node or comment that is being replied to must appear above the comment
+ * form to provide the user context while authoring the comment.
+ *
+ * @param $nid
+ *   Every comment belongs to a node. This is that node's id.
+ * @param $pid
+ *   Some comments are replies to other comments. In those cases, $pid is the parent
+ *   comment's cid.
+ *
+ * @return $output
+ *   The rendered parent node or comment plus the new comment form.
+ */
+function artmob_citation_comment_reply($nid, $citation_nid, $pid = NULL) {
+  // Load the parent node.
+  $node = node_load($nid);
+
+  // Set the breadcrumb trail.
+  menu_set_location(array(array('path' => "node/$citation_nid/citation", 'title' => $node->title), array('path' => "comment/reply/$nid")));
+
+  $op = isset($_POST['op']) ? $_POST['op'] : '';
+
+  $output = '';
+
+  //if (user_access('access comments')) {
+  if (True) {
+    // The user is previewing a comment prior to submitting it.
+    if ($op == t('Preview comment')) {
+      //if (user_access('post comments')) {
+      if (True) {
+        $output .= artmob_citation_comment_form_box(array('pid' => $pid, 'nid' => $nid, 'citation_nid' => $citation_nid), NULL);
+      }
+      else {
+        drupal_set_message(t('You are not authorized to post comments.'), 'error');
+        drupal_goto("node/$citation_nid/citation");
+      }
+    }
+    else {
+      // $pid indicates that this is a reply to a comment.
+      if ($pid) {
+        // load the comment whose cid = $pid
+        if ($comment = db_fetch_object(db_query('SELECT c.*, u.uid, u.name AS registered_name, u.picture, u.data FROM {comments} c INNER JOIN {users} u ON c.uid = u.uid WHERE c.cid = %d AND c.status = %d', $pid, COMMENT_PUBLISHED))) {
+          // If that comment exists, make sure that the current comment and the parent comment both
+          // belong to the same parent node.
+          if ($comment->nid != $nid) {
+            // Attempting to reply to a comment not belonging to the current nid.
+            drupal_set_message(t('The comment you are replying to does not exist.'), 'error');
+            drupal_goto("node/$citation_nid/citation");
+          }
+          // Display the parent comment
+          $comment = drupal_unpack($comment);
+          $comment->name = $comment->uid ? $comment->registered_name : $comment->name;
+          $output .= theme('comment_view', $comment);
+        }
+        else {
+          drupal_set_message(t('The comment you are replying to does not exist.'), 'error');
+          drupal_goto("node/$citation_nid/citation");
+        }
+      }
+      // This is the case where the comment is in response to a node. Display the node.
+      else if (user_access('access content')) {
+        $output .= node_view($node);
+      }
+
+      // Should we show the reply box?
+      if (node_comment_mode($nid) != COMMENT_NODE_READ_WRITE) {
+        drupal_set_message(t("This discussion is closed: you can't post new comments."), 'error');
+        drupal_goto("node/$citation_nid/citation");
+      }
+      //else if (user_access('post comments')) {
+      else if (True) {
+        $output .= artmob_citation_comment_form_box(array('pid' => $pid, 'nid' => $nid, 'citation_nid' => $citation_nid), t('Reply'));
+      }
+      else {
+        drupal_set_message(t('You are not authorized to post comments.'), 'error');
+        drupal_goto("node/$citation_nid/citation");
+      }
+    }
+  }
+  else {
+    drupal_set_message(t('You are not authorized to view comments.'), 'error');
+    drupal_goto("node/$citation_nid/citation");
+  }
+
+  return $output;
+}
+
+function artmob_citation_comment_form_box($edit, $title = NULL) {
+  return theme('box', $title, drupal_get_form('artmob_citation_comment_form', $edit, $title));
+}
+
+
+function artmob_citation_comment_form($edit, $title = NULL) {
+  global $user;
+
+  $op = isset($_POST['op']) ? $_POST['op'] : '';
+
+  if ($user->uid) {
+    if ($edit['cid'] && user_access('administer comments')) {
+      if ($edit['author']) {
+        $author = $edit['author'];
+      }
+      elseif ($edit['name']) {
+        $author = $edit['name'];
+      }
+      else {
+        $author = $edit['registered_name'];
+      }
+
+      if ($edit['status']) {
+        $status = $edit['status'];
+      }
+      else {
+        $status = 0;
+      }
+
+      if ($edit['date']) {
+        $date = $edit['date'];
+      }
+      else {
+        $date = format_date($edit['timestamp'], 'custom', 'Y-m-d H:i O');
+      }
+
+      $form['admin'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Administration'),
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+        '#weight' => -2,
+      );
+
+      if ($edit['registered_name'] != '') {
+        // The comment is by a registered user
+        $form['admin']['author'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Authored by'),
+          '#size' => 30,
+          '#maxlength' => 60,
+          '#autocomplete_path' => 'user/autocomplete',
+          '#default_value' => $author,
+          '#weight' => -1,
+        );
+      }
+      else {
+        // The comment is by an anonymous user
+        $form['is_anonymous'] = array(
+          '#type' => 'value',
+          '#value' => TRUE,
+        );
+        $form['admin']['name'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Authored by'),
+          '#size' => 30,
+          '#maxlength' => 60,
+          '#default_value' => $author,
+          '#weight' => -1,
+        );
+        $form['admin']['mail'] = array(
+          '#type' => 'textfield',
+          '#title' => t('E-mail'),
+          '#maxlength' => 64,
+          '#size' => 30,
+          '#default_value' => $edit['mail'],
+          '#description' => t('The content of this field is kept private and will not be shown publicly.'),
+        );
+
+        $form['admin']['homepage'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Homepage'),
+          '#maxlength' => 255,
+          '#size' => 30,
+          '#default_value' => $edit['homepage'],
+        );
+      }
+
+      $form['admin']['date'] = array('#type' => 'textfield', '#parents' => array('date'), '#title' => t('Authored on'), '#size' => 20, '#maxlength' => 25, '#default_value' => $date, '#weight' => -1);
+
+      $form['admin']['status'] = array('#type' => 'radios', '#parents' => array('status'), '#title' => t('Status'), '#default_value' =>  $status, '#options' => array(t('Published'), t('Not published')), '#weight' => -1);
+
+    }
+    else {
+      $form['_author'] = array('#type' => 'item', '#title' => t('Your name'), '#value' => theme('username', $user)
+      );
+      $form['author'] = array('#type' => 'value', '#value' => $user->name);
+    }
+  }
+  else if (variable_get('comment_anonymous', COMMENT_ANONYMOUS_MAYNOT_CONTACT) == COMMENT_ANONYMOUS_MAY_CONTACT) {
+    $form['name'] = array('#type' => 'textfield', '#title' => t('Your name'), '#maxlength' => 60, '#size' => 30, '#default_value' => $edit['name'] ? $edit['name'] : variable_get('anonymous', t('Anonymous'))
+    );
+
+    $form['mail'] = array('#type' => 'textfield', '#title' => t('E-mail'), '#maxlength' => 64, '#size' => 30, '#default_value' => $edit['mail'], '#description' => t('The content of this field is kept private and will not be shown publicly.')
+    );
+
+    $form['homepage'] = array('#type' => 'textfield', '#title' => t('Homepage'), '#maxlength' => 255, '#size' => 30, '#default_value' => $edit['homepage']);
+  }
+  else if (variable_get('comment_anonymous', COMMENT_ANONYMOUS_MAYNOT_CONTACT) == COMMENT_ANONYMOUS_MUST_CONTACT) {
+    $form['name'] = array('#type' => 'textfield', '#title' => t('Your name'), '#maxlength' => 60, '#size' => 30, '#default_value' => $edit['name'] ? $edit['name'] : variable_get('anonymous', t('Anonymous')), '#required' => TRUE);
+
+    $form['mail'] = array('#type' => 'textfield', '#title' => t('E-mail'), '#maxlength' => 64, '#size' => 30, '#default_value' => $edit['mail'], '#description' => t('The content of this field is kept private and will not be shown publicly.'), '#required' => TRUE);
+
+    $form['homepage'] = array('#type' => 'textfield', '#title' => t('Homepage'), '#maxlength' => 255, '#size' => 30, '#default_value' => $edit['homepage']);
+  }
+
+  if (variable_get('comment_subject_field', 1) == 1) {
+    $form['subject'] = array('#type' => 'textfield', '#title' => t('Subject'), '#maxlength' => 64, '#default_value' => $edit['subject']);
+  }
+
+  $form['comment_filter']['comment'] = array('#type' => 'textarea', '#title' => t('Comment'), '#rows' => 15, '#default_value' => $edit['comment'] ? $edit['comment'] : $user->signature, '#required' => TRUE);
+  if (!isset($edit['format'])) {
+    $edit['format'] = FILTER_FORMAT_DEFAULT;
+  }
+  $form['comment_filter']['format'] = filter_form($edit['format']);
+
+  $form['cid'] = array('#type' => 'value', '#value' => $edit['cid']);
+  $form['pid'] = array('#type' => 'value', '#value' => $edit['pid']);
+  $form['nid'] = array('#type' => 'value', '#value' => $edit['nid']);
+  $form['uid'] = array('#type' => 'value', '#value' => $edit['uid']);
+  $form['citation_nid'] = array('#type' => 'value', '#value' => $edit['citation_nid']);
+
+  //$form['preview'] = array('#type' => 'button', '#value' => t('PPPreview comment'), '#weight' => 19);
+  $form['#token'] = 'comment'. $edit['nid'] . $edit['pid'];
+
+  // Only show post button if preview is optional or if we are in preview mode.
+  // We show the post button in preview mode even if there are form errors so that
+  // optional form elements (e.g., captcha) can be updated in preview mode.
+  //if (!form_get_errors() && ((variable_get('comment_preview', COMMENT_PREVIEW_REQUIRED) == COMMENT_PREVIEW_OPTIONAL) || ($op == t('Preview comment')) || ($op == t('Post comment')))) {
+    $form['submit'] = array('#type' => 'submit', '#value' => t('Post comment'), '#weight' => 20);
+  //}
+
+  if ($op == t('Preview comment')) {
+    $form['#after_build'] = array('artmob_citation_comment_form_add_preview');
+  }
+
+  if ($_REQUEST['destination']) {
+    $form['#attributes']['destination'] = $_REQUEST['destination'];
+  }
+
+  if (empty($edit['cid']) && empty($edit['pid'])) {
+    $form['#action'] = url('artmob_citation_comment/reply/'. $edit['nid'] .'/'. $edit['citation_nid']);
+  }
+
+  // Graft in extra form additions
+  //$form = array_merge($form, comment_invoke_comment($form, 'form'));
+  return $form;
+}
+
+function artmob_citation_comment_form_validate($form_id, $form_values) {
+  comment_validate($form_values);
+}
+
+function _artmob_citation_comment_form_submit($form_values) {
+  if (!isset($form_values['date'])) {
+    $form_values['date'] = 'now';
+  }
+  $form_values['timestamp'] = strtotime($form_values['date']);
+  if (isset($form_values['author'])) {
+    $account = user_load(array('name' => $form_values['author']));
+    $form_values['uid'] = $account->uid;
+    $form_values['name'] = $form_values['author'];
+  }
+  // Validate the comment's subject. If not specified, extract
+  // one from the comment's body.
+  if (trim($form_values['subject']) == '') {
+    // The body may be in any format, so we:
+    // 1) Filter it into HTML
+    // 2) Strip out all HTML tags
+    // 3) Convert entities back to plain-text.
+    // Note: format is checked by check_markup().
+    $form_values['subject'] = trim(truncate_utf8(decode_entities(strip_tags(check_markup($form_values['comment'], $form_values['format']))), 29, TRUE));
+    // Edge cases where the comment body is populated only by HTML tags will
+    // require a default subject.
+    if ($form_values['subject'] == '') {
+      $form_values['subject'] = t('(No subject)');
+    }
+  }
+
+  return $form_values;
+}
+
+function artmob_citation_comment_form_submit($form_id, $form_values) {
+  $form_values = _artmob_citation_comment_form_submit($form_values);
+  if ($cid = comment_save($form_values)) {
+    return array('node/'. $form_values['citation_nid'] .'/artmob_citation', NULL, "comment-$cid");
+  }
+}
+
+function artmob_citation_comment_form_add_preview($form, $edit) {
+  global $user;
+
+  drupal_set_title(t('Preview comment'));
+
+  $output = '';
+
+  // Invoke full validation for the form, to protect against cross site
+  // request forgeries (CSRF) and setting arbitrary values for fields such as
+  // the input format. Preview the comment only when form validation does not
+  // set any errors.
+  drupal_validate_form($form['form_id']['#value'], $form);
+  if (!form_get_errors()) {
+    $comment = (object)_comment_form_submit($edit);
+
+    // Attach the user and time information.
+    if ($edit['author']) {
+      $account = user_load(array('name' => $edit['author']));
+    }
+    elseif ($user->uid && !isset($edit['is_anonymous'])) {
+      $account = $user;
+    }
+    if ($account) {
+      $comment->uid = $account->uid;
+      $comment->name = check_plain($account->name);
+    }
+    $comment->timestamp = $edit['timestamp'] ? $edit['timestamp'] : time();
+    $output .= theme('comment_view', $comment);
+  }
+  $form['comment_preview'] = array(
+    '#value' => $output,
+    '#weight' => -100,
+    '#prefix' => '<div class="preview">',
+    '#suffix' => '</div>',
+  );
+
+  $output = '';
+
+  if ($edit['pid']) {
+    $comment = db_fetch_object(db_query('SELECT c.*, u.uid, u.name AS registered_name, u.picture, u.data FROM {comments} c INNER JOIN {users} u ON c.uid = u.uid WHERE c.cid = %d AND c.status = %d', $edit['pid'], COMMENT_PUBLISHED));
+    $comment = drupal_unpack($comment);
+    $comment->name = $comment->uid ? $comment->registered_name : $comment->name;
+    $output .= theme('comment_view', $comment);
+  }
+  else {
+    $form['#suffix'] = node_view(node_load($edit['nid']));
+    $edit['pid'] = 0;
+  }
+
+  $form['comment_preview_below'] = array('#value' => $output, '#weight' => 100);
+
+  return $form;
+}
+
+
+//* Implementation of hook_block().
+//* Displays the Link in a block.
+function artmob_citation_block($op = 'list', $delta = 0) {
+  if ($op == 'list') {
+    $block[0]['info'] = t('Others in Set');
+    return $block;
+  }
+  else if ($op == 'configure') {
+  }
+  else if ($op == 'save') {
+  }
+  else if ($op == 'view') {
+    switch ($delta) {
+      case 0:  //Others in Set
+        if (arg(0) == 'node' && is_numeric(arg(1))) {
+          $node = node_load( arg(1) );
+          $set_mates = artmob_citation_get_others_in_set($node);
+          if (is_array($set_mates)) {
+            $block['subject'] = 'Others from the set '. $node->set_title;
+            $block['content'] = theme( 'artmob_citation_others_in_set_block', $set_mates );
+          }
+        }
+        break;
+    }
+    return $block;
+
+  }
+}
+
+function theme_artmob_citation_others_in_set_block( $set_mates ) {
+  $content = '';
+  foreach ($set_mates as $number => $info) {
+    $content .= $number .'. '. l($info['title'], "node/". $info['nid'], array('class' => $info['class'])) ."<br />";
+  }
+  $content .= "</p>";
+  return $content;
+}
+
+function artmob_citation_get_citation_id( $nid ) {
+  $citation_id = db_result( db_query( "select citation_id from {am_citation} where nid = %d", $nid ));
+  return $citation_id;
+}
+
+function artmob_citation_get_nid_by_citation_id ( $citation_id ){
+  $nid = db_result( db_query( "select nid from {am_citation} where citation_id = %d", $citation_id ));
+  return $nid;
+}
+
+function artmob_citation_get_link_nid_by_citation_id ( $citation_id ){
+  $nid_count = db_result( db_query( "select count( link_nid ) from {am_citation} where citation_id = %d", $citation_id ));
+  if ( $nid_count > 0 ){
+    $nid = db_result( db_query( "select link_nid from {am_citation} where citation_id = %d", $citation_id ));
+  } else {
+    $nid = 0;
+  }    
+  return $nid;
+}
+
+function artmob_citation_get_citation_by_eid( $eid ) {
+  $query = db_query( "select c.*, w.work_type as work_type_label from {am_citation} c
+                      LEFT JOIN am_work_type w ON c.work_type = w.work_type_id
+                      where link_eid = '%s'", $eid );
+  while ($row = db_fetch_object($query)) {
+    break;
+  }
+  return $row;
+}
+
+function artmob_citation_get_all_citations_for_node( $nid, $include_parent = False ) {
+  $result = array();
+  $select = "select * from {am_citation}";
+  $where = " where link_nid = %d";
+  if ( !$include_parent ){
+    $where .= " and work_type <> ''";
+  }
+  $order = " order by link_eid";
+
+  //$query = db_query( "select * from {am_citation} where link_nid = %d order by link_eid", $nid );
+  $query = db_query( $select.$where.$order, $nid);
+  $sql = sprintf($select.$where.$order, $nid );
+  //drupal_set_message( 'get_all_citation_objects sql = '.$sql );
+  while ($row = db_fetch_object($query)) {
+    $result[$row->nid] = $row->citation_id;
+  }
+  return $result;
+}
+
+function artmob_citation_associated_works_count( $nid ) {
+  $count = db_result( db_query( "select count( * ) from {am_citation} where link_nid = %d and link_eid <> ''", $nid ) );
+  return $count;
+}
+
+function artmob_citation_get_all_citation_objects_for_node( $nid, $include_parent = FALSE ) {
+  $result = array();
+  $select = "SELECT * FROM {am_citation}";
+  $where = " WHERE link_nid = %d";
+  if ( !$include_parent ){
+    $where .= " AND work_type <> ''";
+  }
+  $order = " ORDER BY link_eid";
+
+  //$query = db_query( "seglect * from {am_citation} where link_nid = %d order by link_eid", $nid );
+  $query = db_query( $select.$where.$order, $nid);
+  $sql = sprintf($select.$where.$order, $nid ); 
+
+  while ($row = db_fetch_object($query)) {
+    $result[$row->nid] = $row;
+  }
+  return $result;
+}
+
+function artmob_citation_get_all_citation_objects_for_node_2( $work_nid, $include_parent = FALSE ) {
+//This function returns the entire list of incorporated works for a particular item.
+//Each array element is an object containing the incorporated work record
+  $result = array();
+  $query_string = "SELECT c.*, e.citation_id, c.citation_title FROM {am_encapsulated_works} e
+                   LEFT JOIN {am_citation} c on e.citation_id = c.citation_id
+                   WHERE e.nid = %d";
+  if ( !$include_parent ) {
+    $query_string .= " AND parent_eid <> 0";
+  }
+
+  $query_string .= " ORDER BY tree_level, weight, unique_id";
+  //$query_string .= " ORDER BY unique_id";
+  $query = db_query( $query_string, $work_nid);
+  while ($row = db_fetch_object($query)) {
+    $result[$row->nid] = $row;
+  }
+
+
+  return $result;
+}
+
+function artmob_citation_get_all_associated_citation_objects_for_node( $nid ) {
+  $result = array();
+  $query = db_query( "SELECT * FROM {am_citation} WHERE link_nid = %d AND link_eid <> '' ORDER BY link_eid", $nid );
+  while ($row = db_fetch_object($query)) {
+    $result[$row->nid] = $row;
+  }
+  return $result;
+}
+
+function artmob_citation_get_citation_array_for_node( $nid, $include_parent = FALSE ) {
+  $citation_array = artmob_citation_get_all_citation_objects_for_node( $nid, $include_parent );
+
+  if (!is_array($citation_array)) {
+    return;
+  }
+
+  foreach ( $citation_array as $nid => $citation ) {
+    $citation_dates = artmob_citation_load_citation_dates( $citation->citation_id );
+    $citation->citation_dates = $citation_dates;
+    $citation->contributors = artmob_citation_get_contributors($citation->citation_id);
+
+    $citation->licenses = artmob_citation_get_licenses( $citation->citation_id );
+  }
+
+  return $citation_array;
+
+}
+
+function artmob_citation_get_citation_array_for_node_2( $nid, $include_parent = FALSE ) {
+  $citation_array = artmob_citation_get_all_citation_objects_for_node_2( $nid, $include_parent );
+
+  if (!is_array($citation_array)) {
+    return;
+  }
+
+  foreach ( $citation_array as $nid => $citation ) {
+    $citation_dates = artmob_citation_load_citation_dates( $citation->citation_id );
+    $citation->citation_dates = $citation_dates;
+    $citation->contributors = artmob_citation_get_contributors($citation->citation_id);
+
+    $citation->licenses = artmob_citation_get_licenses( $citation->citation_id );
+  }
+
+  return $citation_array;
+
+}
+
+function artmob_citation_get_licenses( $citation_id ) {
+  //This function will retrieve all licenses as an array for the given citation_id
+  //Each license key will contain a licensees array holding all licensees for this license
+  $license_query = db_query( "Select  l.*, b.*, n.title as license_title
+                              from {am_citation_license} l
+                              left join {am_contributor} c on l.contributor_id = c.nid
+                              left  join {am_license} b on l.license_id = b.license_id
+                              left join {node} n on b.nid = n.nid
+                              where l.citation_id = %d
+                              group by  l.license_id", $citation_id );
+  $license_array = array();
+  while ($license_row = db_fetch_object($license_query)) {
+    $license_id = $license_row->license_id;
+    $license_array[$license_id]['id'] = $license_row->license_id;
+    $license_array[$license_id]['name'] = $license_row->license_title;
+    $license_array[$license_id]['citation_id'] = $license_row->citation_id;
+    $license_array[$license_id]['nid'] = $license_row->nid;
+    $license_array[$license_id]['version'] = $license_row->version;
+    $license_array[$license_id]['source'] = $license_row->source;
+    $license_array[$license_id]['web_reference'] = $license_row->web_reference;
+    $license_array[$license_id]['description'] = $license_row->license_description;
+    $license_array[$license_id]['format'] = $license_row->license_format;
+    $license_array[$license_id]['additional_instructions'] = $license_row->additional_instructions;
+    $license_array[$license_id]['related_license_id'] = $license_row->related_license_id;
+    $license_contributors = array();
+    $license_contributor_sequence = 0;
+    $license_array[$license_id]['contributors'] = artmob_citation_get_licensees_for_license( $citation_id, $license_row->license_id );
+  }
+  return $license_array;
+}
+
+function artmob_citation_get_all_licensees( $citation_id ) {
+  //This function will retrieve all licensees attached to all licenses for
+  //the given citation id.  It will not differentiate by license in any way
+  $licenses = artmob_citation_get_licenses( citation_id );
+  $licensee_array = array();
+  foreach ( $licenses as $license_id => $license_array ) {
+    $contributors = $license_array['contributors'];
+    foreach ($contributors as $contributor_id => $contributor_array ) {
+      $licensee_array[$contributor_id] = $contributor_array;
+    }
+  }
+  return $licensee_array;
+}
+
+function artmob_citation_get_licensees_for_license( $citation_id, $license_id ) {
+  //This function will retrieve all licensees attached to the given
+  //license_id and citation id.
+  $license_contributor_query = db_query( "Select l.*, c.*, b.*, n.title as license_title, c.nid as contributor_nid
+                            from {am_citation_license} l
+                            left join {am_contributor} c on l.contributor_id = c.contributor_id
+                            left  join {am_license} b on l.license_id = b.license_id
+                            left join {node} n on b.nid = n.nid
+                            where l.citation_id = %d and l.license_id = %d", $citation_id, $license_id );
+  $qry = sprintf( "Select l.*, c.*, b.*, n.title as license_title, c.nid as contributor_nid
+                            from {am_citation_license} l
+                            left join {am_contributor} c on l.contributor_id = c.contributor_id
+                            left  join {am_license} b on l.license_id = b.license_id
+                            left join {node} n on b.nid = n.nid
+                            where l.citation_id = %d and l.license_id = %d", $citation_id, $license_id );
+  watchdog( 'citation get licenses', 'qry = '. $qry );
+  $license_contributor_array = array();
+  while ( $license_contributor_row = db_fetch_object( $license_contributor_query )) {
+    $contributor_id = $license_contributor_row->contributor_id;
+    $license_contributor_array[$contributor_id]['id'] = $license_contributor_row->contributor_id;
+    $license_contributor_array[$contributor_id]['nid'] = $license_contributor_row->contributor_nid;
+    $license_contributor_array[$contributor_id]['firstname'] = $license_contributor_row->first_name;
+    $license_contributor_array[$contributor_id]['lastname'] = $license_contributor_row->last_name;
+    $license_contributor_array[$contributor_id]['fullname'] = $license_contributor_row->title;
+  }
+  return $license_contributor_array;
+}
+
+function artmob_citation_get_contributors($citation_id, $unique = FALSE) {
+    $contributors = array();
+    $query = db_query( "SELECT * from {am_citation_roles} r
+                       LEFT JOIN {am_contributor} c ON r.contributor_id = c.contributor_id
+                       WHERE citation_id = %d ORDER BY sequence", $citation_id );
+    $contributor_sequence = 0;
+    $contributor_list = array();
+    while ($row = db_fetch_object($query)) {
+      //if $unique is true then we don't want to repeat
+      //contributors in the array so we check the list
+      //if it is not there then we add it and continue
+      //if it does exist then skip it.
+      if ( $unique ) {
+        $is_continue = !in_array( $row->nid, $contributor_list );
+        if ( $is_continue){
+          $contributor_list[] = $row->nid;
+        }
+      } else {
+        $is_continue = TRUE;
+      }
+
+      if ( $is_continue ){
+        $contributor = array();
+        $contributor_array = array();
+        $contributor_array['role'] = $row->role_id;
+        $contributor_array['existing'] = $row->nid;
+        $contributor_array['newfirstname'] = '';
+        $contributor_array['newlastname'] = '';
+        $cnode = node_load($row->nid);
+        $contributor_array['full'] = $cnode;
+        $contributor_array['name'] = $cnode->contributor_type == CONTRIBUTOR_TYPE_CORPORATION ? $cnode->last_name : $cnode->title;
+        if ( $build_expanded ) {
+          $contributor_array['id'] = $row->contributor_id;
+          $contributor_array['nid'] = $row->nid;
+        }
+        $contributor[0] = $contributor_array;
+        $contributors[$contributor_sequence] = $contributor;
+        $contributor_sequence++;
+      }
+    }
+
+  return $contributors;
+}
+
+function artmob_citation_convert_date_value( $date_value, &$day, &$month, &$year, &$date_order ) {
+  //we will assume that the $date_value comes in in the format dd/mm/yyyy
+  $date_value_array = explode( '/', $date_value );
+  watchdog( 'citation_save', '$date_value = '. $date_value );
+  $day = $date_value_array[0];
+  $month = $date_value_array[1];
+  $year = $date_value_array[2];
+  watchdog( 'citation_save', '$day = '. $day );
+  watchdog( 'citation_save', '$month = '. $month );
+  watchdog( 'citation_save', '$year = '. $year );
+
+  $date_order = artmob_date_widget_build_date_order( $day, $month, $year );
+}
+
+function artmob_citation_add_citations_by_nodetype( $node_type ) {
+  //This function will find all nodes of $node_type
+  //that do not have citations and add them by
+  //loading the node, setting citaton_include and resaving
+  //This assumes that the node type has the use_citation switch on.
+  $db_query = db_query( "select n.nid from {node} n
+                   left join {am_citation} c on n.nid = c.link_nid
+                   where isnull(c.link_eid) and n.type  = '%s'", $node_type );
+  while ($row = db_fetch_object($db_query)) {
+    $node = node_load( $row->nid );
+    $node->changed = time();
+    $node->citation_include = 1;
+    node_save( $node );
+  }
+  return;
+}
+
+function artmob_citation_build_language_array() {
+  //for now building in code.  May port this to a table in future.
+  //values taken from the library of congress language values
+  $options['aar'] = "Afar";
+  $options['abk'] = "Abkhaz";
+  $options['ace'] = "Achinese";
+  $options['ach'] = "Acoli";
+  $options['ada'] = "Adangme";
+  $options['ady'] = "Adygei";
+  $options['afa'] = "Afroasiatic (Other)";
+  $options['afh'] = "Afrihili (Artificial language)";
+  $options['afr'] = "Afrikaans";
+  $options['ain'] = "Ainu";
+  $options['aka'] = "Akan";
+  $options['akk'] = "Akkadian";
+  $options['alb'] = "Albanian";
+  $options['ale'] = "Aleut";
+  $options['alg'] = "Algonquian (Other)";
+  $options['alt'] = "Altai";
+  $options['amh'] = "Amharic";
+  $options['ang'] = "English, Old (ca. 450-1100)";
+  $options['anp'] = "Angika";
+  $options['apa'] = "Apache languages";
+  $options['ara'] = "Arabic";
+  $options['arc'] = "Aramaic";
+  $options['arg'] = "Aragonese";
+  $options['arm'] = "Armenian";
+  $options['arn'] = "Mapuche";
+  $options['arp'] = "Arapaho";
+  $options['art'] = "Artificial (Other)";
+  $options['arw'] = "Arawak";
+  $options['asm'] = "Assamese";
+  $options['ast'] = "Bable";
+  $options['ath'] = "Athapascan (Other)";
+  $options['aus'] = "Australian languages";
+  $options['ava'] = "Avaric";
+  $options['ave'] = "Avestan";
+  $options['awa'] = "Awadhi";
+  $options['aym'] = "Aymara";
+  $options['aze'] = "Azerbaijani";
+  $options['bad'] = "Banda languages";
+  $options['bai'] = "Bamileke languages";
+  $options['bak'] = "Bashkir";
+  $options['bal'] = "Baluchi";
+  $options['bam'] = "Bambara";
+  $options['ban'] = "Balinese";
+  $options['baq'] = "Basque";
+  $options['bas'] = "Basa";
+  $options['bat'] = "Baltic (Other)";
+  $options['bej'] = "Beja";
+  $options['bel'] = "Belarusian";
+  $options['bem'] = "Bemba";
+  $options['ben'] = "Bengali";
+  $options['ber'] = "Berber (Other)";
+  $options['bho'] = "Bhojpuri";
+  $options['bih'] = "Bihari";
+  $options['bik'] = "Bikol";
+  $options['bin'] = "Edo";
+  $options['bis'] = "Bislama";
+  $options['bla'] = "Siksika";
+  $options['bnt'] = "Bantu (Other)";
+  $options['bos'] = "Bosnian";
+  $options['bra'] = "Braj";
+  $options['bre'] = "Breton";
+  $options['btk'] = "Batak";
+  $options['bua'] = "Buriat";
+  $options['bug'] = "Bugis";
+  $options['bul'] = "Bulgarian";
+  $options['bur'] = "Burmese";
+  $options['byn'] = "Bilin";
+  $options['cad'] = "Caddo";
+  $options['cai'] = "Central American Indian (Other)";
+  $options['car'] = "Carib";
+  $options['cat'] = "Catalan";
+  $options['cau'] = "Caucasian (Other)";
+  $options['ceb'] = "Cebuano";
+  $options['cel'] = "Celtic (Other)";
+  $options['cha'] = "Chamorro";
+  $options['chb'] = "Chibcha";
+  $options['che'] = "Chechen";
+  $options['chg'] = "Chagatai";
+  $options['chi'] = "Chinese";
+  $options['chk'] = "Chuukese";
+  $options['chm'] = "Mari";
+  $options['chn'] = "Chinook jargon";
+  $options['cho'] = "Choctaw";
+  $options['chp'] = "Chipewyan";
+  $options['chr'] = "Cherokee";
+  $options['chu'] = "Church Slavic";
+  $options['chv'] = "Chuvash";
+  $options['chy'] = "Cheyenne";
+  $options['cmc'] = "Chamic languages";
+  $options['cop'] = "Coptic";
+  $options['cor'] = "Cornish";
+  $options['cos'] = "Corsican";
+  $options['cpe'] = "Creoles and Pidgins, English-based (Other)";
+  $options['cpf'] = "Creoles and Pidgins, French-based (Other)";
+  $options['cpp'] = "Creoles and Pidgins, Portuguese-based (Other)";
+  $options['cre'] = "Cree";
+  $options['crh'] = "Crimean Tatar";
+  $options['crp'] = "Creoles and Pidgins (Other)";
+  $options['csb'] = "Kashubian";
+  $options['cus'] = "Cushitic (Other)";
+  $options['cze'] = "Czech";
+  $options['dak'] = "Dakota";
+  $options['dan'] = "Danish";
+  $options['dar'] = "Dargwa";
+  $options['day'] = "Dayak";
+  $options['del'] = "Delaware";
+  $options['den'] = "Slave";
+  $options['dgr'] = "Dogrib";
+  $options['din'] = "Dinka";
+  $options['div'] = "Divehi";
+  $options['doi'] = "Dogri";
+  $options['dra'] = "Dravidian (Other)";
+  $options['dsb'] = "Lower Sorbian";
+  $options['dua'] = "Duala";
+  $options['dum'] = "Dutch, Middle (ca. 1050-1350)";
+  $options['dut'] = "Dutch";
+  $options['dyu'] = "Dyula";
+  $options['dzo'] = "Dzongkha";
+  $options['efi'] = "Efik";
+  $options['egy'] = "Egyptian";
+  $options['eka'] = "Ekajuk";
+  $options['elx'] = "Elamite";
+  $options['eng'] = "English";
+  $options['enm'] = "English, Middle (1100-1500)";
+  $options['epo'] = "Esperanto";
+  $options['est'] = "Estonian";
+  $options['ewe'] = "Ewe";
+  $options['ewo'] = "Ewondo";
+  $options['fan'] = "Fang";
+  $options['fao'] = "Faroese";
+  $options['fat'] = "Fanti";
+  $options['fij'] = "Fijian";
+  $options['fil'] = "Filipino";
+  $options['fin'] = "Finnish";
+  $options['fiu'] = "Finno-Ugrian (Other)";
+  $options['fon'] = "Fon";
+  $options['fre'] = "French";
+  $options['frm'] = "French, Middle (ca. 1300-1600)";
+  $options['fro'] = "French, Old (ca. 842-1300)";
+  $options['frr'] = "North Frisian";
+  $options['frs'] = "East Frisian";
+  $options['fry'] = "Frisian";
+  $options['ful'] = "Fula";
+  $options['fur'] = "Friulian";
+  $options['gaa'] = "G„";
+  $options['gay'] = "Gayo";
+  $options['gba'] = "Gbaya";
+  $options['gem'] = "Germanic (Other)";
+  $options['geo'] = "Georgian";
+  $options['ger'] = "German";
+  $options['gez'] = "Ethiopic";
+  $options['gil'] = "Gilbertese";
+  $options['gla'] = "Scottish Gaelic";
+  $options['gle'] = "Irish";
+  $options['glg'] = "Galician";
+  $options['glv'] = "Manx";
+  $options['gmh'] = "German, Middle High (ca. 1050-1500)";
+  $options['goh'] = "German, Old High (ca. 750-1050)";
+  $options['gon'] = "Gondi";
+  $options['gor'] = "Gorontalo";
+  $options['got'] = "Gothic";
+  $options['grb'] = "Grebo";
+  $options['grc'] = "Greek, Ancient (to 1453)";
+  $options['gre'] = "Greek, Modern (1453-)";
+  $options['grn'] = "Guarani";
+  $options['gsw'] = "Swiss German";
+  $options['guj'] = "Gujarati";
+  $options['gwi'] = "Gwich'in";
+  $options['hai'] = "Haida";
+  $options['hat'] = "Haitian French Creole";
+  $options['hau'] = "Hausa";
+  $options['haw'] = "Hawaiian";
+  $options['heb'] = "Hebrew";
+  $options['her'] = "Herero";
+  $options['hil'] = "Hiligaynon";
+  $options['him'] = "Western Pahari languages";
+  $options['hin'] = "Hindi";
+  $options['hit'] = "Hittite";
+  $options['hmn'] = "Hmong";
+  $options['hmo'] = "Hiri Motu";
+  $options['hrv'] = "Croatian";
+  $options['hsb'] = "Upper Sorbian";
+  $options['hun'] = "Hungarian";
+  $options['hup'] = "Hupa";
+  $options['iba'] = "Iban";
+  $options['ibo'] = "Igbo";
+  $options['ice'] = "Icelandic";
+  $options['ido'] = "Ido";
+  $options['iii'] = "Sichuan Yi";
+  $options['ijo'] = "Ijo";
+  $options['iku'] = "Inuktitut";
+  $options['ile'] = "Interlingue";
+  $options['ilo'] = "Iloko";
+  $options['ina'] = "Interlingua (International Auxiliary Language Association)";
+  $options['inc'] = "Indic (Other)";
+  $options['ind'] = "Indonesian";
+  $options['ine'] = "Indo-European (Other)";
+  $options['inh'] = "Ingush";
+  $options['ipk'] = "Inupiaq";
+  $options['ira'] = "Iranian (Other)";
+  $options['iro'] = "Iroquoian (Other)";
+  $options['ita'] = "Italian";
+  $options['jav'] = "Javanese";
+  $options['jbo'] = "Lojban (Artificial language)";
+  $options['jpn'] = "Japanese";
+  $options['jpr'] = "Judeo-Persian";
+  $options['jrb'] = "Judeo-Arabic";
+  $options['kaa'] = "Kara-Kalpak";
+  $options['kab'] = "Kabyle";
+  $options['kac'] = "Kachin";
+  $options['kal'] = "Kal‚tdlisut";
+  $options['kam'] = "Kamba";
+  $options['kan'] = "Kannada";
+  $options['kar'] = "Karen languages";
+  $options['kas'] = "Kashmiri";
+  $options['kau'] = "Kanuri";
+  $options['kaw'] = "Kawi";
+  $options['kaz'] = "Kazakh";
+  $options['kbd'] = "Kabardian";
+  $options['kha'] = "Khasi";
+  $options['khi'] = "Khoisan (Other)";
+  $options['khm'] = "Khmer";
+  $options['kho'] = "Khotanese";
+  $options['kik'] = "Kikuyu";
+  $options['kin'] = "Kinyarwanda";
+  $options['kir'] = "Kyrgyz";
+  $options['kmb'] = "Kimbundu";
+  $options['kok'] = "Konkani";
+  $options['kom'] = "Komi";
+  $options['kon'] = "Kongo";
+  $options['kor'] = "Korean";
+  $options['kos'] = "Kusaie";
+  $options['kpe'] = "Kpelle";
+  $options['krc'] = "Karachay-Balkar";
+  $options['krl'] = "Karelian";
+  $options['kro'] = "Kru (Other)";
+  $options['kru'] = "Kurukh";
+  $options['kua'] = "Kuanyama";
+  $options['kum'] = "Kumyk";
+  $options['kur'] = "Kurdish";
+  $options['kut'] = "Kootenai";
+  $options['lad'] = "Ladino";
+  $options['lah'] = "Lahnd?";
+  $options['lam'] = "Lamba (Zambia and Congo)";
+  $options['lao'] = "Lao";
+  $options['lat'] = "Latin";
+  $options['lav'] = "Latvian";
+  $options['lez'] = "Lezgian";
+  $options['lim'] = "Limburgish";
+  $options['lin'] = "Lingala";
+  $options['lit'] = "Lithuanian";
+  $options['lol'] = "Mongo-Nkundu";
+  $options['loz'] = "Lozi";
+  $options['ltz'] = "Luxembourgish";
+  $options['lua'] = "Luba-Lulua";
+  $options['lub'] = "Luba-Katanga";
+  $options['lug'] = "Ganda";
+  $options['lui'] = "LuiseÒo";
+  $options['lun'] = "Lunda";
+  $options['luo'] = "Luo (Kenya and Tanzania)";
+  $options['lus'] = "Lushai";
+  $options['mac'] = "Macedonian";
+  $options['mad'] = "Madurese";
+  $options['mag'] = "Magahi";
+  $options['mah'] = "Marshallese";
+  $options['mai'] = "Maithili";
+  $options['mak'] = "Makasar";
+  $options['mal'] = "Malayalam";
+  $options['man'] = "Mandingo";
+  $options['mao'] = "Maori";
+  $options['map'] = "Austronesian (Other)";
+  $options['mar'] = "Marathi";
+  $options['mas'] = "Masai";
+  $options['may'] = "Malay";
+  $options['mdf'] = "Moksha";
+  $options['mdr'] = "Mandar";
+  $options['men'] = "Mende";
+  $options['mga'] = "Irish, Middle (ca. 1100-1550)";
+  $options['mic'] = "Micmac";
+  $options['min'] = "Minangkabau";
+  $options['mis'] = "Miscellaneous languages";
+  $options['mkh'] = "Mon-Khmer (Other)";
+  $options['mlg'] = "Malagasy";
+  $options['mlt'] = "Maltese";
+  $options['mnc'] = "Manchu";
+  $options['mni'] = "Manipuri";
+  $options['mno'] = "Manobo languages";
+  $options['moh'] = "Mohawk";
+  $options['mon'] = "Mongolian";
+  $options['mos'] = "MoorÈ";
+  $options['mul'] = "Multiple languages";
+  $options['mun'] = "Munda (Other)";
+  $options['mus'] = "Creek";
+  $options['mwl'] = "Mirandese";
+  $options['mwr'] = "Marwari";
+  $options['myn'] = "Mayan languages";
+  $options['myv'] = "Erzya";
+  $options['nah'] = "Nahuatl";
+  $options['nai'] = "North American Indian (Other)";
+  $options['nap'] = "Neapolitan Italian";
+  $options['nau'] = "Nauru";
+  $options['nav'] = "Navajo";
+  $options['nbl'] = "Ndebele (South Africa)";
+  $options['nde'] = "Ndebele (Zimbabwe)";
+  $options['ndo'] = "Ndonga";
+  $options['nds'] = "Low German";
+  $options['nep'] = "Nepali";
+  $options['new'] = "Newari";
+  $options['nia'] = "Nias";
+  $options['nic'] = "Niger-Kordofanian (Other)";
+  $options['niu'] = "Niuean";
+  $options['nno'] = "Norwegian (Nynorsk)";
+  $options['nob'] = "Norwegian (BokmÂl)";
+  $options['nog'] = "Nogai";
+  $options['non'] = "Old Norse";
+  $options['nor'] = "Norwegian";
+  $options['nqo'] = "N'Ko";
+  $options['nso'] = "Northern Sotho";
+  $options['nub'] = "Nubian languages";
+  $options['nwc'] = "Newari, Old";
+  $options['nya'] = "Nyanja";
+  $options['nym'] = "Nyamwezi";
+  $options['nyn'] = "Nyankole";
+  $options['nyo'] = "Nyoro";
+  $options['nzi'] = "Nzima";
+  $options['oci'] = "Occitan (post 1500)";
+  $options['oji'] = "Ojibwa";
+  $options['ori'] = "Oriya";
+  $options['orm'] = "Oromo";
+  $options['osa'] = "Osage";
+  $options['oss'] = "Ossetic";
+  $options['ota'] = "Turkish, Ottoman";
+  $options['oto'] = "Otomian languages";
+  $options['paa'] = "Papuan (Other)";
+  $options['pag'] = "Pangasinan";
+  $options['pal'] = "Pahlavi";
+  $options['pam'] = "Pampanga";
+  $options['pan'] = "Panjabi";
+  $options['pap'] = "Papiamento";
+  $options['pau'] = "Palauan";
+  $options['peo'] = "Old Persian (ca. 600-400 B.C.)";
+  $options['per'] = "Persian";
+  $options['phi'] = "Philippine (Other)";
+  $options['phn'] = "Phoenician";
+  $options['pli'] = "Pali";
+  $options['pol'] = "Polish";
+  $options['pon'] = "Ponape";
+  $options['por'] = "Portuguese";
+  $options['pra'] = "Prakrit languages";
+  $options['pro'] = "ProvenÁal (to 1500)";
+  $options['pus'] = "Pushto";
+  $options['que'] = "Quechua";
+  $options['raj'] = "Rajasthani";
+  $options['rap'] = "Rapanui";
+  $options['rar'] = "Rarotongan";
+  $options['roa'] = "Romance (Other)";
+  $options['roh'] = "Raeto-Romance";
+  $options['rom'] = "Romani";
+  $options['rum'] = "Romanian";
+  $options['run'] = "Rundi";
+  $options['rup'] = "Aromanian";
+  $options['rus'] = "Russian";
+  $options['sad'] = "Sandawe";
+  $options['sag'] = "Sango (Ubangi Creole)";
+  $options['sah'] = "Yakut";
+  $options['sai'] = "South American Indian (Other)";
+  $options['sal'] = "Salishan languages";
+  $options['sam'] = "Samaritan Aramaic";
+  $options['san'] = "Sanskrit";
+  $options['sas'] = "Sasak";
+  $options['sat'] = "Santali";
+  $options['scn'] = "Sicilian Italian";
+  $options['sco'] = "Scots";
+  $options['sel'] = "Selkup";
+  $options['sem'] = "Semitic (Other)";
+  $options['sga'] = "Irish, Old (to 1100)";
+  $options['sgn'] = "Sign languages";
+  $options['shn'] = "Shan";
+  $options['sid'] = "Sidamo";
+  $options['sin'] = "Sinhalese";
+  $options['sio'] = "Siouan (Other)";
+  $options['sit'] = "Sino-Tibetan (Other)";
+  $options['sla'] = "Slavic (Other)";
+  $options['slo'] = "Slovak";
+  $options['slv'] = "Slovenian";
+  $options['sma'] = "Southern Sami";
+  $options['sme'] = "Northern Sami";
+  $options['smi'] = "Sami";
+  $options['smj'] = "Lule Sami";
+  $options['smn'] = "Inari Sami";
+  $options['smo'] = "Samoan";
+  $options['sms'] = "Skolt Sami";
+  $options['sna'] = "Shona";
+  $options['snd'] = "Sindhi";
+  $options['snk'] = "Soninke";
+  $options['sog'] = "Sogdian";
+  $options['som'] = "Somali";
+  $options['son'] = "Songhai";
+  $options['sot'] = "Sotho";
+  $options['spa'] = "Spanish";
+  $options['srd'] = "Sardinian";
+  $options['srn'] = "Sranan";
+  $options['srp'] = "Serbian";
+  $options['srr'] = "Serer";
+  $options['ssa'] = "Nilo-Saharan (Other)";
+  $options['ssw'] = "Swazi";
+  $options['suk'] = "Sukuma";
+  $options['sun'] = "Sundanese";
+  $options['sus'] = "Susu";
+  $options['sux'] = "Sumerian";
+  $options['swa'] = "Swahili";
+  $options['swe'] = "Swedish";
+  $options['syc'] = "Syriac";
+  $options['syr'] = "Syriac, Modern";
+  $options['tah'] = "Tahitian";
+  $options['tai'] = "Tai (Other)";
+  $options['tam'] = "Tamil";
+  $options['tat'] = "Tatar";
+  $options['tel'] = "Telugu";
+  $options['tem'] = "Temne";
+  $options['ter'] = "Terena";
+  $options['tet'] = "Tetum";
+  $options['tgk'] = "Tajik";
+  $options['tgl'] = "Tagalog";
+  $options['tha'] = "Thai";
+  $options['tib'] = "Tibetan";
+  $options['tig'] = "TigrÈ";
+  $options['tir'] = "Tigrinya";
+  $options['tiv'] = "Tiv";
+  $options['tkl'] = "Tokelauan";
+  $options['tlh'] = "Klingon (Artificial language)";
+  $options['tli'] = "Tlingit";
+  $options['tmh'] = "Tamashek";
+  $options['tog'] = "Tonga (Nyasa)";
+  $options['ton'] = "Tongan";
+  $options['tpi'] = "Tok Pisin";
+  $options['tsi'] = "Tsimshian";
+  $options['tsn'] = "Tswana";
+  $options['tso'] = "Tsonga";
+  $options['tuk'] = "Turkmen";
+  $options['tum'] = "Tumbuka";
+  $options['tup'] = "Tupi languages";
+  $options['tur'] = "Turkish";
+  $options['tut'] = "Altaic (Other)";
+  $options['tvl'] = "Tuvaluan";
+  $options['twi'] = "Twi";
+  $options['tyv'] = "Tuvinian";
+  $options['udm'] = "Udmurt";
+  $options['uga'] = "Ugaritic";
+  $options['uig'] = "Uighur";
+  $options['ukr'] = "Ukrainian";
+  $options['umb'] = "Umbundu";
+  $options['und'] = "Undetermined";
+  $options['urd'] = "Urdu";
+  $options['uzb'] = "Uzbek";
+  $options['vai'] = "Vai";
+  $options['ven'] = "Venda";
+  $options['vie'] = "Vietnamese";
+  $options['vol'] = "Volap¸k";
+  $options['vot'] = "Votic";
+  $options['wak'] = "Wakashan languages";
+  $options['wal'] = "Wolayta";
+  $options['war'] = "Waray";
+  $options['was'] = "Washo";
+  $options['wel'] = "Welsh";
+  $options['wen'] = "Sorbian (Other)";
+  $options['wln'] = "Walloon";
+  $options['wol'] = "Wolof";
+  $options['xal'] = "Oirat";
+  $options['xho'] = "Xhosa";
+  $options['yao'] = "Yao (Africa)";
+  $options['yap'] = "Yapese";
+  $options['yid'] = "Yiddish";
+  $options['yor'] = "Yoruba";
+  $options['ypk'] = "Yupik languages";
+  $options['zap'] = "Zapotec";
+  $options['zbl'] = "Blissymbolics";
+  $options['zen'] = "Zenaga";
+  $options['zha'] = "Zhuang";
+  $options['znd'] = "Zande languages";
+  $options['zul'] = "Zulu";
+  $options['zun'] = "Zuni";
+  $options['zxx'] = "No linguistic content";
+  $options['zza'] = "Zaza";
+  return $options;
+}
+
+function artmob_citation_build_sequence_type_array() {
+  //This list is temporary.  Real values must be entered!!!
+  $options['ARTMOB_SEQUENCE_TYPE_INTEGER'] = "Integer";
+  $options['ARTMOB_SEQUENCE_TYPE_TIMECODE'] = "Timecode (HH:MM:SS)";
+  return $options;
+}
+
+function _artmob_citation_order_submit() {
+  $cnid = $_REQUEST['cnid'];
+  $parentid = $_REQUEST['parentid'];
+  $reparent = $_REQUEST['reparent'];
+  $resequence = $_REQUEST['resequence'];
+  $my_eid = artmob_citation_get_eid_from_cnid ( $cnid );
+  $reparent_eid = artmob_citation_get_eid_from_cnid( $reparent );
+  if ( $my_eid != $reparent_eid ){
+    $reparent_level = artmob_citation_get_tree_level_from_eid( $reparent_eid );
+    $query = sprintf("update {am_encapsulated_works}
+                      set weight = %d,
+                      tree_level = %d,
+                      parent_eid = '%s'
+                      where eid = '%s'",
+
+                      $resequence,
+                      $reparent_level + 1,
+                      $reparent_eid,
+                      $my_eid );
+
+    db_query ( $query );
+    //drupal_set_message( $query );
+
+    //Update the levels of all of the children of the moved work
+    //since it may have moved to a totally new branch
+    artmob_citation_update_child_tree_level( $my_eid, $reparent_level + 1 );
+  }
+  $nid = artmob_citation_get_nid_from_cnid( $cnid );
+  drupal_goto( 'node/'.$nid.'/citation' );
+}
+
+function _artmob_citation_order_delete() {
+  $cnid = $_POST['cnid'];
+  drupal_set_message( 'in delete - deleting cnid '.$cnid);
+  artmob_citation_remove_my_children( $cnid );
+  //This goto didn't work so I added the redirect in the js file
+  //drupal_goto( 'node/'.$nid.'/citation' );
+}
+
+function artmob_citation_remove_my_children( $cnid ){
+  //This function is a recursive function that will
+  //delete all of my children works (and citations)
+  //and recursively their children and their children's children..etc
+  //and then finally delete myself
+  //  -- Psuedocode --
+  //Find all of my children
+  //loop through my children
+  //  artmob_citation_remove_my_children()
+  //end loop
+  //remove me
+
+  $my_eid = artmob_citation_get_eid_from_cnid( $cnid );
+  $query = db_query( "select c.nid as cnid from {am_encapsulated_works} e
+                      left join {am_citation} c on e.citation_id = c.citation_id
+                      where parent_eid = '%s'", $my_eid );
+  while ( $row = db_fetch_object( $query ) ){
+    artmob_citation_remove_my_children( $row->cnid );
+  }
+  db_query( "delete from {am_encapsulated_works} where eid = '%s'",$my_eid );
+  watchdog( 'citation works delete', 'deleting work '.$my_eid );
+  watchdog( 'citation works delete', 'deleting citation node '.$cnid );
+  node_delete( $cnid );
+}
+
+function artmob_citation_update_child_tree_level( $my_eid, $my_level ){
+  //update all items with me as their parent to my_level + 1
+  db_query( "update {am_encapsulated_works} set tree_level = %d where parent_eid = '%s'", $my_level + 1, $my_eid );
+  $db_query = db_query( "select eid from {am_encapsulated_works} where parent_eid = '%s'", $my_eid );
+  //loop through each child
+  while ($row = db_fetch_object($db_query)) {
+    //call artmob_citation_update_child_tree_level( child_eid, my_level + 1 );
+    artmob_citation_update_child_tree_level( $row->eid, $my_level + 1 );
+  }
+}
+
+function artmob_citation_get_eid_from_cnid( $cnid ){
+  $query = sprintf( "select link_eid from {am_citation} where nid = %d", $cnid );
+  //drupal_set_message( $query );
+  $eid = db_result( db_query( $query ) );
+  return $eid;
+}
+
+function artmob_citation_get_nid_from_cnid( $cnid ){
+  $query = sprintf("select link_nid from {am_citation} where nid = %d", $cnid );
+  //drupal_set_message( $query );
+  $eid = db_result( db_query( $query ) );
+  return $eid;
+}
+
+function artmob_citation_get_tree_level_from_eid( $eid ){
+  $query = sprintf( "select tree_level from {am_encapsulated_works} where eid = '%s'", $eid );
+  //drupal_set_message( $query );
+  $tree_level = db_result( db_query( $query ) );
+  return $tree_level;
+}
+
+function artmob_citation_verify_encapsulated_works_tree( $nid ){
+  //verify encapsulated works tree
+  //if the count of the encapsulated works is > 1 (since this includes the base work)
+  //and all of the tree_levels are 0
+  //then rebuild the tree
+  $count =  db_result( db_query( "select count( * ) from {am_encapsulated_works}
+                     where nid = %d and tree_level = 0", $nid ));
+
+  if ( $count > 1 ) {
+    //Do this loop twice as it is sometimes needed in case the order of the links
+    //don't follow the unique_id order (which they should)!
+    for ($i = 1; $i <= 2; $i++) {
+      $loop_query =  db_query( "select * from {am_encapsulated_works}
+                       where nid = %d and parent_eid <> 0 order by unique_id", $nid );
+
+      while ($item = db_fetch_object($loop_query)) {
+        $query = db_query( "SELECT e.*, f.tree_level as parent_level FROM {am_encapsulated_works} e
+                          left join am_encapsulated_works f
+                          on e.parent_eid = f.eid
+                          WHERE e.unique_id = %d", $item->unique_id );
+        while ($row = db_fetch_object($query)) {
+          db_query( "update {am_encapsulated_works} set tree_level = %d where unique_id = %d",
+                  $row->parent_level + 1, $row->unique_id );
+        }
+      }
+    }
+  }
+}
+
+
+

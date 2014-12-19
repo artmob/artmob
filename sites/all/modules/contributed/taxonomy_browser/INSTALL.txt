@@ -1,0 +1,20 @@
+***  D R U P A L    M O D U L E  ***
+Name: taxonomy_browser module
+Author: Moshe Weitzman <weitzmna@tejasa.com>
+
+********************************************************************
+
+INSTALLATION:
+1. Place the entire taxonomy_browser directory into your Drupal
+   sites/all/modules/ or sites/sitename/modules directory.
+2. Enable this module by navigating to: administer > modules
+3. Optional: install node_type_filter.module (http://drupal.org/project/node_type_filter)
+   for node specific category browsing. [Currently unsupported.]
+4. Select the categories (vocabularies) the module will use by
+   going to the Admin > Settings > Taxonomy Browser page.
+
+Installation is finished.
+
+A new menu item called 'category browser' will be visible in the Drupal menu.
+Alternatively you can navigate to http://example.com/index.php?q=taxonomy_browser.
+This module requires no special user permissions.

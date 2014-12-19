@@ -1,0 +1,103 @@
+<?php
+// $Id: artmob_price.module,v 1.0 2011/09/12 17:37:33 ramani Exp $
+
+/**
+ * @file
+ * ADDDOCUMENTATION
+ */
+
+define ('CITATION_MOD_EXISTS',module_exists('artmob_citation'));
+/**
+ * hook_elements - define the widget type
+ */
+function artmob_ahah_support_elements() {
+  $type = array();
+  $type['artmob_date_widget'] = array( '#input' => TRUE, );
+  $type['artmob_contributor_widget'] = array( '#input' => TRUE, );
+  $type['artmob_identifier'] = array( '#input' => TRUE, );
+  $type['artmob_dc_description'] = array( '#input' => TRUE, );
+  $type['artmob_measurement'] = array( '#input' => TRUE, );
+  $type['artmob_annotation'] = array( '#input' => TRUE, );
+  $type['artmob_series_contributor'] = array( '#input' => TRUE, );
+  return $type;
+}
+
+function artmob_ahah_support_init() {
+  if (CITATION_MOD_EXISTS) {
+    // load inc file, say artmob_citation_ahah.inc
+    // load javascripts
+    //The javascripts should only load when editing
+    $ahah_path = drupal_get_path('module', 'artmob_ahah_support');
+    $ahah_inc = $ahah_path .'/inc';
+    $ahah_includes = array( 'datewidget.inc', 'identifierwidget.inc', 'descriptionwidget.inc', 'measurewidget.inc', 'annotationwidget.inc', 'serieswidget.inc', 'contributorwidget.inc' );
+    foreach ($ahah_includes as $inc) {
+      require_once($ahah_inc ."/". $inc);
+    }
+
+     if ($arg0 == 'node' && is_numeric($arg1) && $arg2 == 'edit') {
+      $ahah_js = $ahah_path .'/js';
+
+      $ahah_scripts = array( 'datewidget.js', 'identifierwidget.js', 'descriptionwidget.js', 'measurewidget.js', 'annotationwidget.js', 'contributorwidget.js', 'serieswidget.js', 'form.js', 'highlightFade.js' );
+      //$ahah_scripts = array( 'datewidget.js', 'form.js', 'highlightFade.js' );
+      //$ahah_includes = array( 'datewidget.inc', 'identifierwidget.inc');
+
+      foreach ($ahah_scripts as $js) {
+        drupal_add_js($ahah_js ."/". $js, 'module');
+      }
+
+    }
+  }
+}
+
+// ********************************************************************************
+// WIDGET_NODEAPI - handle the database interactions
+// ********************************************************************************
+
+/**
+ * hook_nodeapi
+ */
+function artmob_ahah_support_nodeapi( &$node, $op ) {
+  if (CITATION_MOD_EXISTS) {
+    switch ($op) {
+      // info flow db -> node -> form -> node -> db
+      case load: // Load Widgets in from db
+        $aload = array();
+        $bload = array();
+        $cload = array();
+        $dload = array();
+        $eload = array();
+        $fload = array();
+        $gload = array();
+
+        $aload = artmob_date_widget_nodeapi( &$node, $op );
+        $bload = artmob_identifier_nodeapi( &$node, $op );
+        $aload = array_merge( $aload, $bload );
+        $cload = artmob_dc_description_nodeapi( &$node, $op );
+        $aload = array_merge( $aload, $cload );
+        $dload = artmob_measurement_nodeapi( &$node, $op );
+        $aload = array_merge( $aload, $dload );
+        $eload = artmob_annotation_nodeapi( &$node, $op );
+        $aload = array_merge( $aload, $eload );
+        $fload = artmob_series_contributor_nodeapi( &$node, $op );
+        $aload = array_merge( $aload, $fload );
+        $gload = artmob_contributor_widget_nodeapi( &$node, $op );
+        $aload = array_merge( $aload, $gload );
+        return $aload;
+        break;
+      default:
+        artmob_date_widget_nodeapi( &$node, $op );
+        artmob_identifier_nodeapi( &$node, $op );
+        artmob_dc_description_nodeapi( &$node, $op );
+        artmob_measurement_nodeapi( &$node, $op );
+        artmob_annotation_nodeapi( &$node, $op );
+        artmob_series_contributor_nodeapi( &$node, $op );
+        artmob_contributor_widget_nodeapi( &$node, $op );
+    }
+  } else {
+    switch ($op) {
+      case load: // Load Widgets in from db
+        return array();
+    }
+  }
+}
+

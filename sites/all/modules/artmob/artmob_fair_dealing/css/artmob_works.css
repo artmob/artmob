@@ -1,0 +1,628 @@
+/*   artmob_works.css 
+ *   CSS file that drives the styles for the presentation of works.
+ *   Currently called by artmob_citation.module, artmob_license.module and artmob_fair_dealing.module
+ 
+ 		 
+ 		 Work Type Colour Scheme:
+ 		 
+ 		 A - Literary (Gold)
+ 					Primary: #cba200; 
+ 					Light: #f1c000;
+ 					Dark: #c19b02;
+ 					
+ 		 B - Dramatic  (Fuchsia)
+ 		 			Primary: #df5998;
+ 		 			Light: #f585b9;
+ 		 			Dark: #df2e81;
+ 		 			
+ 		 C - Musical  (Blue)
+ 		 			Primary: #00a9d0;
+ 		 			Light: #5fc9e2;
+ 		 			Dark: #00748f;
+ 		 
+ 		 D - Visual Artistic  (Green)
+ 		 			Primary: #a7d000;
+ 		 			Light: #c5f500;
+ 		 			Dark: #90b300;
+ 		 			
+ 		 E - Performance (Orange)
+ 		 			Primary: #ff7800;
+ 		 			Light: #ffa454;
+ 		 			Dark: #e66c00;
+ 		 
+ 		 Neutral:
+ 		 			Primary: #CCCCCC;
+ 		 			Light: #EDEDED;
+ 		 			Dark: #666666;
+ 
+ */
+
+.work select.invalid {
+	border: 2px solid red;
+}
+
+work.invalid {
+	opacity: .7;
+}
+
+.work h1 { 
+	text-transform: uppercase;
+	margin: 0px;
+	color: #FF5148;
+	font-size: 26px;
+
+}
+
+.work h2 {
+	color: #000000;
+	font-size: 16px;
+	padding-top: 10px;
+	margin-top: 20px;
+	border-top: 1px dotted #699391;
+}
+
+.work h3 {
+	font-size: 14px;
+	margin: 15px 0px 0px 0px;
+	text-transform: uppercase;
+	color:#999;
+	font-size:11px;
+
+}
+
+
+.work h3 > h2 {
+	margin-top:0 
+	}
+
+.work p {
+	margin: 0px 0px 5px 0px;
+	padding: 0px;
+}
+	
+#work-collection-init .keyroles {
+	border:none;
+	}
+	
+#work-collection-init .keyroles h3, #work-collection-init .keyinfo h3 {
+	margin-bottom:0;
+	border-bottom:1px solid #ccc;
+	padding-bottom:5px;
+	margin-bottom:5px;
+	font-weight: normal;
+	font-size:1em;
+	color:#333;
+	text-transform: none;
+	}
+	
+#work-collection-init .fd-worktype {
+	border-top: none;
+	color: #000;
+	font-weight: normal;
+	}
+	
+#work-collection-init table {
+	margin-bottom:10px;
+	}
+	
+#work-collection-init th {
+	background-color:#fff;
+	}
+	
+#work-collection-init td {
+	padding:10px;
+	}
+	
+#work-collection-init tr {
+	border-bottom:1px solid #fff;
+	background-color: #f7f7f7 ;
+	}
+	
+#work-collection-init tr:nth-child(2n) {
+	background-color:#ededed;
+	}
+
+.work {
+	border-left: 4px solid #ccc;
+	border-bottom: 4px solid #ccc;
+	padding-top: 2px ;
+	padding-bottom: 10px ;
+	padding-left:0;
+	margin-left:2px;
+	margin-bottom:20px;
+	background: #fff url(../images/icons/icon-flag_blank.png) no-repeat top left;
+	}
+
+
+.work-help-text {
+	padding-bottom: 8px;
+	font-style: italic;
+	}
+
+.work h3.fd-label, .citation-table th {
+	text-transform: uppercase;
+	color:#999;
+	font-size:11px;
+	}
+	
+.work .message {
+	border: 1px solid #df5998;
+	background-color: #EEEEEE;
+	padding: 10px;
+	color: red;
+}
+
+.work .message ul {
+	padding-left: 10px;
+}
+
+.work .message p, .work .message li {
+	color: red;
+	font-weight: bold;
+}
+	
+	
+/* filetype banners --------------------------------*/
+
+.filetype-document #work-1, .worktype-1, .filetype-1 {
+	background-image: url(../images/icons/icon-flag_files_document.png);
+}
+
+.filetype-video #work-1, .worktype-2, .filetype-2  {
+	background-image: url(../images/icons/icon-flag_files_video.png);
+}
+
+.filetype-image #work-1, .worktype-3, .filetype-3 {
+	background-image: url(../images/icons/icon-flag_files_image.png);
+}
+
+.filetype-audio #work-1, .worktype-4, .filetype-4 {
+	background-image: url(../images/icons/icon-flag_files_audio.png);
+}
+
+
+
+/*   Attribute Colours  --------------------------------*/	
+
+.work.worktype-A /* literary */ {
+	border-color: #cba200;
+	background-image: url(../images/icons/icon-flag_literary.png);
+	}
+	
+.work.worktype-A > .banner {
+	background-color: #cba200;
+	}
+	
+.work.worktype-A .parenttypename, .work.worktype-A h3.fd-label {
+	color: #cba200;
+	}
+
+.work.worktype-B /* dramatic */ {
+	border-color: #df5998;
+	background-image: url(../images/icons/icon-flag_dramatic.png);
+	}
+
+.work.worktype-B > .banner {
+	background-color: #df5998;
+	}
+
+.work.worktype-B .parenttypename, .work.worktype-B h3.fd-label {
+	color: #df5998;
+	}
+	
+.work.worktype-C /* musical */ {
+	border-color: #00a9d0;
+	background-image: url(../images/icons/icon-flag_musical.png);
+	}
+	
+.work.worktype-C > .banner {
+	background-color: #00a9d0;
+	}
+	
+.work.worktype-C .parenttypename, .work.worktype-C h3.fd-label {
+	color: #00a9d0;
+	}
+	
+.work.worktype-D /* visual artistic */ {
+	border-color: #a7d000;
+	background-image: url(../images/icons/icon-flag_visual.png);
+	}
+
+.work.worktype-D > .banner {
+	background-color: #a7d000;
+	}
+	
+.work.worktype-D .parenttypename, .work.worktype-D h3.fd-label {
+	color: #a7d000;
+	}
+	
+.work.worktype-E /* performance */ {
+	border-color: #ff7800;
+	background-image: url(../images/icons/icon-flag_performance.png);
+	}
+
+.work.worktype-E > .banner {
+	background-color: #ff7800;
+	}
+
+.work.worktype-E .parenttypename, .work.worktype-E h3.fd-label {
+	color: #ff7800;
+	}
+	
+.work.worktype-F /* neighbouring rights */ {
+	border-color: #9690a6;
+	background-image: url(../images/icons/icon-flag_neighbour.png);
+	}
+	
+.work.worktype-F > .banner {
+	background-color: #9690a6;
+	}
+	
+.work.worktype-F .parenttypename, .work.worktype-F h3.fd-label {
+	color: #9690a6;
+	}
+	
+.innerwork {
+	padding-left: 10px;
+	}
+
+.work .menu {
+	padding-bottom: 10px; 
+	}
+
+.work .banner {
+	background-color: #ccc;
+	border-width: 0	;
+	color:#fff;
+	font-weight:normal;
+	height:29px;
+	margin-left:35px;
+	}
+	
+.work .parenttypename {
+	color: #ccc;
+	}
+
+.work .banner-title {
+	line-height: 29px;
+	text-shadow: rgba(0, 0, 0, .5) 0px -1px 1px; 
+	font-weight: bold;
+	overflow: hidden;
+	width: 350px;
+	height: 29px;
+	}
+
+.work .banner-title .highlight {
+	color:#fff;
+	font-weight: bold;
+	}
+
+.work .banner .close, .work .banner .open {
+	width:96px;
+	height:29px;
+	float:right;
+	background: transparent no-repeat top right;
+	}
+	
+.work .banner .close, .work .banner .open:hover {
+	background-image: url(../images/flag-close.png);
+	text-decoration: none;
+	} 
+
+.work .banner .open, .work .banner .close:hover {
+	background-image: url(../images/flag-open.png);
+	text-decoration: none;
+	}
+
+.work .banner .close a, .work .banner .open a, .work .banner .close a:hover, .work .banner .open a:hover {
+	line-height: 29px;
+	display:inline-block;
+	height:29px;
+	width:96px;
+	margin-left: 25px;
+	font-size: 10px;
+	color: #858585;
+	font-weight:bold;
+	text-transform: uppercase;
+	text-decoration: none;
+	text-shadow: #fff 0px 2px 2px; 
+	}
+	
+.work h2, .work h2 .highlight, .info {
+	border-top: none;
+	color: #000;
+	font-weight: normal;
+	font-size: 16px;
+	}
+	
+.work h2 .highlight {
+	font-weight: bold;
+	}
+	
+/*   Form Elements --------------------------------*/
+
+.work .cvalues, .work .add-new-contributor-container, .work input.add-info,  .work input.add-contributor {
+	 /*margin: 10px auto;*/
+	 }
+	 
+.work .keyroles .cvalues:last-child select{
+	 font-style: italic;
+	 }
+	
+ .work input[type="button"], .work select, .work input[type="text"],  .fast_confirm button.fast_confirm_proceed, .fast_confirm button .fast_confirm_cancel {
+	 line-height:23px;
+	 height:25px;
+	 padding:0 10px ;
+	 color:#333;
+	 font-weight:bold;
+	 border:1px solid #666;
+	 text-shadow: #fff 0px 1px 2px; 
+	 -webkit-border-radius: 5px;
+	 -moz-border-radius: 5px;
+	 -o-border-radius: 5px;
+	 -khtml-border-radius: 5px; /* for old Konqueror browsers */
+	 border-radius: 5px; /* future proofing */
+	 -moz-box-shadow: 0px 1px #ddd;
+	 -webkit-box-shadow: 0px 1px #ddd;
+	 box-shadow: 0px 1px #ddd;
+	 }
+				
+input[type="button"], .fast_confirm button.fast_confirm_proceed  {
+	 text-transform: uppercase;
+	 }
+	 
+input[type="button"], .work select, .fast_confirm button.fast_confirm_proceed {
+	 background: transparent url(../images/form-light.png) repeat-x center top;
+	 }
+	 
+input[type="button"]:hover, .work select:hover, .fast_confirm button.fast_confirm_proceed:hover {
+	color:#222;
+	background:transparent url(../images/form-light.png) center bottom;
+	cursor: pointer;
+	}
+	
+
+.work .keyfields, .work .keyroles {
+	 border-top:1px solid #ccc;
+	 padding-top:10px;
+	 }
+	 
+.work .select-cfield, .fast_confirm button.fast_confirm_cancel, .work .select-crole {
+	 text-transform: uppercase;
+	 color:#fff;
+	 background: transparent url(../images/form-dark.png) repeat-x center top;
+	 text-shadow: #000 0px -1px 1px; 
+	}
+	 
+.work .select-cfield:hover, .fast_confirm button.fast_confirm_cancel:hover,  .work .select-crole:hover {
+	color:#ddd;
+	background:transparent url(../images/form-dark.png) center bottom;
+	cursor: pointer;
+	}
+
+.work .select-crole option, .work .select-cfield option {
+	color: #000;
+	text-shadow: none;
+	font-style: normal;
+	background: #FFF;
+	 }
+ 
+.work input[type="text"] {
+	 background:  transparent url(../images/form-text.png) repeat-x center center;
+	 font-style: italic;
+	 text-transform: none;
+	 width: 200px;
+	}
+	
+.work .add-new-contributor-container input[type="text"] {
+	width: 110px;
+}
+
+.select-cname, .select-crole {
+	width: 120px;
+}
+
+.select-cfield {
+	width: 150px;
+}
+
+.cc-cname {
+	margin-left: 8px;
+}
+
+.add-new-contributor-container {
+	font-size: .6em;
+}
+
+.work input[type="text"].date-year-field {
+	 width: 40px;
+	}
+ 
+.work select {
+	 line-height: 20px;
+	 margin-right:10px;
+	 -moz-border-radius: 0;
+	 padding:0 ;
+	}	
+	 
+.work select option, .work select {
+	padding-top:.25em;
+}
+
+.citation-edit select.reparent {
+	width: 250px;
+}
+
+.citation-module #work-1 > .innerwork > .title > form.citation-edit select, .citation-module #work-1 > .innerwork > .title > form.citation-edit input[type="submit"]  {
+	display: none;
+}
+
+/* Nested Work Messages */
+
+.hasnested > div > h2.h2hasnested, .nonested > div > h2.h2nonested {
+	display: block;
+}
+
+.hasnested > div > h2.h2nonested, .nonested > div > h2.h2hasnested, .nonested > form {
+	display: none;
+}	
+
+/* LICENSE MODULE ADDITIONS */
+
+.license-worktype-label {
+	font-weight: 700;
+	}
+	
+.work .licenses h3 {
+	margin-top: 10px;
+	color: #FFFFFF;
+	font-size: 13px;
+	margin-bottom: 2px;
+}
+	
+.add-license {
+	margin-top: 20px;
+}
+
+.add-license-info {
+	background-color: #e84f6d;
+	-moz-border-radius: 10px;
+	-webkit-border-radius: 10px;
+	border-radius: 15px;
+	width: 514px;
+}
+
+.body-panels-nav {
+	width: 514px;
+}
+
+.panel-nav-1 {
+	border-top-left-radius: 15px;
+	-moz-border-top-left-radius: 15px; 
+	-webkit-border-top-left-radius: 15px;
+}
+
+.panel-nav-3 {
+	border-top-right-radius: 15px;
+	-moz-border-top-right-radius: 15px; 
+	-webkit-border-top-right-radius: 15px;
+}
+
+
+a.panel-nav {
+	color: #FFFFFF;
+	font-family: helvetica, arial, sans-serif;
+	font-size: 16px;
+	font-weight: bold;
+	display: inline-block;
+	margin: 0px;
+	height: 60px;
+	text-align: top;
+	width: 170px;
+	border-bottom: 2px solid white;
+}
+
+a.panel-nav:link,a.panel-nav:visited,a.panel-nav:active {
+	color: #FFFFFF;
+	text-decoration: none;
+}
+
+.body-panels-nav a.active {
+	color: #000000;
+	text-decoration: none;
+}
+
+a.panel-nav:hover {
+	color: #000000;
+	text-decoration: none;
+}
+
+.body-panels-nav a.active .inner-panel-nav {
+	border-bottom: 3px solid #e84f6d;
+}
+
+.inner-panel-nav {
+	padding: 10px;
+	float: left;
+	height: 40px;
+	width: 150px;
+}
+
+.panel-nav-2 {
+	border-left: 2px solid white;
+	border-right: 2px solid white;
+
+}
+
+.body-panels-nav a.inactive {
+		background-color: #ec6f87;
+}
+
+
+.add-license-info h2 {
+	margin: 0px 0px 20px 0px;
+	padding-top: 0px;
+	font-weight: bold;
+}
+
+.work .add-license-info select{
+	background-color: #FFFFFF;
+	background-image: none;
+}
+
+.add-license-info > div {
+	margin-bottom: 20px;
+}
+
+.add-license-info input, .add-license-info textarea, .add-license-info select {
+	margin-bottom: 10px;
+}
+
+.add-license-info textarea {
+	font-family: Arial,sans-serif;
+	font-size: 1em;
+	padding: 2px;
+}
+
+.license-name {
+	font-weight: bold;
+}
+
+.license-additional {
+	margin: 20px 0px 20px 0px;
+}
+
+.license-introduction {
+	font-weight: bold;
+}
+
+.panel-wrapper {
+	padding: 0px 10px;
+}
+
+.known-contributors {
+	width: 100%;
+}
+
+select[name='license-contributor-options'] {
+	width: 200px;
+}
+
+.license-add-new-contributor .add-contributor-btn, .license-add-new-contributor .nc-close {
+	display: none;
+}
+
+/* CITATION MODULE ADDITIONS */
+
+.citation-module .work h2 {
+	margin: 0px 0px 20px 0px;
+	padding-top: 0px;
+}
+
+.citation-module .work .menu {
+	display: none;
+}
+
+.citation-table th {
+	padding-top: 10px;
+}

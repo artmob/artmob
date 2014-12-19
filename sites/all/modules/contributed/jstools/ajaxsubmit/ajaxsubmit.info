@@ -1,0 +1,11 @@
+; $Id: ajaxsubmit.info,v 1.1.2.6 2008/04/14 16:10:31 nedjo Exp $
+name =  AJAX submit
+description = Makes designated forms submit via AJAX.
+package = Javascript tools
+dependencies = jstools form_store
+
+; Information added by drupal.org packaging script on 2008-11-07
+version = "5.x-1.2"
+project = "jstools"
+datestamp = "1226023222"
+

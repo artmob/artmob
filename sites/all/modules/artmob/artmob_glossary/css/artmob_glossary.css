@@ -1,0 +1,71 @@
+.textframe dd, .gtext {
+	color: black;
+	font-family: tahoma,arial,sans-serif;
+	font-size: 14px;
+	margin: 0px;
+	width: 270px;
+	display: block;
+}
+
+.textframe dt, .gterm {
+	margin: 0px 0px 8px 0px;
+	font-family: tahoma,arial,sans-serif;
+	text-transform: uppercase;
+	font-size: 18px;
+	color: black;
+	font-weight: bold;
+	display: block;
+}
+
+
+.textframe-topcap {
+	width: 330px;
+	height: 30px;
+	background-image: url('../templates/images/help_top_cap.png');*/
+	background-repeat: no-repeat;
+	display: block;
+}
+
+.textframe-content {
+	background-image: url('../templates/images/help_middle.png');
+	background-repeat: repeat-y;
+	padding: 0px 30px;
+	min-height: 100px;
+	
+}
+
+.textframe-bottomcap {
+	width: 330px;
+	height: 30px;
+	background-image: url('../templates/images/help_bottom_cap.png');
+	background-repeat: no-repeat;
+	display: block;
+}
+
+
+.textframe {
+	color: #FFFFFF;
+	width: 330px;
+	opacity: 1;
+	float: left;
+	top: 0;
+	position: absolute;
+	z-index: 201;
+	filter:alpha(opacity=100);  
+-moz-opacity:1;  
+}
+
+.gloss-link {
+	cursor: pointer;
+	display:inline-block;
+	overflow: hidden;
+	z-index:1;
+	width: 13px;
+	height: 13px;	
+	top: -3px;
+	position: relative;
+	}
+.gloss-link img:hover {
+	cursor:pointer;
+	margin-top: -14px;
+	}

@@ -1,0 +1,9 @@
+name = Taxonomy Block
+description = Makes blocks based on taxonomy vocabularies and terms.
+dependencies = taxonomy
+
+; Information added by drupal.org packaging script on 2007-06-19
+version = "5.x-1.x-dev"
+project = "taxonomy_block"
+datestamp = "1182212696"
+

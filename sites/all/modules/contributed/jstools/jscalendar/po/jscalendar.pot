@@ -1,0 +1,47 @@
+# $Id: jscalendar.pot,v 1.1.2.1 2007/12/15 15:43:01 wulff Exp $
+#
+# LANGUAGE translation of Drupal (general)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from file: jscalendar.module,v 1.16 2007/06/21 23:03:00 nedjo
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2007-12-08 13:10+0100\n"
+"PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
+"Last-Translator: NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: jscalendar.module:30 jscalendar.info:0
+msgid "JS Calendar"
+msgstr ""
+
+#: jscalendar.module:31
+msgid "Configurations for the popup calendar"
+msgstr ""
+
+#: jscalendar.module:77
+msgid "JSCalendar style"
+msgstr ""
+
+#: jscalendar.module:78
+msgid "Choose the JSCalendar style."
+msgstr ""
+
+#: jscalendar.module:0
+msgid "jscalendar"
+msgstr ""
+
+#: jscalendar.info:0
+msgid "Enables popup calendars for selecting dates using the jscalendar library."
+msgstr ""
+
+#: jscalendar.info:0
+msgid "Javascript tools"
+msgstr ""
+

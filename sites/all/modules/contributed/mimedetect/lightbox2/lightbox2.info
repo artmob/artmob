@@ -1,0 +1,10 @@
+; $Id: lightbox2.info,v 1.1.2.1.2.3 2008/07/14 11:51:23 snpower Exp $
+name = Lightbox2
+description = Enables Lightbox2 for Drupal
+dependencies = jquery_update
+
+; Information added by drupal.org packaging script on 2009-01-08
+version = "5.x-2.9"
+project = "lightbox2"
+datestamp = "1231421440"
+

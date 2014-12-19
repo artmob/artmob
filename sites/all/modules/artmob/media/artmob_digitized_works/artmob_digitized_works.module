@@ -1,0 +1,417 @@
+<?php
+// $Id: artmob_digitized_works.module,v 1.0 2008/03/01 08:31:22 drumm Exp $
+
+/**
+ * @file
+ * Allows users to enter a Link to an Article.
+ */
+
+
+//* Implementation of hook_node_info().
+
+function artmob_digitized_works_node_info() {
+  return array(
+    'DigitizedWorks' => array(
+      'name' => t('Documents'),
+      'module' => 'artmob_digitized_works',
+      'description' => t("Add a new digitized Document (such as a scanned book) in PDF form to your archive.")
+    ),
+  );
+}
+
+// Implementation of hook_access().
+
+function artmob_digitized_works_access($op, $node) {
+  global $user;
+
+  if ($op == 'create') {
+    // Only registered users can create Articles.
+    return user_access('Add Artmob Media');
+  }
+
+  else if ($op == 'update') {
+    if ( $user->uid == $node->uid ){
+      return user_access('Edit Own Artmob Media');
+    } else {
+      return user_access('Edit Artmob Media');
+    }
+  }
+  else if ($op == 'delete') {
+    return user_access('Remove Artmob Media');
+  }
+  else if ($op == 'view') {
+    return user_access('View Artmob Media');
+  }
+  else {
+    return FALSE;
+  }
+}
+
+/**
+ * Implementation of hook_init().
+*/
+
+
+function artmob_digitized_works_init() {
+	$module_path = drupal_get_path('module','artmob_digitized_works');
+	
+	drupal_add_js($module_path . '/js/am_digitized_works.js');
+	
+	$settings = array(
+		'downloadup' => base_path() . $module_path . '/images/download_up.png',
+		'downloadover' =>  base_path() . $module_path . '/images/download_over.png'
+	);
+	
+	if (arg(0) == 'node' && is_numeric(arg(1))) {
+		$node = node_load(arg(1));
+		
+		$settings['nodetype'] = $node->type;
+		
+		if (is_array($node->files)) {
+			 $file = array_shift($node->files);
+		   $settings['filepath'] = base_path() . $file->filepath;
+		   $settings['filesize'] = round(($file->filesize/1000000),2) . " MB";
+		   $settings['filename'] = $file->filename;
+		} else {
+			 $settings['filepath'] = NULL;
+		}
+		
+		$settings['movefield'] = arg(2) == 'edit' ? TRUE : FALSE;
+	}
+	
+	
+  drupal_add_js(array('ddsettings' => $settings), "setting");
+	
+}
+
+/**
+ * Implementation of hook_menu().
+*/
+function artmob_digitized_works_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+  }
+  else {
+    $items[] = array(
+      'path' => 'admin/artmob/digitized_convert',
+      'title' => t('convert digitized documents entries'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('artmob_digitized_convert_form', NULL),
+      'description' => t('Allows the conversion of digitized documents entries'),
+      'access' => user_access('administer site configuration'),
+      'type' => MENU_NORMAL_ITEM,
+    );
+  }
+
+  return $items;
+}
+
+function artmob_digitized_convert_form() {
+  $form = array();
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Convert the digitized documents HTML body fields'),
+    '#prefix' => t('This will convert the digitzed works HTML Body fields and merge them into the description.'),
+  );
+
+  return $form;
+}
+
+function artmob_digitized_works_form_alter($form_id, &$form) {
+    // Normally a switch is used because you may want to alter more than
+    // one form and it is easy to add a new case for each form.
+    switch ($form_id) {
+      // This is our form ID.
+      case 'DigitizedWorks_node_form':
+        // Our kickin' mods go here.
+        $form['attachments']['#weight'] = -4;
+        $form['attachments']['#collapsed'] = FALSE;
+        $form['attachments']['#title'] = 'Upload your document';
+        break;
+    }
+  }
+
+function artmob_digitized_convert_form_submit($form_id, $form_values) {
+  if ( $form_values['op'] == 'Convert the digitized documents HTML body fields' ) {
+    $result = db_query("SELECT * FROM {am_digitizedworks} WHERE HTMLBody <> ''" );
+    while ($row = db_fetch_object($result)) {
+      //get nid of digitized work
+      $nid = $row->nid;
+      
+      //get body and vid from node_revision for $nid
+      $body= db_query( "select r.body, r.vid from {node} n
+                          left join {node_revisions} r on n.vid = r.vid
+                          where n.nid = %d", $nid );
+                          
+      $data = db_fetch_object( $body );
+      
+      //update the node_revisions by appending the HTMLBody to it
+      db_query( "UPDATE {node_revisions} set body = '%s' where vid = %d", $data->body .' '. $row->HTMLBody, $data->vid );
+      //delete the HTMLBody field so that if the data is reconverted, it won't double append
+      db_query( "UPDATE {am_digitizedworks} set HTMLBody = '' where nid = %d", $nid );
+    }
+    drupal_set_message( 'The digitized documents have been converted' );
+  }
+}
+
+function artmob_digitized_works_view($node, $teaser = FALSE, $page = FALSE) {
+  if ($page) {
+    $node->body = check_markup($node->body, $node->filter, FALSE);
+   $node->content['artmob_digitized_works'] = array('#value' => theme( 'artmob_digitized_works_basic_view', $node, $page ));
+  } 
+  else {
+    $node->teaser = check_markup($node->teaser, $node->filter, FALSE);
+    $node->content['artmob_digitized_works'] = array('#value' => theme( 'artmob_digitized_works_teaser_view', $node, $page ));
+  }
+  return $node;
+}
+
+function theme_artmob_digitized_works_basic_view( &$node, $page ) {
+  $content = '';
+  $content .= "<div class='digitized-document dd-full'>";
+  $content .= $node->body;
+  $content .= "</div>";
+  return $content;
+}
+
+function theme_artmob_digitized_works_teaser_view( &$node, $page ) {
+  $content = '';
+  $content .= "<div class='digitized-document dd-teaser'>";
+  $content .= $node->teaser;
+  $content .= "</div>";
+  return $content;
+}
+
+/**
+ * Implementation of hook_block().
+ *
+ * Displays the Link in a block.
+ */
+function artmob_digitized_works_block($op = 'list', $delta = 0) {
+  //Possible choices for $op are: list,configure,save & view
+  //if $op is list then must return an array of arrays which must at least
+  //define an 'info' element describing the block.  Other optional elements include
+  //weight, enabled and region (ie 'right' or 'left).
+  
+  //if $op is view then we must return an array which must have a 'subject'
+  //element and a 'content' element defining the block (indexed by $delta).
+  
+  //if $op is configure then optionally return a string containing the
+  //configuration form.
+  
+  //if $op is save then return nothing.
+  
+  if ($op == 'list') {
+    $block[0]['info'] = t('DigitizedWorks');
+    return $block;
+  }
+  else if ($op == 'configure') {
+    switch ($delta) {
+      case 0: //DigitizedWorks
+        $form['recent_DigitizedWorks_num_posts'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Number of recent digitized workds to display'),
+          '#default_value' => variable_get('recent_DigitizedWorks_num_posts', 5)
+        );
+        break;
+    }
+    return $form;
+  }
+  else if ($op == 'save') {
+    switch ($delta) {
+      case 0: //Recent DigitizedWorks
+        variable_set('recent_DigitizedWorks_num_posts', (int)$edit['recent_DigitizedWorks_num_posts']);
+        break;
+    }
+  }
+  else if ($op == 'view') {
+    switch ($delta) {
+      case 0:
+        if ( (arg(0) == 'node') and (is_numeric(arg(1)))) {
+          $result = db_query_range("SELECT nid FROM {node} WHERE TYPE = 'DigitizedWorks' ORDER BY changed DESC", 0, 5);
+          if (db_num_rows($result)) {
+             while ($row = db_fetch_object($result)) {
+              $node = node_load($row->nid);
+              $node = node_prepare($node);
+              $contentarray[] = $node;
+             }
+          }
+        }
+        $block['subject'] = 'artmob_digitized_works';
+        $block['content'] = theme('artmob_digitized_works_block', $contentarray);
+        return $block;
+    }
+  }
+} 
+
+function theme_artmob_digitized_works_block( $contentarray )  {
+  foreach ($contentarray as $node) {
+    $content .= l( $node->title, $node->nid );
+  }
+  return $content;
+}
+
+// Implementation of hook_insert().
+
+function artmob_digitized_works_insert($node) {
+/* NOT NEEDED NOW THAT WE NO LONGER SAVE HTMLBODY OR FORMAT
+  db_query("INSERT INTO {am_digitizedworks} (nid, vid, HTMLBody, HTMLBodyFormat)
+                               VALUES (%d, %d, '%s', %d)",
+       $node->nid, $node->vid, $node->HTMLBody, $node->HTMLBodyFormat);
+*/
+}
+
+// Implementation of hook_update().
+function artmob_digitized_works_update($node) {
+/* NOT NEEDED NOW THAT WE NO LONGER SAVE HTMLBODY OR FORMAT
+  db_query("UPDATE {am_digitizedworks}
+            set HTMLBody ='%s',
+            HTMLBodyFormat = %d
+            
+             where nid = %d",
+
+             $node->HTMLBody,
+            $node->HTMLBodyFormat,
+
+            $node->nid);
+*/
+}
+
+// Implementation of hook_delete().
+function artmob_digitized_works_delete($node) {
+/* NOT NEEDED NOW THAT WE NO LONGER SAVE HTMLBODY OR FORMAT
+  db_query("DELETE FROM {am_digitizedworks}
+              where nid = %d",
+             $node->nid);
+*/
+}
+
+// Implementation of hook_load().
+function artmob_digitized_works_load($node) {
+
+/* joe's code
+  $t = db_fetch_object(db_query('SELECT * FROM {am_digitizedworks} WHERE nid = %d', $node->nid));
+  return $t;
+*/
+
+/* NOT NEEDED NOW THAT WE NO LONGER SAVE HTMLBODY OR FORMAT
+  $t = db_fetch_array(db_query('SELECT * FROM {am_digitizedworks} WHERE nid = %d', $node->nid));
+  return $t;
+*/
+}
+
+
+/**
+ * Implementation of hook_submit().
+ */
+function artmob_digitized_works_submit(&$node) {
+  global $user;
+  // Set default values for non-administrators.
+  if (!user_access('administer nodes')) {
+    $node->revision = 1;
+    $node->uid = $user->uid;
+  }
+}
+
+
+// Implementation of hook_form().
+function artmob_digitized_works_form(&$node) {
+
+  $type = node_get_types('type', $node);
+
+  $form['DigitizedWorks'] = array(
+    '#type'          => 'fieldset',
+    '#title'         => t('Digitized Documents'),
+    '#weight'        => -5,
+    '#collapsible'   => TRUE,
+    '#collapsed'     => FALSE
+  );
+
+  $form['DigitizedWorks']['title'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('title'),
+    '#default_value' => $node->title,
+    '#description'   => ARTMOB_MEDIA_TITLE_HELP,
+    '#tree'          => 'FALSE',
+    '#rows'          => 1,
+    '#required'      => True
+  );
+  
+  $form['DigitizedWorks']['body'] = array(
+    '#type'          => 'textarea',
+    '#title'         => t('Description'),
+    '#default_value' => $node->body,
+    '#description'   => ARTMOB_MEDIA_DESCRIPTION_HELP,
+    '#tree'          => 'FALSE',
+    '#rows'          => 3,
+    '#required'      => True
+  );
+  $form['DigitizedWorks']['format'] = filter_form($node->format);
+
+/* NOT NEEDED NOW THAT WE NO LONGER SAVE HTMLBODY OR FORMAT
+ $form['DigitizedWorks']['a']['HTMLBody'] = array(
+    '#type'          => 'textarea',
+    '#title'         => t('HTML Body'),
+    '#default_value' => $node->HTMLBody,
+    '#description'   => 'enter the HTML body of the work',
+    '#tree'          => 'FALSE',
+    '#rows'          => 10,
+    '#required'      => False,
+    '#weight'        => -6,
+  );
+  $form['DigitizedWorks']['a']['HTMLBodyFormat'] = filter_form($node->HTMLBodyFormat, -5, array('HTMLBodyFormat'));
+*/
+  return $form;
+
+}
+
+/**
+ * Implementation of hook_form_alter().
+ *
+function artmob_digitized_works_form_alter($form_id, &$form) {
+}
+*/
+
+/**
+ * Implementation of hook_nodeapi().
+ *
+function artmob_digitized_works_nodeapi(&$node, $op, $teaser, $page) {
+  switch ($op) {
+    case 'prepare':
+      break;
+    case 'load':
+      break;
+    case 'view':
+      break;
+    case 'update':
+      break;
+    case 'delete revision':
+      break;
+    case 'delete':
+      break;
+    case 'insert':
+      break;
+    case 'submit':
+      break;
+  }
+}
+ */
+
+
+// Implementation of hook_help().
+function artmob_digitized_works_help($section) {
+  switch ($section) {
+    case 'admin/help#description':
+      return t('Enables the creation of digitized documents.');
+      break;
+    case 'admin/modules#description':
+      return t('Enables the creation of digitized documents.');
+      break;
+    case 'admin/node/add#DigitizedWorks':
+      return t('A digitized work. Use this page to add an digitized documents.');
+      break;
+  }
+}
+
+

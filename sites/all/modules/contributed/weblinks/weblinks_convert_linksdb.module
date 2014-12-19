@@ -1,0 +1,135 @@
+<?php
+// $Id: weblinks_convert_linksdb.module,v 1.1.2.1 2009/05/10 00:10:46 nancyw Exp $
+
+/**
+ * @file
+ * Convert LinksDB package to Web Links.
+ * Drupal 5 Version - LinksDB has no 6 version.
+ */
+
+/**
+ * Implementation of hook_menu().
+ */
+function weblinks_convert_linksdb_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+    $items[] = array(
+      'path' => 'admin/settings/weblinks/linksdb',
+      'title' => 'Convert LinksDB package',
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('weblinks_convert_linksdb_form'),
+      'access' => user_access('administer weblinks'),
+      'type' => MENU_LOCAL_TASK,
+      'weight' => 10,
+      );
+  }
+  else {
+    drupal_add_css(drupal_get_path('module', 'weblinks') .'/weblinks.css');
+  }
+  return $items;
+}
+
+function weblinks_convert_linksdb_form() {
+  drupal_set_message(t('The LinksDB tables will be used to create Web Links nodes and taxonomy terms will be created from its categories.'), 'warning');
+
+  $form = array();
+
+  $form['backup'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('I have done a back up of my database.'),
+    );
+
+  $form['limit'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Number of Links to convert at a time'),
+    '#size' => 5,
+    '#default_value' => 0,
+    '#description' => t('This minimizes the risk of timing out if you have a lot of links to convert.'),
+    );
+
+  $form['convert'] = array(
+    '#type' => 'submit',
+    '#value' => t('Convert'),
+    );
+
+  $form['#validate']['weblinks_convert_linksdb_form_validate'] = array();
+  $form['#submit']['weblinks_convert_linksdb_form_submit'] = array();
+  
+  return $form;
+}
+
+function weblinks_convert_linksdb_form_validate($form_id, $form_values) {
+  if (!$form_values['backup']) {
+    form_set_error('backup', t('You must check the box that says you backed up your database.'));
+  }
+}
+
+function weblinks_convert_linksdb_form_submit($form_id, $form_values) {
+  weblinks_convert_linksdb($form_values['limit']);
+}
+
+function weblinks_convert_linksdb($limit = 10) {
+  $rows = $current = $new_cat = array();
+  $vid = _weblinks_get_vocid();
+
+  // Get current terms in case any are duplicates.
+  $result = db_query("SELECT tid, name FROM {term_data} WHERE vid=%d", $vid);
+  while ($term = db_fetch_array($result)) {
+    $current[$term['name']] = $term['tid'];
+  }
+
+  // Get all the LinksDB categories and convert to taxo terms in the Weblinks vocab.
+  $result = db_query("SELECT id, name, parent as mom FROM {links_categories} ORDER BY parent, name");
+  while ($term = db_fetch_array($result)) {
+    if (isset($current[$term['name']])) {
+       $term['tid'] = $new_cat[$term['id']] = $current[$term['name']];
+    }
+    else {
+      // Build a new term. tid, name, description, vid, weight, ['parent'] = array(0)
+      $term['tid'] = NULL;
+      $term['vid'] = $vid;
+      $term['parent'] = $new_cat[$term['mom']];
+      $term['weight'] = 0;
+      $term['description'] = t('Converted from LinksDB');
+      $term['relations'] = $term['synonyms'] = NULL;
+      taxonomy_save_term($term);
+      // TST created a tid for us.
+      $new_cat[$term['id']] = $term['tid'];
+    } /* 30 */
+    $rows[] = array($term['id'], $term['name'], $term['mom'], $term['tid']);
+  }
+
+  // Now get all the "nodes" and create real nodes for them.
+  global $user;
+  $node_base = array(
+    'type' => 'weblinks',
+    'is_converted' => TRUE,
+    'uid' => $user->uid,
+    'name' => $user->name,
+    'promote' => 0,
+    'sticky' => 0,
+    'last_click' => 0,
+    'last_status' => '',
+    'last_checked' => 0,
+    'weight' => 0,
+    'nid' => NULL,
+    'vid' => NULL,
+    'format' => FILTER_FORMAT_DEFAULT,
+    'log' => t('Converted from LinksDB'),
+    'pathauto_perform_alias' => TRUE,
+    );
+  $result = db_query("SELECT name as title, description as body, url, category, 1 - dead as status, clicks as click_count, deadcomment FROM {links_links}");
+  while ($node = db_fetch_array($result)) {
+    $node['teaser'] = node_teaser($node['body'], FILTER_FORMAT_DEFAULT);
+    if ($node['deadcomment']) {
+      $node['body'] .= '<!--break--><p>'. t('Dead by: %comment', array('%comment' => $node['deadcomment'])) .'</p>';
+    }
+    $node['taxonomy'] = array($vid => $new_cat[$node['category']]);
+
+    $node = array_merge($node_base, $node);
+    $node = node_submit($node);
+    node_save($node);
+    drupal_set_message(t('%title saved as node/!nid', array('%title' => $node->title, '!nid' => $node->nid))); 
+  }
+}

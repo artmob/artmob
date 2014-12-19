@@ -1,0 +1,542 @@
+# $Id: token.pot,v 1.1.2.2 2008/12/10 12:44:43 hass Exp $
+#
+# LANGUAGE translation of Drupal (general)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  token_cck.inc,v 1.1.2.11 2008/06/28 15:09:33 greggles
+#  token_comment.inc,v 1.1.2.5 2008/07/14 16:06:57 greggles
+#  token_node.inc,v 1.3.2.26 2008/07/18 19:37:37 greggles
+#  token_taxonomy.inc,v 1.1.2.5 2008/06/28 15:09:33 greggles
+#  token_user.inc,v 1.1.2.9 2008/06/28 15:09:33 greggles
+#  token.module,v 1.5.2.14 2008/07/14 19:15:02 greggles
+#  token.info,v 1.1.2.1 2007/03/10 22:17:48 eaton
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2008-12-10 13:43+0100\n"
+"PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
+"Last-Translator: NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: token_cck.inc:60
+msgid "Referenced node ID."
+msgstr ""
+
+#: token_cck.inc:61
+msgid "Referenced node title."
+msgstr ""
+
+#: token_cck.inc:62
+msgid "Formatted html link to the node."
+msgstr ""
+
+#: token_cck.inc:88
+msgid "Raw number value."
+msgstr ""
+
+#: token_cck.inc:89
+msgid "Formatted number value."
+msgstr ""
+
+#: token_cck.inc:114
+msgid "Raw, unfiltered text."
+msgstr ""
+
+#: token_cck.inc:115
+msgid "Formatted and filtered text."
+msgstr ""
+
+#: token_cck.inc:137
+msgid "Referenced user ID"
+msgstr ""
+
+#: token_cck.inc:138
+msgid "Referenced user name"
+msgstr ""
+
+#: token_cck.inc:139
+msgid "Formatted html link to referenced user"
+msgstr ""
+
+#: token_cck.inc:164
+msgid "Link URL"
+msgstr ""
+
+#: token_cck.inc:165
+msgid "Link title"
+msgstr ""
+
+#: token_cck.inc:166
+msgid "Formatted html link"
+msgstr ""
+
+#: token_cck.inc:192
+msgid "Image file ID"
+msgstr ""
+
+#: token_cck.inc:193
+msgid "Image title"
+msgstr ""
+
+#: token_cck.inc:194
+msgid "Image alt text"
+msgstr ""
+
+#: token_cck.inc:195
+msgid "Image file name"
+msgstr ""
+
+#: token_cck.inc:196
+msgid "Image path"
+msgstr ""
+
+#: token_cck.inc:197
+msgid "Image MIME type"
+msgstr ""
+
+#: token_cck.inc:198
+msgid "Image file size"
+msgstr ""
+
+#: token_cck.inc:199
+msgid "Fully formatted HTML image tag"
+msgstr ""
+
+#: token_cck.inc:230
+msgid "The raw date value."
+msgstr ""
+
+#: token_cck.inc:231
+msgid "The formatted date."
+msgstr ""
+
+#: token_cck.inc:232
+msgid "The raw date timestamp."
+msgstr ""
+
+#: token_cck.inc:233
+msgid "Date year (four digit)"
+msgstr ""
+
+#: token_cck.inc:234
+msgid "Date year (two digit)"
+msgstr ""
+
+#: token_cck.inc:235
+msgid "Date month (full word)"
+msgstr ""
+
+#: token_cck.inc:236
+msgid "Date month (abbreviated)"
+msgstr ""
+
+#: token_cck.inc:237
+msgid "Date month (two digit, zero padded)"
+msgstr ""
+
+#: token_cck.inc:238
+msgid "Date month (one or two digit)"
+msgstr ""
+
+#: token_cck.inc:239
+msgid "Date week (two digit)"
+msgstr ""
+
+#: token_cck.inc:240
+msgid "Date date (day of month)"
+msgstr ""
+
+#: token_cck.inc:241
+msgid "Date day (full word)"
+msgstr ""
+
+#: token_cck.inc:242
+msgid "Date day (abbreviation)"
+msgstr ""
+
+#: token_cck.inc:243
+msgid "Date day (two digit, zero-padded)"
+msgstr ""
+
+#: token_cck.inc:244
+msgid "Date day (one or two digit)"
+msgstr ""
+
+#: token_cck.inc:246
+msgid "If the field has a to-date defined, the same tokens exist in the form: [to-????], where ???? is the normal token."
+msgstr ""
+
+#: token_comment.inc:65
+msgid "Comment ID"
+msgstr ""
+
+#: token_comment.inc:66
+msgid "Comment's node ID"
+msgstr ""
+
+#: token_comment.inc:67
+msgid "Comment title"
+msgstr ""
+
+#: token_comment.inc:68
+msgid "Comment title. WARNING - raw user input"
+msgstr ""
+
+#: token_comment.inc:69
+msgid "Comment body"
+msgstr ""
+
+#: token_comment.inc:70
+msgid "Comment body. WARNING - raw user input"
+msgstr ""
+
+#: token_comment.inc:72
+msgid "Comment author's user id"
+msgstr ""
+
+#: token_comment.inc:73
+msgid "Comment author's user name"
+msgstr ""
+
+#: token_comment.inc:74
+msgid "Comment author's user name. WARNING - raw user input"
+msgstr ""
+
+#: token_comment.inc:76
+msgid "Comment creation year (four digit)"
+msgstr ""
+
+#: token_comment.inc:77
+msgid "Comment creation year (two digit)"
+msgstr ""
+
+#: token_comment.inc:78
+msgid "Comment creation month (full word)"
+msgstr ""
+
+#: token_comment.inc:79
+msgid "Comment creation month (abbreviated)"
+msgstr ""
+
+#: token_comment.inc:80
+msgid "Comment creation month (two digit, zero padded)"
+msgstr ""
+
+#: token_comment.inc:81
+msgid "Comment creation month (one or two digit)"
+msgstr ""
+
+#: token_comment.inc:82
+msgid "Comment creation week (two digit)"
+msgstr ""
+
+#: token_comment.inc:83
+msgid "Comment creation date (day of month)"
+msgstr ""
+
+#: token_comment.inc:84
+msgid "Comment creation day (full word)"
+msgstr ""
+
+#: token_comment.inc:85
+msgid "Comment creation day (abbreviation)"
+msgstr ""
+
+#: token_comment.inc:86
+msgid "Comment creation day (two digit, zero-padded)"
+msgstr ""
+
+#: token_comment.inc:87
+msgid "Comment creation day (one or two digit)"
+msgstr ""
+
+#: token_node.inc:173
+msgid "Node ID"
+msgstr ""
+
+#: token_node.inc:174
+msgid "Node type"
+msgstr ""
+
+#: token_node.inc:175
+msgid "Node type (user-friendly version)"
+msgstr ""
+
+#: token_node.inc:176
+msgid "Node title"
+msgstr ""
+
+#: token_node.inc:177
+msgid "Unfiltered node title. WARNING - raw user input."
+msgstr ""
+
+#: token_node.inc:179
+msgid "Node author's user id"
+msgstr ""
+
+#: token_node.inc:180
+msgid "Node author's user name"
+msgstr ""
+
+#: token_node.inc:181
+msgid "Node author's user name. WARNING - raw user input."
+msgstr ""
+
+#: token_node.inc:182
+msgid "Node author's e-mail."
+msgstr ""
+
+#: token_node.inc:183
+msgid "Node author's e-mail. WARNING - raw user input."
+msgstr ""
+
+#: token_node.inc:186
+msgid "Name of top taxonomy term"
+msgstr ""
+
+#: token_node.inc:187
+msgid "Unfiltered name of top taxonomy term. WARNING - raw user input."
+msgstr ""
+
+#: token_node.inc:188
+msgid "ID of top taxonomy term"
+msgstr ""
+
+#: token_node.inc:189
+msgid "Name of top term's vocabulary"
+msgstr ""
+
+#: token_node.inc:190
+msgid "Unfiltered name of top term's vocabulary. WARNING - raw user input."
+msgstr ""
+
+#: token_node.inc:191
+msgid "ID of top term's vocabulary"
+msgstr ""
+
+#: token_node.inc:196
+msgid "Node creation year (four digit)"
+msgstr ""
+
+#: token_node.inc:197
+msgid "Node creation year (two digit)"
+msgstr ""
+
+#: token_node.inc:198
+msgid "Node creation month (full word)"
+msgstr ""
+
+#: token_node.inc:199
+msgid "Node creation month (abbreviated)"
+msgstr ""
+
+#: token_node.inc:200
+msgid "Node creation month (two digit, zero padded)"
+msgstr ""
+
+#: token_node.inc:201
+msgid "Node creation month (one or two digit)"
+msgstr ""
+
+#: token_node.inc:202
+msgid "Node creation week (two digit)"
+msgstr ""
+
+#: token_node.inc:203
+msgid "Node creation date (day of month)"
+msgstr ""
+
+#: token_node.inc:204
+msgid "Node creation day (full word)"
+msgstr ""
+
+#: token_node.inc:205
+msgid "Node creation day (abbreviation)"
+msgstr ""
+
+#: token_node.inc:206
+msgid "Node creation day (two digit, zero-padded)"
+msgstr ""
+
+#: token_node.inc:207
+msgid "Node creation day (one or two digit)"
+msgstr ""
+
+#: token_node.inc:208
+msgid "All tokens for node creation dates can also be used with with the \"mod-\" prefix; doing so will use the modification date rather than the creation date."
+msgstr ""
+
+#: token_node.inc:210
+msgid "The name of the menu the node belongs to."
+msgstr ""
+
+#: token_node.inc:211
+msgid "The name of the menu the node belongs to. WARNING - raw user input."
+msgstr ""
+
+#: token_node.inc:212
+msgid "The menu path (as reflected in the breadcrumb), not including Home or [menu]. Separated by /."
+msgstr ""
+
+#: token_node.inc:213
+msgid "The unfiltered menu path (as reflected in the breadcrumb), not including Home or [menu]. Separated by /. WARNING - raw user input."
+msgstr ""
+
+#: token_node.inc:260
+msgid "The title of the node's book parent."
+msgstr ""
+
+#: token_node.inc:261
+msgid "The id of the node's book parent."
+msgstr ""
+
+#: token_node.inc:262
+msgid "The titles of all parents in the node's book hierarchy."
+msgstr ""
+
+#: token_node.inc:264
+msgid "The unfiltered title of the node's book parent. WARNING - raw user input."
+msgstr ""
+
+#: token_node.inc:265
+msgid "The unfiltered titles of all parents in the node's book hierarchy. WARNING - raw user input."
+msgstr ""
+
+#: token_taxonomy.inc:45
+msgid "The id number of the category's parent vocabulary."
+msgstr ""
+
+#: token_taxonomy.inc:46
+msgid "The vocabulary that the page's first category belongs to."
+msgstr ""
+
+#: token_taxonomy.inc:47
+msgid "The name of the category."
+msgstr ""
+
+#: token_taxonomy.inc:48
+msgid "The id number of the category."
+msgstr ""
+
+#: token_taxonomy.inc:49
+msgid "The unfiltered vocabulary that the page's first category belongs to. WARNING - raw user input."
+msgstr ""
+
+#: token_taxonomy.inc:50
+msgid "The unfiltered name of the category. WARNING - raw user input."
+msgstr ""
+
+#: token_user.inc:54
+msgid "User's name"
+msgstr ""
+
+#: token_user.inc:55
+msgid "User's unfiltered name. WARNING - raw user input."
+msgstr ""
+
+#: token_user.inc:57
+msgid "User's ID"
+msgstr ""
+
+#: token_user.inc:58
+msgid "User's email address"
+msgstr ""
+
+#: token_user.inc:60
+msgid "User's registration date"
+msgstr ""
+
+#: token_user.inc:61
+msgid "Days since the user registered"
+msgstr ""
+
+#: token_user.inc:62
+msgid "User's last login date"
+msgstr ""
+
+#: token_user.inc:63
+msgid "Days since the user's last login"
+msgstr ""
+
+#: token_user.inc:64
+msgid "The current date in the user's timezone"
+msgstr ""
+
+#: token_user.inc:65
+msgid "The URL of the user's profile page."
+msgstr ""
+
+#: token_user.inc:66
+msgid "The URL the user's account editing page."
+msgstr ""
+
+#: token.module:31 token.info:0
+msgid "Token"
+msgstr ""
+
+#: token.module:31
+msgid "Replacement value"
+msgstr ""
+
+#: token.module:34
+msgid "tokens"
+msgstr ""
+
+#: token.module:71
+msgid "Anonymous"
+msgstr ""
+
+#: token.module:75
+msgid "Drupal"
+msgstr ""
+
+#: token.module:100
+msgid "The name of the currently logged in user."
+msgstr ""
+
+#: token.module:101
+msgid "The user ID of the currently logged in user."
+msgstr ""
+
+#: token.module:102
+msgid "The email address of the currently logged in user."
+msgstr ""
+
+#: token.module:103
+msgid "The url of the current Drupal website."
+msgstr ""
+
+#: token.module:104
+msgid "The name of the current Drupal website."
+msgstr ""
+
+#: token.module:105
+msgid "The slogan of the current Drupal website."
+msgstr ""
+
+#: token.module:106
+msgid "The mission of the current Drupal website."
+msgstr ""
+
+#: token.module:107
+msgid "The contact email address for the current Drupal website."
+msgstr ""
+
+#: token.module:108
+msgid "The current date on the site's server."
+msgstr ""
+
+#: token.module:0
+msgid "token"
+msgstr ""
+
+#: token.info:0
+msgid "Provides a shared API for replacement of textual placeholders with actual data."
+msgstr ""
+

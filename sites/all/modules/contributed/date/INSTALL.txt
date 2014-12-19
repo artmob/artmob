@@ -1,0 +1,29 @@
+Installation instructions:
+
+1) Install the cck files from http://drupal.org/project/date.
+
+2) Upload the date files to a 'date' folder in the modules directory. You should end
+   up with a structure like: drupal/modules/date/date.module. You can also place it
+   inside the cck folder. Either location will work.
+
+   * Optional * Download the adodb date library from 
+   http://phplens.com/phpeverywhere/adodb_date_library
+   and add it to the folder. If included, it will allow you to use dates from
+   the year 100 to the year 3000. Without it, most date handling is limited to
+   1970 to 2038.
+   
+3) Go to admin/modules and enable the date module. Be sure to submit the page
+   even if the date module is already selected. That will update the path to the files.
+
+4) Go to admin/node/types to view cck content types. Add or select a content type.
+
+5) While viewing a cck content type, select the option to add a new field. Several
+   options for date fields should be visible.
+   
+6) If you already have date fields created from an earlier version, be sure to
+   edit each one and save your changes. There may be new options available that need to be set.
+
+Documentation is available at http://drupal.org/node/92460.
+   
+   
+

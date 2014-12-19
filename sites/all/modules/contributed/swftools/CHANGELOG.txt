@@ -1,0 +1,51 @@
+06 March 2009
+-------------
+Quick fix for #384876 until I can come up with a better solution (prevents the
+SWF Tools playlist cache clear from deleting everything in the root of the file
+system!)
+
+12 February 2009
+----------------
+#371735 - Fixed - incorrect construction of id tag in HTML.
+
+07 October 2008
+---------------
+#308515 - Fixed - string used for determining extension was empty when a remote
+file is being checked, so code changed to check a more appropriate string.
+
+03 October 2008
+---------------
+#314045 - Constants incorrectly defined - fixed.
+
+02 October 2008
+---------------
+#308172 - Extra / in url when using a remote media path. This is fixed.
+As a result of this bug fix some other issues with the remote media system
+were found. In particular, the players were no longer automatically detected
+for size. This is fixed.
+
+8 September 2008
+----------------
+Added better support for id parameter in SWF Object 2 embedding.
+Fixed colour settings page for 1 Pixel Out player.
+
+7 September 2008
+----------------
+Fixed accidental carry over of drupal_flush_all_caches() from SWF Tools 6!
+
+6 September 2008
+----------------
+New release for Drupal 5. Many changes from SWF Tools 6 have been back ported
+including private file support, fix for odd encoding that upsets 1 Pixel Out
+player, support for SWF Object 2, support for JW Media Player 4, support for
+FlowPlayer. Also fixes full screen and base parameter errors that occurred if
+using direct embedding.
+
+23 August 2008
+--------------
+SWFObject 2 module updated with code from SWF Tools 6 - now generates the flash
+vars using the array format, rather than the string format (minor change, but
+makes code more legible). Also now assigns an id to the objects which fixes a
+"Done, with errors" issue when using JW Media Player 4 on IE6.
+
+; $Id: CHANGELOG.txt,v 1.1.2.9 2009/03/06 17:29:07 stuartgreenfield Exp $

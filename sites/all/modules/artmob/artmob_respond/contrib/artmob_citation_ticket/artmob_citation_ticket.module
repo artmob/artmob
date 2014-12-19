@@ -1,0 +1,356 @@
+<?php
+// $Id: artmob_citation_ticket.module,v 1.0 2008/03/01 08:31:22 drumm Exp $
+
+/* @file
+ * ADDDOCUMENTATION
+ **/
+
+
+//* Implementation of hook_node_info().
+function artmob_citation_ticket_node_info() {
+  return array(
+    'amcitation_ticket' => array(
+      'name' => t('Citation Ticket'),
+      'module' => 'artmob_citation_ticket',
+      'description' => t("This allows a user to enter a new citation ticket")
+    ),
+  );
+}
+
+// Implementation of hook_access().
+function artmob_citation_ticket_access($op, $node) {
+  if ($op == 'create') {
+    return user_access('Add Response Tickets');
+  }
+  else if ($op == 'update') {
+    return user_access('Edit Response Tickets');
+  }
+  else if ($op == 'delete') {
+    return user_access('Remove Response Tickets');
+  }
+  else if ($op == 'view') {
+    $access = user_access('View Response Tickets');
+    if ( $node->is_public == 0 ) {
+      $access = $access and user_access('View Private Response Tickets');
+    }
+    return $access;
+  }
+  else {
+    return FALSE;
+  }
+}
+
+
+//* Implementation of hook_menu().
+function artmob_citation_ticket_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+  }
+  else {
+  }
+
+  return $items;
+}
+
+
+function artmob_citation_ticket_view($node, $teaser = FALSE, $page = FALSE) {
+  if ($teaser) {
+        $node->teaser = check_markup($node->teaser, $node->format, FALSE);
+    $node->content['artmob_citation_ticket'] = array('#value' => theme( 'artmob_citation_ticket_teaser', $node, $page ));
+  }
+
+  if ($page) {
+    $node->body = check_markup($node->body, $node->format, FALSE);
+    $node->content['artmob_citation_ticket'] = array('#value' => theme( 'artmob_citation_ticket_page', $node, $page ));
+  }
+  return $node;
+
+}
+
+function theme_artmob_citation_ticket_teaser( $node, $page ) {
+  $content = '';
+  $content .= $node->teaser;
+  return $content;
+}
+
+function theme_artmob_citation_ticket_page( $node, $page ) {
+  $content = '';
+  $content .= $node->body;
+  return $content;
+}
+
+
+//* Implementation of hook_block().
+function artmob_citation_ticket_block($op = 'list', $delta = 0) {
+  if ($op == 'list') {
+    return $block;
+  }
+  else if ($op == 'configure') {
+    switch ($delta) {
+      case 0:
+        break;
+    }
+    return $form;
+  }
+  else if ($op == 'save') {
+    switch ($delta) {
+      case 0:
+        break;
+    }
+  }
+  else if ($op == 'view') {
+    switch ($delta) {
+    }
+  }
+}
+
+// Implementation of hook_insert().
+function artmob_citation_ticket_insert($node) {
+  $node->ticket_number = db_next_id('am_ticketid');
+  db_query("INSERT INTO {am_citation_ticket} (nid, uid, ticket_number, ticket_link_nid,
+                                               is_public, ticket_name, ticket_email, ticket_status,
+                                               dispute_status)
+                               VALUES (%d, %d, %d, %d, %d, '%s', '%s', '%s', '%s' )",
+       $node->nid, $node->uid, $node->ticket_number, $node->ticket_link_nid,
+       $node->is_public, $node->ticket_name, $node->ticket_email, $node->ticket_status,
+       $node->dispute_status);
+}
+
+// Implementation of hook_update().
+function artmob_citation_ticket_update($node) {
+  db_query("UPDATE {am_citation_ticket}
+            set uid = %d,
+            ticket_number = %d,
+            ticket_link_nid = %d,
+            is_public = %d,
+            ticket_name = '%s',
+            ticket_email = '%s',
+            ticket_status = '%s',
+            dispute_status = '%s'
+            where nid = %d",
+
+            $node->uid,
+            $node->ticket_number,
+            $node->ticket_link_nid,
+            $node->is_public,
+            $node->ticket_name,
+            $node->ticket_email,
+            $node->ticket_status,
+            $node->dispute_status,
+            $node->nid);
+}
+
+// Implementation of hook_delete().
+function artmob_citation_ticket_delete($node) {
+  db_query("delete FROM {am_citation_ticket}
+            where nid = %d",
+            $node->nid);
+}
+
+
+// Implementation of hook_load().
+function artmob_citation_ticket_load($node) {
+  $t = db_fetch_array(db_query('SELECT * FROM {am_citation_ticket} WHERE nid = %d', $node->nid));
+  return $t;
+}
+
+
+
+//* Implementation of hook_submit().
+function artmob_citation_ticket_submit(&$node) {
+  global $user;
+  // Set default values for non-administrators.
+  if (!user_access('administer nodes')) {
+    $node->revision = 1;
+    $node->uid = $user->uid;
+  }
+}
+
+
+// Implementation of hook_form().
+function artmob_citation_ticket_form(&$node) {
+
+  $form['citation_ticket'] = array(
+    '#type'          => 'fieldset',
+    '#title'         => t('citation ticket'),
+    '#weight'        => -5,
+    '#collapsible'   => TRUE,
+    '#collapsed'     => FALSE
+  );
+
+  $form['citation_ticket']['ticket_number'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Ticket #'),
+    '#default_value' => $node->ticket_number,
+    '#tree'          => 'FALSE',
+    '#rows'          => 1,
+    '#required'      => TRUE,
+    '#disabled'        => True,
+  );
+
+  $form['citation_ticket']['title'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Subject'),
+    '#default_value' => $node->title,
+    '#description'   => t("enter the subject"),
+    '#tree'          => 'FALSE',
+    '#rows'          => 1,
+    '#required'      => TRUE
+  );
+
+  $form['citation_ticket']['body'] = array(
+    '#type'          => 'textarea',
+    '#title'         => t('Comment'),
+    '#default_value' => $node->body,
+    '#description'   => t("enter your comment"),
+    '#tree'          => 'FALSE',
+    '#rows'          => 3,
+    '#required'      => TRUE
+  );
+  $form['citation_ticket']['format'] = filter_form($node->format);
+
+  if ( $node->uid == 0 ) {
+    $site_user_name = 'N/A';
+  } 
+  else {
+    $site_user = db_fetch_object(db_query('SELECT * FROM {users} WHERE uid = %d', $node->uid));
+    $site_user_name = $site_user->name;
+  }
+
+  $form['citation_ticket']['uid'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Site User Name'),
+    '#default_value' => $site_user_name,
+    '#description'   => t("Name of user (if logged in)"),
+    '#tree'          => 'FALSE',
+    '#rows'          => 0,
+    '#disabled'        => True,
+  );
+
+  $form['citation_ticket']['ticket_name'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Name'),
+    '#default_value' => $node->ticket_name,
+    '#description'   => t("Name of user (if not logged in)"),
+    '#tree'          => 'FALSE',
+    '#rows'          => 0,
+    '#disabled'        => True,
+  );
+
+  $form['citation_ticket']['ticket_email'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('email'),
+    '#default_value' => $node->ticket_email,
+    '#description'   => t("Email of user (if not logged in)"),
+    '#tree'          => 'FALSE',
+    '#rows'          => 1,
+    '#disabled'        => True,
+  );
+
+  $form['citation_ticket']['is_public'] = array(
+    '#type' => 'checkbox',
+    '#title' => t("Make my comments public"),
+          '#default_value' => $node->is_public,
+    '#weight' => 0,
+  );
+
+  $form['citation_ticket']['ticket_link_nid'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('linked node id'),
+    '#default_value' => $node->ticket_link_nid,
+    '#tree'          => 'FALSE',
+    '#rows'          => 1,
+    '#disabled'      => True,
+  );
+  
+  $form['citation_ticket']['ticket_status'] = array(
+                  '#type'                 => 'select',
+                  '#title'                => 'Ticket Status',
+                  '#options'              => artmob_respond_get_ticket_status_list(),
+                  '#default_value' => $node->ticket_status
+  );
+
+  $form['citation_ticket']['dispute_status'] = array(
+                  '#type'                 => 'select',
+                  '#title'                => 'Dispute Status',
+                  '#options'              => artmob_respond_get_dispute_status_list(),
+                  '#default_value' => $node->dispute_status
+  );
+
+  return $form;
+
+}
+
+
+//* Implementation of hook_form_alter().
+function artmob_citation_ticket_form_alter($form_id, &$form) {
+  // boilerplate code to determine the node type of the form
+  if (isset($form['type'])) {
+          $type = $form['type']['#value'];
+  }
+  elseif (isset($form['orig_type'])) {
+                  $type = $form['orig_type']['#value'];
+  } 
+  else {
+          return;
+  }
+
+  switch ($form_id) {
+    case 'node_type_form':
+      break;
+
+    case $type .'_node_form':
+      break;
+  }
+}
+
+
+//* Implementation of hook_nodeapi().
+function artmob_citation_ticket_nodeapi(&$node, $op, $teaser, $page) {
+  switch ($op) {
+    case 'submit':
+      break;
+    case 'update':
+    $bupdate = TRUE;
+    //Fall through, with flag.  Therefore with every update we delete
+    //the old associated records and then resave the new ones
+
+    case 'delete':
+      if (!$bupdate) {
+        break;
+      }
+    case 'insert':
+      break;
+    case 'load':
+      break;
+    case 'prepare':
+      break;
+    case 'view':
+      break;
+    case 'update':
+      break;
+    case 'delete revision':
+      break;
+    case 'submit':
+      break;
+  }
+}
+
+
+// Implementation of hook_help().
+function artmob_citation_ticket_help($section) {
+  switch ($section) {
+    case 'admin/help#description':
+      return t('Enables the creation of citation tickets.');
+      break;
+    case 'admin/modules#description':
+      return t('Enables the creation of citation tickets.');
+      break;
+    case 'admin/node/add#artmob_citation_ticket':
+      return t('A citation ticket. Use this page to add a citation ticket.');
+      break;
+  }
+}
+
+

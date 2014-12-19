@@ -1,0 +1,10 @@
+; $Id: swftools_integrate.info,v 1.1.2.4 2007/06/18 23:07:05 dww Exp $
+name =  SWF Tools Integration
+description = Unstable: Provides useful integration options that can be switched on in the menu.
+package = SWF Tools
+
+; Information added by drupal.org packaging script on 2009-03-09
+version = "5.x-2.4"
+project = "swftools"
+datestamp = "1236624056"
+

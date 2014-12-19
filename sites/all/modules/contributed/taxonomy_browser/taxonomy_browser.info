@@ -1,0 +1,9 @@
+; $Id: taxonomy_browser.info,v 1.1.2.1 2008/05/25 18:41:33 nancyw Exp $
+name = Taxonomy Browser
+description = Enables users to construct their own view of content from terms across multiple vocabularies.
+
+; Information added by drupal.org packaging script on 2008-08-14
+version = "5.x-1.4"
+project = "taxonomy_browser"
+datestamp = "1218726028"
+

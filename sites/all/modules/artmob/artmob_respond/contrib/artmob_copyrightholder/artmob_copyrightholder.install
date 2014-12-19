@@ -1,0 +1,42 @@
+<?php
+// $Id$
+
+function artmob_copyrightholder_uninstall() {
+    db_query("DROP TABLE IF EXISTS {am_copyrightholder}");
+    drupal_set_message( "Dropped the copyright holder table" );
+}
+
+/**
+ * Implementation of hook_install()
+ */
+function artmob_copyrightholder_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+    
+    drupal_set_message( "Creating copyright holder table");
+    	
+    db_query( 
+      "CREATE TABLE {am_copyrightholder} (
+        `nid` int(10) unsigned NOT NULL default '0',
+        `widget_name` varchar(255)  NOT NULL default '',
+        `subwidget_id` int(10) unsigned NOT NULL default '0',
+        `contributor_nid` int(10) unsigned NOT NULL default '0',
+        `firstname` text  NOT NULL default '',
+        `middlenames` text  default '',
+        `lastname` text  default '',
+        `email` text  default '',
+        `othercontact` text  default '',
+        PRIMARY KEY  (`subwidget_id`)
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;"
+    );
+    
+  }
+}
+
+/**
+ * Updates
+ */
+function artmob_copyrightholder_update_1() {
+  return _system_update_utf8( array( 'am_copyrightholder' ) );
+}

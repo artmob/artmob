@@ -1,0 +1,1339 @@
+<?php
+// $Id: weblinks.module,v 1.1.4.18 2007/10/16 20:36:37 bdragon Exp $
+
+/**
+ * @file
+ * Enable submission and display of categorized web links.
+ */
+
+/**
+ * Display help and module information
+ * @param section which section of the site we're displaying help 
+ * @return help text for section
+ */
+function weblinks_help($section='') {
+  $output = '';
+  switch ($section) {
+    case 'node/add#weblinks':
+      return t('Create a new web link.');
+  }
+  return $output;
+}
+
+/**
+ * Valid permissions for this module
+ * @return An array of valid permissions for the weblinks module
+ */
+function weblinks_perm() {
+  return array('create weblinks', 'edit own weblinks', 'edit group weblinks', 'edit group categories', 'administer weblinks');
+}
+
+/**
+ * Implementation of hook_access().
+ */
+function weblinks_access($op, $node) {
+  global $user;
+
+  if ($op == 'create') {
+    return user_access('create weblinks');
+  }
+
+  if ($op == 'update' || $op == 'delete') {
+    if (user_access('edit own weblinks') && ($user->uid == $node->uid)) {
+      return TRUE;
+    }
+    //if (user_access('edit group weblinks') && ($user->uid == $node->uid)) {
+    /*if (user_access('edit group weblinks')) {
+      return TRUE;
+    }*/
+  }
+}
+
+/**
+ * Implementation of hook_node_info().
+ */
+function weblinks_node_info() {
+  return array(
+    'weblinks' => array(
+      'name' => t('Web link'),
+      'module' => 'weblinks',
+      'description' => t('Create a new web link.'),
+      'title_label' => t('Link Name'),
+    )
+  );
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function weblinks_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+    $items[] = array(
+      'path' => 'node/add/weblinks',
+      'title' => t('Web Link'),
+      'access' => user_access('create weblinks'),
+    );
+    $items[] = array(
+      'path' => 'weblinks',
+      'title' => t('Web Links'),
+      'callback' => 'weblinks_page',
+      'access' => user_access('access content'),
+      'type' => MENU_SUGGESTED_ITEM,
+    );
+    $items[] = array(
+      'path' => 'admin/content/weblinks',
+      'title' => t('Web Links'),
+      'description' => t('Control web links and their categories and change web link settings.'),
+      'callback' => 'weblinks_overview',
+      'access' => user_access('administer weblinks'),
+      'type' => MENU_NORMAL_ITEM,
+    );
+    $items[] = array(
+      'path' => 'admin/content/weblinks/list',
+      'title' => t('list'),
+      'access' => user_access('edit own weblinks'),
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+      'weight' => -10,
+    );
+    $items[] = array(
+      'path' => 'admin/content/weblinks/add/container',
+      'title' => t('Add category'),
+      'callback' => 'weblinks_form_main',
+      'callback arguments' => array('container'),
+      'access' => user_access('administer weblinks'),
+      'type' => MENU_LOCAL_TASK,
+    );
+    $items[] = array(
+      'path' => 'admin/content/weblinks/add/weblink',
+      'title' => t('Add weblink'),
+      'callback' => 'weblinks_form_weblink',
+      'access' => user_access('create weblinks'),
+      'type' => MENU_LOCAL_TASK,
+    );
+    $items[] = array(
+      'path' => 'admin/settings/weblinks',
+      'title' => t('Web Links'),
+      'description' => t('Set a variety of options for web link display and categorization.'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('weblinks_admin_settings'),
+      'access' => user_access('administer site configuration'),
+      'type' => MENU_NORMAL_ITEM, // optional
+    );
+  }
+  else if (is_numeric(arg(5))) {
+    $term = taxonomy_get_term(arg(5));
+
+    // Check if this is a valid term.
+    if ($term) {
+      $items[] = array(
+        'path' => 'admin/content/weblinks/edit/container',
+        'title' => t('Edit category'),
+        'callback' => 'weblinks_form_main',
+        'callback arguments' => array('container', (array)$term),
+        'access' => user_access('administer weblinks'),
+        'type' => MENU_CALLBACK);
+      $items[] = array(
+        'path' => 'node/edit/weblink/'. $term->tid,
+        'title' => t('Edit web link'),
+        /*'callback' => 'weblinks_form_main',
+        'callback arguments' => array('weblink', (array)$term),*/
+        'access' => user_access('administer weblinks'),
+        'type' => MENU_CALLBACK,
+      );
+    }
+  }
+  else {
+    if (arg(0) == 'user' && is_numeric(arg(1))) {
+      global $user;
+      $account = user_load(array('uid' => arg(1)));
+      // @@@ Bdragon: Non-anon can edit other users' weblinks if they have the contact form turned on? Huh?
+      if (($user->uid != $account->uid && $account->contact) || user_access('administer users')) {
+        $items[] = array(
+          'path' => 'user/'. arg(1) .'/weblinks',
+          'title' => t('Web Links'),
+          'callback' => 'weblinks_user_page',
+          'type' => MENU_LOCAL_TASK,
+          'access' => $user->uid,
+          'weight' => 2,
+        );
+      }
+    }
+  }
+  return $items;
+}
+
+/**
+ * Module settings page.
+ */
+function weblinks_admin_settings() {
+  $form['weblinks_external'] = array(
+    '#type' => 'radios',
+    '#title' => t('Web links open in new windows'), 
+    '#default_value' => variable_get("weblinks_external", 1), 
+    '#description' => t('Most people will want to leave this as URL'), 
+    '#options' => array('no', 'yes'),
+    '#required' => FALSE,
+    '#weight' => -10,
+  );
+  $form['weblinks_pagedesc'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Page information'), 
+    '#cols' => 40,
+    '#rows' => 5,
+    '#default_value' => variable_get("weblinks_pagedesc", NULL), 
+    '#description' => t('This description will appear at the top of the links page'), 
+    '#required' => FALSE,
+    '#weight' => -10,
+  );
+  $form['weblinks_simplelinks'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use Simple Links'), 
+    '#default_value' => variable_get("weblinks_simplelinks", 0), 
+    '#description' => t('Enable this if you only want links on the main page'), 
+    '#required' => FALSE,
+    '#weight' => -9,
+  );
+  $form['weblinks_urlnode'] = array(
+    '#type' => 'radios',
+    '#title' => t('Links lead URL or to Web Link node'), 
+    '#default_value' => variable_get("weblinks_urlnode", 'url'), 
+    '#description' => t('Most people will want to leave this as URL'), 
+    '#options' => array('url' => 'URL', 'node' => 'node'),
+    '#required' => FALSE,
+    '#weight' => -8,
+  );
+  $form['weblinks_block_urlnode'] = array(
+    '#type' => 'radios',
+    '#title' => t('Block links lead URL or to Web Link node'), 
+    '#default_value' => variable_get("weblinks_block_urlnode", 'url'), 
+    '#description' => t('Most people will want to leave this as URL'), 
+    '#options' => array('url' => 'URL', 'node' => 'node'),
+    '#required' => FALSE,
+    '#weight' => -7,
+  );
+  $form['weblinks_catdesc'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Display link category descriptions'), 
+    '#default_value' => variable_get("weblinks_catdesc", 1), 
+    '#required' => FALSE,
+    '#weight' => -6,
+  );
+  $form['weblinks_subcatdesc'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Display link sub-category descriptions'), 
+    '#default_value' => variable_get("weblinks_subcatdesc", 0), 
+    '#required' => FALSE,
+    '#weight' => -5,
+  );
+  $form['weblinks_linkdesc'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Display individual link descriptions'), 
+    '#default_value' => variable_get("weblinks_linkdesc", 1), 
+    '#description' => t($row['description']), 
+    '#required' => FALSE,
+    '#weight' => -4,
+  );
+  $form['weblinks_linkinfo'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Display link information'), 
+    '#default_value' => variable_get("weblinks_linkinfo", 1), 
+    '#description' => t('This displays link author, publish date, and revision date'), 
+    '#required' => FALSE,
+    '#weight' => -3,
+  );
+  $form['weblinks_maxfrontdepth'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Maximum category depth (front page)'), 
+    '#default_value' => variable_get("weblinks_maxfrontdepth", 1), 
+    '#description' => t('This is affects how many subcategories, if any, will display on the main links page'), 
+    '#required' => FALSE,
+    '#size' => 2,
+    '#weight' => -2,
+  );
+  $form['weblinks_maxdepth'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Maximum category depth'), 
+    '#default_value' => variable_get("weblinks_maxdepth", 1), 
+    '#description' => t('This is affects how many subcategories, if any, will display on every other links page'), 
+    '#required' => FALSE,
+    '#size' => 2,
+    '#weight' => -1
+  );
+  $form['weblinks_clickthru'] = array(
+    '#type' => 'textfield',
+    '#title' => t('User click through'), 
+    '#default_value' => variable_get("weblinks_clickthru", NULL), 
+    '#description' => t('How many clicks a user can make before all the menus are automatically expanded. Leave blank if you do not want to set a limit.'),
+    '#required' => FALSE,
+    '#size' => 2,
+    '#weight' => 0,
+  );
+
+  $form['weblinks_maxdisp_block_recent'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Maximum Recent Web Links'), 
+    '#default_value' => variable_get("weblinks_maxdisp_block_recent", NULL), 
+    '#description' => t('Maximum number of links in the Recent Web Links block.'),
+    '#required' => FALSE,
+    '#size' => 2,
+    '#weight' => 1,
+  );
+
+  // Get the weblinks categories to add to the blogroll
+  $result = db_query('SELECT td.tid, td.name
+    FROM {term_data} td
+    WHERE td.vid = %d
+    ORDER BY td.weight, td.name', _weblinks_get_vid());
+
+  while ($row = db_fetch_object($result)) {
+    // Set which link categories get displayed on the links page
+
+    $form[$row->tid] = array(
+      '#type' => 'fieldset',
+      '#title' => t($row->name),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#weight' => 2,
+    );
+
+    $form[$row->tid]['weblinks_page_'. $row->tid] = array(
+      '#type' => 'checkbox',
+      '#title' => t($row->name),
+      '#default_value' => variable_get('weblinks_page_'. $row->tid, 1), 
+      '#required' => FALSE,
+      '#description' => t('Check to enable this category'),
+    );
+
+    // Set the maximum number of links to display for each category
+    $form[$row->tid]['weblinks_maxdisp_'. $row->tid] = array(
+      '#type' => 'textfield',
+      '#title' => t('Maximum links to display'),
+      '#default_value' => variable_get('weblinks_maxdisp_'. $row->tid, NULL),
+      '#size' => 2,
+      '#required' => FALSE,
+      '#description' => t('Leave blank if you would not like to limit the number of links displayed'),
+    );
+
+    // Set the maximum number of links to display in the block for each category
+    $form[$row->tid]['weblinks_maxdisp_block_'. $row->tid] = array(
+      '#type' => 'textfield',
+      '#title' => t('Maximum block entries to display'),
+      '#default_value' => variable_get('weblinks_maxdisp_block_'. $row->tid, NULL),
+      '#size' => 2,
+      '#required' => FALSE,
+      '#description' => t('Leave blank if you would not like to limit the number of links displayed'),
+    );
+  }
+  return system_settings_form($form);
+}
+
+function weblinks_term_path($term) {
+  return 'weblinks/'. $term->tid;
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ */
+function weblinks_nodeapi(&$node, $op, $teaser, $page) {
+  switch ($op) {
+    case 'delete revision':
+      db_query('DELETE FROM {weblinks} WHERE vid = %d', $node->vid);
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_taxonomy().
+ */
+function weblinks_taxonomy($op, $type, $term = NULL) {
+  if ($op == 'delete' && $term['vid'] == _weblinks_get_vid()) {
+    switch ($type) {
+      case 'term':
+        $results = db_query('SELECT b.nid FROM {weblinks} b WHERE b.tid = %d', $term['tid']);
+        while ($node = db_fetch_object($results)) {
+          // node_delete will also remove any association with non-forum vocabularies.
+          $count = db_fetch_object(db_query('SELECT COUNT(b.tid) AS num FROM {weblinks} b WHERE b.nid = %d', $node->nid));
+          if ($count->num == 1) {
+            node_delete($node->nid);//Only delete links that are NOT cross listed
+          }
+        }
+
+        // For containers, remove the tid from the weblinks_containers variable.
+        $containers = variable_get('weblinks_containers', array());
+        $key = array_search($term['tid'], $containers);
+        if ($key !== FALSE) {
+          unset($containers[$key]);
+        }
+        variable_set('weblinks_containers', $containers);
+        break;
+      case 'vocabulary': // This will probably NEVER be the case
+        variable_del('weblinks_nav_vocabulary');
+    }
+  }
+}
+
+/**
+ * Implementation of hook_form().
+ */
+function weblinks_form(&$node) {
+  $type = node_get_types('type', $node);
+
+  $form['title'] = array(
+    '#type' => 'textfield',
+    '#title' => check_plain($type->title_label),
+    '#default_value' => $node->title,
+    '#maxlength' => 64,
+    '#description' => t('This is the name that will be hyperlinked.'),
+    '#required' => TRUE,
+  );
+  $form['url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('URL'),
+    '#default_value' => $node->url,
+    '#maxlength' => 255,
+    '#description' => t('The description can provide additional information about the link.'),
+    '#required' => TRUE,
+  );
+  $form['weight'] = array(
+    '#type' => 'weight',
+    '#title' => t('Weight'),
+    '#default_value' => $node->weight,
+    '#maxlength' => 10,
+    '#description' => t('In listings, the heavier terms (with a larger weight) will sink and the lighter terms will be positioned nearer the top.'),
+    '#required' => TRUE,
+  );
+  $form['body_filter']['body'] = array(
+    '#type' => 'textarea', 
+    '#title' => check_plain($type->body_label), 
+    '#default_value' => $node->body, 
+    '#cols' => 60,
+    '#rows' => 5, 
+    '#required' => FALSE,
+  );
+  $form['body_filter']['format'] = filter_form($node->format);
+
+  return $form;
+}
+
+/**
+ * Returns a form for adding a container to the weblink vocabulary.
+ *
+ * @param $edit Associative array containing a container term to be added or edited.
+ */
+function weblinks_form_container($edit = array()) {
+  // Handle a delete operation.
+ /* if ($_POST['op'] == t('Delete') || $_POST['edit']['confirm']) {
+    return _weblinks_confirm_delete($edit['tid']);
+  }*/
+  
+  $form['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Category Name'),
+    '#default_value' => $edit['name'],
+    '#maxlength' =>  64,
+    '#description' => t('This categorizes the links and allows you to sort them.'),
+    '#required' => TRUE,
+  );
+  $form['description'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Category Description'),
+    '#default_value' => $edit['description'],
+    '#cols' => 60,
+    '#rows' => 5, 
+    '#description' => t('The description can provide additional information about the link grouping.'),
+  );
+  $form['synonyms'] = array('#type' => 'textarea', '#title' => t('Synonyms'), '#default_value' => implode("\n", taxonomy_get_synonyms($edit['tid'])), '#description' => t('<a href="%help-url">Synonyms</a> of this term, one synonym per line.', array('%help-url' => url('admin/help/taxonomy', NULL, NULL, 'synonyms'))));
+  $form['parent']['#tree'] = TRUE;
+  $form['parent'][0] = _weblinks_parent_select($edit['tid'], t('Parent'), 'weblinks');
+  $form['weight'] = array(
+    '#type' => 'weight',
+    '#title' => t('Weight'),
+    '#default_value' => $edit['weight'],
+    '#maxlength' => 10,
+    '#description' => t('In listings, the heavier terms (with a larger weight) will sink and the lighter terms will be positioned nearer the top.'),
+    '#required' => TRUE,
+  );
+  $vid =  _weblinks_get_vid();
+  $form['vid'] = array('#type' => 'hidden', '#value' => $vid);
+  $form['submit'] = array('#type' => 'submit', '#value' => t('Submit'));
+  if ($edit['tid']) {
+    $form['delete'] = array('#type' => 'submit', '#value' => t('Delete'));
+    $form['tid'] = array('#type' => 'hidden', '#value' => $edit['tid']);
+  }
+  //$form['#base'] = 'weblinks_form'; //??? - UPDATE
+  return $form;
+}
+
+function weblinks_form_main($type, $edit = array()) {
+  // @@@ Bdragon: Oh, come on! Use drupal_confirm_form!
+  if ($_POST['op'] == t('Delete') || $_POST['confirm']) {
+    return drupal_get_form('weblinks_confirm_delete', $edit['tid']);
+  }
+  switch ($type) {
+    case 'weblink':
+      return drupal_get_form('weblinks_form_weblink', $edit);
+      break;
+    case 'container':
+      return drupal_get_form('weblinks_form_container', $edit);
+      break;
+  }
+}
+
+/**
+ * Returns a form for adding a weblink
+ */
+function weblinks_form_weblink() {
+  // @@@ Bdragon: This is ugly.
+  drupal_goto('node/add/weblinks', 'destination=admin/content/weblinks');
+}
+
+/**
+ * Process forum form and container form submissions.
+ */
+function weblinks_form_container_submit($form_id, $form_values) {
+  $container = TRUE;
+  $type = t('weblinks container');
+  $status = taxonomy_save_term($form_values);
+  switch ($status) {
+    case SAVED_NEW:
+      $containers = variable_get('weblinks_containers', array());
+      $containers[] = $form_values['tid'];
+      variable_set('weblinks_containers', $containers);
+
+      drupal_set_message(t('Created new %type %term.', array('%term' => theme('placeholder', $form_values['name']), '%type' => $type)));
+      break;
+    case SAVED_UPDATED:
+      drupal_set_message(t('The %type %term has been updated.', array('%term' => $form_values['name'], '%type' => $type)));
+      break;
+  }
+  return 'admin/content/weblinks';
+}
+
+/**
+ * Returns the vocabulary id for weblinks navigation.
+ */
+function _weblinks_get_vid() {
+  $vid = variable_get('weblinks_nav_vocabulary', '');
+  if (empty($vid)) {
+    // Check to see if a weblinks vocabulary exists
+    $vid = db_result(db_query("SELECT vid FROM {vocabulary} WHERE module='%s'", 'weblinks'));
+    if (!$vid) {
+      $edit = array('name' => 'Web Links', 'multiple' => 1, 'required' => 0, 'hierarchy' => 2, 'relations' => 0, 'module' => 'weblinks', 'nodes' => array('weblinks' => 1));
+      taxonomy_save_vocabulary($edit);
+      $vid = $edit['vid'];
+    }
+    variable_set('weblinks_nav_vocabulary', $vid);
+  }
+  return $vid;
+}
+
+/**
+ * Returns a select box for available parent terms.
+ *
+ * @param $tid ID of the term which is being added or edited
+ * @param $title Title to display the select box with
+ * @param $child_type Whether the child is weblink or category
+ */
+function _weblinks_parent_select($tid, $title, $child_type) {
+  $parents = taxonomy_get_parents($tid);
+  if ($parents) {
+    $parent = array_shift($parents);
+    $parent = $parent->tid;
+  }
+  else {
+    $parent = 0;
+  }
+
+  $children = taxonomy_get_tree(_weblinks_get_vid(), $tid);
+
+  // A term can't be the child of itself, nor of its children.
+  foreach ($children as $child) {
+    $exclude[] = $child->tid;
+  }
+  $exclude[] = $tid;
+
+  // If taxonomy_access is enabled, there may be group permissions to check
+  $include = _weblinks_get_access();
+
+  $tree = taxonomy_get_tree(_weblinks_get_vid());
+  if (user_access('administer weblinks')) {
+    $options[0] = '<'. t('root') .'>';
+  }
+  if ($tree) {
+    foreach ($tree as $term) {
+      if (!in_array($term->tid, $exclude)) {
+        // If user doesn't have admin priveledges, then user must have a specific role to be here
+        if ((user_access('administer weblinks')) || (user_access('edit group weblinks') && (in_array($term->tid, $include)))) {
+          //$options[$term->tid] = _taxonomy_depth($term->depth) . $term->name;
+          $options[$term->tid] = str_repeat('-', $term->depth) . $term->name;
+        }
+      }
+    }
+  }
+  if ($child_type == 'container') {
+    $description = t('Containers are usually placed at the top (root) level of your web link categories but you can also place a container inside a parent container or category.');
+  }
+  else if ($child_type == 'forum') {
+    $description = t('You may place your web link inside a parent container or category, or at the top (root) level of your categories.');
+  }
+
+  return array('#type' => 'select', '#title' => $title, '#default_value' => $parent, '#options' => $options, '#description' => $description, '#required' => TRUE);
+}
+
+/**
+ * Returns an array of terms a user has access to.
+ */
+function _weblinks_get_access() {
+  global $user;
+  $roles = $user->roles;
+
+  // @@@ Bdragon: Hardcoding taxonomy_access? db_rewrite_sql should probabaly be used instead.
+  if (module_exists('taxonomy_access')) {
+    foreach ($roles as $key => $rolename) {
+      $result = db_query("SELECT tid FROM {term_access} WHERE rid = %d AND grant_create = 1", $key);
+      while ($row = db_fetch_array($result)) {
+        $include[] = $row['tid'];
+      }
+    }
+  }
+  return $include;
+}
+
+/**
+ * Returns the term id for weblinks categories.
+ */
+function _weblinks_get_tid() {
+  $vid = _weblinks_get_vid();
+  if (!empty($vid)) {
+    // Check to see if a forum vocabulary exists
+    $tid = db_fetch_array(db_query('SELECT tid FROM {term_data} WHERE vid = %d', $vid));
+  }
+  return $tid;
+}
+
+/**
+ * Implementation of hook_view; this adds the url to viewable link node.
+ */
+function weblinks_view(&$node, $teaser = FALSE, $page = FALSE) {
+  if ($page) {
+    $vocabulary = taxonomy_get_vocabulary(variable_get('weblinks_nav_vocabulary', ''));
+    // Breadcrumb navigation
+    $breadcrumb = array();
+    $breadcrumb[] = array('path' => 'weblinks', 'title' => $vocabulary->name);
+    if ($parents = taxonomy_get_parents_all($node->tid)) {
+      $parents = array_reverse($parents);
+      foreach ($parents as $p) {
+        $breadcrumb[] = array('path' => 'weblinks/'. $p->tid, 'title' => $p->name);
+      }
+    }
+    $breadcrumb[] = array('path' => 'node/'. $node->nid);
+    menu_set_location($breadcrumb); // @@@ Bdragon: Is this sane?
+  }
+
+  $node = node_prepare($node, $teaser); // @@@ Bdragon: Huh?
+
+  $url = db_fetch_object(db_query_range('SELECT url FROM {weblinks} WHERE nid = %d', $node->nid, 0, 1));
+  //UPDATE
+  $node->url = $url->url;
+  /*$node->body = l(t($url->url), $url->url) . $node->body;*/
+  $node->content['url'] = array(
+    '#value' => l(t($node->url), $node->url),
+    '#weight' => 1,
+  );
+  return $node;
+}
+
+/**
+ * Implementation of hook_prepare().
+ * Assign bw taxonomy when adding a weblink from within a category.
+ */
+function weblinks_prepare(&$node) {
+  if (!$node->nid) {
+    // new topic
+    //$node->taxonomy[arg(3)]->vid = _weblinks_get_vid();
+    //$node->taxonomy[arg(3)]->tid = arg(3);
+  }
+}
+
+/**
+ * Implementation of hook_load().
+ */
+function weblinks_load($node) {
+  $bw = db_fetch_object(db_query('SELECT url, weight FROM {weblinks} WHERE nid = %d', $node->nid));
+  return $bw;
+}
+
+/**
+ * Implementation of hook_insert().
+ */
+function weblinks_insert($node) {
+  $vid = _weblinks_get_vid();
+  if (count($node->taxonomy[$vid]) < 1) {
+    db_query('INSERT INTO {weblinks} (nid, tid, vid, url, weight) VALUES (%d, %d, %d, "%s", %d)', $node->nid, 0, $node->vid, $node->url, $node->weight);
+  }
+  else {
+    foreach ($node->taxonomy[$vid] as $tid) {
+      db_query('INSERT INTO {weblinks} (nid, tid, vid, url, weight) VALUES (%d, %d, %d, "%s", %d)', $node->nid, $tid, $node->vid, $node->url, $node->weight);
+    }
+  }
+}
+
+/**
+ * Implementation of hook_update().
+ */
+function weblinks_update($node) {
+  $vid = _weblinks_get_vid();
+  if (!($node->is_new || $node->revision)) {
+    db_query('DELETE FROM {weblinks} WHERE nid = %d', $node->nid);
+  }
+  if (count($node->taxonomy[$vid]) < 1) {
+    db_query('INSERT INTO {weblinks} (nid, tid, vid, url, weight) VALUES (%d, %d, %d, "%s", %d)', $node->nid, 0, $node->vid, $node->url, $node->weight);
+  }
+  else {
+    foreach ($node->taxonomy[$vid] as $tid) {
+      db_query('INSERT INTO {weblinks} (nid, tid, vid, url, weight) VALUES (%d, %d, %d, "%s", %d)', $node->nid, $tid, $node->vid, $node->url, $node->weight);
+    }
+  }
+}
+
+/**
+ * Implementation of hook_delete().
+ */
+function weblinks_delete(&$node) {
+  db_query('DELETE FROM {weblinks} WHERE nid = %d', $node->nid);
+}
+
+/**
+ * Returns a confirmation page for deleting a weblinks taxonomy term.
+ *
+ * @param $tid ID of the term to be deleted
+ */
+function weblinks_confirm_delete($tid) {
+  // @@@ Bdragon: Replace this with a call to drupal_confirm_form!
+  $term = taxonomy_get_term($tid);
+
+  $form['tid'] = array('#type' => 'hidden', '#value' => $tid);
+  $form['name'] = array('#type' => 'hidden', '#value' => $term->name);
+
+  return confirm_form($form, t('Are you sure you want to delete the category %name?', array('%name' => $term->name)), 'admin/content/weblinks', t('Deleting a weblink or container will delete <b>all sub-categories and associated links as well</b>. This action cannot be undone.'), t('Delete'), t('Cancel'));
+}
+
+/**
+ * Implementation of forms api _submit call. Deletes a link category after confirmation.
+ */
+function weblinks_confirm_delete_submit($form_id, $form_values) {
+  // @@@ Bdragon: Replace this with a call to drupal_confirm_form!
+  taxonomy_del_term($form_values['tid']);
+  drupal_set_message(t('The category %term and all sub-categories and associated links have been deleted.', array('%term' => theme('placeholder', $form_values['name']))));
+  watchdog('content', t('weblinks: deleted %term and all its sub-categories and associated links.', array('%term' => theme('placeholder', $form_values['name']))));
+
+  return 'admin/content/weblinks';
+}
+
+/**
+ * Returns an overview list of existing weblinks and containers
+ */
+function weblinks_overview() {
+  // @@@ Bdragon: Uh? Theming?
+  drupal_add_js('misc/collapse.js');
+  $header = array(t('Name'), t('Operations'));
+  $tree = taxonomy_get_tree(_weblinks_get_vid(), $parent = 0, $depth = -1, $max_depth = 1);
+  global $bwrow;
+  global $i;
+  $i = 0;
+  $menu = '';
+  $bwrow = array();
+
+  $menu .= '<div class="weblinkCat"><fieldset class=" collapsible collapsed"><legend>Unclassified</legend>'.
+    '<div class="form-item">';
+  $menu .= "<h3>Unclassified</h3>";
+  $menu .= _weblinks_links(0, $admin=TRUE);
+  $menu .= '</fieldset></div>';  
+
+  if ($tree) {
+    foreach ($tree as $term) {
+      $menu .= '<div class="weblinkCat"><fieldset class=" collapsible collapsed"><legend>'. check_plain($term->name) .'</legend>'.
+        '<div class="form-item">';
+      $menu .= "<h3>". check_plain($term->name);
+      if (user_access('administer weblinks')) {
+        $menu .= " ::: ". l(t('edit category'), "admin/content/weblinks/edit/container/$term->tid");
+      }
+      else if (user_access('edit group categories')) {
+        $include = _weblinks_get_access();
+        if (in_array($term->tid, $include)) {
+          $menu .= " ::: ". l(t('edit category'), "admin/content/weblinks/edit/container/$term->tid");
+        }
+      }
+      $menu .= "</h3>";
+      $menu .= _weblinks_recurse_admin($term->tid);
+      $menu .= '</fieldset></div>';
+    }
+  }
+  else {
+    $rows[] = array(array('data' => '<em>'. t('There are no existing categories or web links. You may add some on the <a href="%container">add container</a> or <a href="%forum">add forum</a> pages.', array('%container' => url('admin/content/weblinks/add/container'), '%forum' => url('admin/content/weblinks/add/weblink'))) .'</em>', 'colspan' => 2));
+  }
+  $output .= $menu;
+  return $output;
+}
+
+function _weblinks_recurse_admin($tid) {
+  // Get web links for this cat
+  $output .= _weblinks_links($tid, $admin=TRUE);
+  $children = taxonomy_get_children($tid, _weblinks_get_vid());
+  if ($children) {
+    foreach ($children as $child) {
+      $output .= '<div><fieldset class=" collapsible collapsed"><legend>'. check_plain($child->name) .'</legend>'.
+        '<div class="form-item">';
+      $output .=  "<h3>". check_plain($child->name);
+      if (user_access('administer weblinks')) {
+        $output .= " ::: ". l(t('edit category'), "admin/content/weblinks/edit/container/$child->tid");
+      }
+      else if (user_access('edit group categories')) {
+        $include = _weblinks_get_access();
+        if (in_array($child->tid, $include)) {
+          $output .= " ::: ". l(t('edit category'), "admin/content/weblinks/edit/container/$child->tid");
+        }
+      }
+      $output .= "</h3>";
+
+      // If this child is a category (i.e. has children)
+      $output .= _weblinks_recurse_admin($child->tid);
+      $output .= '</fieldset>';
+    }
+  }
+  return $output;
+}
+
+function _weblinks_recurse_children($tid, $max_depth=NULL, $withlinks=FALSE) {
+  global $depth;
+  $description = variable_get("weblinks_subcatdesc", FALSE); // see if we're supposed to display cat descriptions
+  if ($withlinks) {
+    $output .= _weblinks_links($tid);
+  }
+  if ($depth <= $max_depth) {
+    $children = taxonomy_get_children($tid, _weblinks_get_vid());
+    if ($children) {
+      $depth++;
+      $output .= "<ul class=\"subcat\">";
+      foreach ($children as $child) { 
+        $output .= "<li class=\"subcatItem\">". l(t($child->name), 'weblinks/'. $child->tid);
+        if ($description) {
+          $output .= "<p>". $child->description ."</p>";
+        }
+        if ($depth < $max_depth) {
+          $output .= _weblinks_recurse_children($child->tid, $max_depth, $withlinks);
+        }
+        $output .= "</li>";
+      }
+      $output .= "</ul>";
+    }
+  }
+  return $output;
+}
+
+/**
+ * Page displaying web links, separated by category.
+ */
+function weblinks_page($tid = 0) {
+  // Get the page description, if there is one
+  if (variable_get("weblinks_pagedesc", FALSE)) {
+    $output = "<p>". variable_get("weblinks_pagedesc", FALSE) ."</p>";
+  }
+  else {
+    $output = ''; // @@@ Bdragon: Logic can be simplified here!
+  }
+
+  $description = variable_get("weblinks_catdesc", FALSE); // see if we're supposed to display cat descriptions
+  $withlinks = variable_get("weblinks_simplelinks", FALSE); // see if we're just using cat -> link; simple
+  $maxdepth = variable_get("weblinks_maxfrontdepth", 1); // See how many subcats to display on front page
+  $clickthru = variable_get("weblinks_clickthru", 2); // Maximum number of click to get at links (0 is front page)
+
+  $bwrow = array();
+  if ($tid == 0) {
+    $output .= _weblinks_links(0);
+    $tree = taxonomy_get_tree(_weblinks_get_vid(), $tid, $depth = -1, $max_depth = 1); //get top-level cats
+    if ($tree) {
+      foreach ($tree as $term) {
+        //$output .= "<div class=\"catbox\"><h3><a href=\"$term->tid\">$term->name</a></h3>";
+        $output .= "<div class=\"catbox\"><h3 class=\"weblinks\">". l(t($term->name), 'weblinks/'. $term->tid) ."</h3>";
+        if ($description) {
+          $output .= "<p>". $term->description ."</p>";
+        }
+        global $depth; // @@@ Bdragon: wtf?
+        $depth = 0;
+        $output .= _weblinks_recurse_children($term->tid, $maxdepth, $withlinks);
+        $output .= "</div>";
+      }
+    }
+    else {
+      $output .= t('There are no existing categories or web links.');
+    }
+  }
+  else {
+    $maxdepth = variable_get("weblinks_maxdepth", 0); // See how many subcats to display on front page
+    $thisterm = taxonomy_get_term($tid);
+    $output .= "<h2>$thisterm->name</h2>";
+    if ($description) {
+      $output .= "<p>". $thisterm->description ."</p>";
+    }
+    $clickindex = count(taxonomy_get_parents_all($tid));
+    $clickthruindex = $clickindex - variable_get("weblinks_maxfrontdepth", 1);
+    $withlinks = TRUE;
+    //print "CTI is {$clickthruindex}; CT id {$clickthru}";
+    if ($clickthruindex >= $clickthru) {
+      $maxdepth = NULL;
+    } // if we've reached the click through limit, display links
+    global $depth; // @@@ Bdragon: wtf?
+    $depth = 0;
+    $links = _weblinks_recurse_children($tid, $maxdepth, $withlinks);
+    if ($links == '') {
+      $output .= t('There are no existing categories or web links.');
+    }
+    else {
+      $output .= $links;
+    }
+  }
+
+  // Breadcrumb navigation
+  $breadcrumb = array();
+  $breadcrumb[] = array('path' => 'weblinks', 'title' => 'Web Links');
+  if ($parents = taxonomy_get_parents_all($tid)) {
+    $parents = array_reverse($parents);
+    foreach ($parents as $p) {
+      $breadcrumb[] = array('path' => 'weblinks/'. $p->tid, 'title' => $p->name);
+    }
+  }
+  $breadcrumb[] = array('path' => 'weblinks/'. $tid);
+  menu_set_location($breadcrumb); // @@@ Bdragon: Probabaly a poor idea.
+
+  //return theme("page", $output);
+  return $output;
+}
+
+function weblinks_user_form() {
+  global $user;
+  $filter = weblinks_build_filter_query();
+  $vid = _weblinks_get_vid();
+
+  // @@@ Bdragon: Danger, will robinson!
+  $result = db_query('SELECT n.* FROM {node} n '. $filter['join'] .
+    ' INNER JOIN {users} u ON n.uid = '. $user->uid .
+    ' INNER JOIN {term_node} tn ON tn.nid = n.nid'.
+    ' INNER JOIN {term_data} t ON t.tid = tn.tid'.
+    ' '. $filter['where'] .' AND t.vid = '. $vid .
+    ' ORDER BY n.changed DESC', $filter['args']);
+
+  $destination = drupal_get_destination();
+  $form['options'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Update options'),
+    '#prefix' => '<div class="container-inline">',
+    '#suffix' => '</div>',
+  );
+  $options = array();
+  $weblinks_options = array('delete'); // Should we allow "unpublish"?
+  foreach (module_invoke_all('node_operations') as $operation => $array) {
+    if (in_array($operation, $weblinks_options)) {
+      $options[$operation] = $array['label'];
+    }
+  }
+  $form['options']['operation'] = array('#type' => 'select', '#options' => $options,  '#default_value' => 'approve');
+  $form['options']['submit'] = array('#type' => 'submit', '#value' => t('Update'));
+
+  while ($node = db_fetch_object($result)) {
+    $nodes[$node->nid] = '';
+    $form['title'][$node->nid] = array('#value' => l($node->title, 'node/'. $node->nid) .' '. theme('mark', node_mark($node->nid, $node->changed)));
+    $form['status'][$node->nid] =  array('#value' =>  ($node->status ? t('published') : t('not published')));
+    $form['operations'][$node->nid] = array('#value' => l(t('edit'), 'node/'. $node->nid .'/edit', array(), $destination));
+  }
+  $form['nodes'] = array('#type' => 'checkboxes', '#options' => $nodes);
+  $form['pager'] = array('#value' => theme('pager', NULL, 50, 0));
+
+  return $form;
+ // $result = pager_query('SELECT n.*, u.name, u.uid FROM {node} n '. $filter['join'] .' INNER JOIN {users} u ON n.uid = u.uid '. $filter['where'] .' ORDER BY n.changed DESC', 50, 0, NULL, $filter['args']);
+}
+
+/**
+ * Displays a Drupal page containing weblinks submitted by a given user.
+ */
+function weblinks_user_page() {
+  global $user;
+  if ($account = user_load(array('uid' => arg(1)))) {
+    // Node admin style brief look at user weblinks, including pub status
+
+    $output = drupal_get_form('weblinks_filter_form', $form);
+
+    // @@@ Bdragon: No!
+    if ($_POST['operation'] == 'delete' && $_POST['nodes']) {
+      return drupal_get_form('node_multiple_delete_confirm');
+    }
+    elseif ($_POST['operation'] == 'unpublish' && $_POST['nodes']) {
+      node_operations_unpublish($_POST['nodes']);
+    }
+
+    // Call the form first, to allow for the form_values array to be populated.
+    $output .= drupal_get_form('weblinks_user_form', $form);
+    return $output;
+  }
+  else {
+    drupal_not_found(); // @@@ Bdragon: Simplify logic: move to the top!
+  }
+}
+
+/**
+ * Theme node administration overview.
+ */
+function theme_weblinks_user_form($form) {
+  // Overview table:
+  $header = array(NULL, t('Title'), t('Status'), t('Operations'));
+
+  $output .= drupal_render($form['options']);
+  if (isset($form['title']) && is_array($form['title'])) {
+    foreach (element_children($form['title']) as $key) {
+      $row = array();
+      $row[] = drupal_render($form['nodes'][$key]);
+      $row[] = drupal_render($form['title'][$key]);
+      $row[] = drupal_render($form['status'][$key]);
+      $row[] = drupal_render($form['operations'][$key]);
+      $rows[] = $row;
+    }
+
+  }
+  else  {
+    $rows[] = array(array('data' => t('No posts available.'), 'colspan' => '6'));
+  }
+
+  $output .= theme('table', $header, $rows);
+  if ($form['pager']['#value']) {
+    $output .= drupal_render($form['pager']);
+  }
+
+  $output .= drupal_render($form);
+
+  return $output;
+}
+
+/**
+ * Return form for node administration filters.
+ */
+function weblinks_filter_form() {
+  $session = &$_SESSION['weblinks_overview_filter'];
+  $session = is_array($session) ? $session : array();
+  $filters = weblinks_filters();
+
+  $i = 0;
+  $form['filters'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Show only items where'),
+    '#theme' => 'node_filters',
+  );
+  foreach ($session as $filter) {
+    list($type, $value) = $filter; //@@@ Bdragon: Uh, $k => $v syntax on previous line anyone?
+    if ($type == 'category') {
+      // Load term name from DB rather than search and parse options array.
+      $value = module_invoke('taxonomy', 'get_term', $value); //@@@ Bdragon: module_invoke_all!
+      $value = $value->name;
+    }
+    else {
+      $value = $filters[$type]['options'][$value];
+    }
+    $string = ($i++ ? '<em>and</em> where <strong>%a</strong> is <strong>%b</strong>' : '<strong>%a</strong> is <strong>%b</strong>');
+    $form['filters']['current'][] = array('#value' => t($string, array('%a' => $filters[$type]['title'] , '%b' => $value)));
+  }
+
+  foreach ($filters as $key => $filter) {
+    $names[$key] = $filter['title'];
+    $form['filters']['status'][$key] = array('#type' => 'select', '#options' => $filter['options']);
+  }
+  $form['filters']['filter'] = array('#type' => 'radios', '#options' => $names, '#default_value' => 'status');
+  $form['filters']['buttons']['submit'] = array('#type' => 'submit', '#value' => (count($session) ? t('Refine') : t('Filter')));
+  if (count($session)) {
+    $form['filters']['buttons']['undo'] = array('#type' => 'submit', '#value' => t('Undo'));
+    $form['filters']['buttons']['reset'] = array('#type' => 'submit', '#value' => t('Reset'));
+  }
+
+  return $form;
+}
+
+/**
+ * List bw administration filters that can be applied.
+ */
+function weblinks_filters() {
+  // @@@ Bdragon: Skipping looking at this before I learn a bit more about the admin filter page...
+  // Regular filters
+  $filters['status'] = array('title' => t('status'),
+    'options' => array('status-1'   => t('published'),     'status-0' => t('not published'),
+                       'moderate-1' => t('in moderation'), 'moderate-0' => t('not in moderation'),
+                       'promote-1'  => t('promoted'),      'promote-0' => t('not promoted'),
+                       'sticky-1'   => t('sticky'),        'sticky-0' => t('not sticky')));
+   // The taxonomy filter
+  /*if ($taxonomy = module_invoke('taxonomy', 'form_all', 1)) {
+    $filters['category'] = array('title' => t('category'), 'options' => $taxonomy);
+  }*/
+  if ($taxonomy = _weblinks_parent_select($edit['tid'], t('Parent'), 'weblinks')) {
+    $filters['category'] = array('title' => t('category'), 'options' => $taxonomy['#options']);
+  }
+
+  return $filters;
+}
+
+/**
+ * Build query for bw administration filters based on session.
+ */
+function weblinks_build_filter_query() {
+  $filters = weblinks_filters();
+
+  // Build query
+  $where = $args = array();
+  $join = '';
+  foreach ($_SESSION['weblinks_overview_filter'] as $index => $filter) {
+    list($key, $value) = $filter;
+    switch ($key) {
+      case 'status':
+        // Note: no exploitable hole as $key/$value have already been checked when submitted
+        list($key, $value) = explode('-', $value, 2);
+        $where[] = 'n.'. $key .' = %d';
+        break;
+      case 'category':
+        $table = "tn$index";
+        $make_where = "($table.tid = %d";
+        $join .= "INNER JOIN {term_node} $table ON n.nid = $table.nid ";
+
+        // Search recursively for the children of this term
+        $children = taxonomy_get_children($_SESSION['weblinks_overview_filter'][$index][1], _weblinks_get_vid());
+        $i = 0;
+        foreach ($children as $child) {
+          $i++;
+          //$table = "tn".$index.$i;
+          $make_where .= " OR $table.tid = ". $child->tid ." ";
+        }
+        $make_where .= ")";
+        $where[] = $make_where;
+        break;
+      case 'type':
+        $where[] = "n.type = '%s'";
+    }
+    $args[] = $value;
+  }
+  $where = count($where) ? 'WHERE '. implode(' AND ', $where) : '';
+
+  return array('where' => $where, 'join' => $join, 'args' => $args);
+}
+
+/**
+ * Process result from bw administration filter form.
+ */
+function weblinks_filter_form_submit() {
+  global $form_values;
+  $op = $_POST['op'];
+  $filters = weblinks_filters();
+  switch ($op) {
+    case t('Filter'):
+    case t('Refine'):
+      if (isset($form_values['filter'])) {
+        $filter = $form_values['filter'];
+
+        // Flatten the options array to accommodate hierarchical/nested options.
+        $flat_options = form_options_flatten($filters[$filter]['options']);
+
+        if (isset($flat_options[$form_values[$filter]])) {
+          $_SESSION['weblinks_overview_filter'][] = array($filter, $form_values[$filter]);
+        }
+      }
+      break;
+    case t('Undo'):
+      array_pop($_SESSION['weblinks_overview_filter']);
+      break;
+    case t('Reset'):
+      $_SESSION['weblinks_overview_filter'] = array();
+      break;
+  }
+}
+
+/**
+ * Prepare links content.
+ */
+function _weblinks_links($tid, $admin=FALSE) {
+  // Get the max number of posts to display
+  $limitnum = variable_get("weblinks_maxdisp_". $tid, 10);
+  $description = variable_get("weblinks_linkdesc", TRUE);
+  $info = variable_get("weblinks_linkinfo", TRUE);
+  if (user_access('edit group weblinks')) {
+    $include = _weblinks_get_access();
+  }
+  $query = "SELECT nr.body, n.*, bw.url
+    FROM {node} n
+    INNER JOIN {node_revisions} nr ON nr.nid = n.nid 
+    INNER JOIN {weblinks} bw ON bw.nid = n.nid 
+    WHERE bw.tid = %d AND n.status = 1
+    ORDER BY bw.weight ASC, n.title ASC";
+
+  if ($limitnum) {
+    $result = db_query_range($query, $tid, 0, $limitnum);
+  }
+  else {
+    $result = db_query($query, $tid);
+  }
+
+  $page_content ="<ul class=\"weblinks\">";
+  while ($row = db_fetch_array($result)) {
+    $user = user_load($array = array('uid' => $row['uid']));
+    $title = check_plain($row['title']);
+    $options = array();
+    if (variable_get('weblinks_external', 1)) {
+      $options['target'] = '_new';
+    }
+
+    if ($admin) {
+      $page_content .= "<li class=\"adminBasicweblinks\">";
+      if (user_access('administer weblinks')) {
+        $page_content .= l(t('edit weblink'), "node/{$row['nid']}/edit", $attributes = array(), drupal_get_destination()) ." - ";
+      }
+      else if (user_access('edit group weblinks')) {
+        if (in_array($tid, $include)) {
+          $page_content .= l(t('edit weblink'), "node/{$row['nid']}/edit", $attributes = array(), drupal_get_destination()) ." - ";
+        }
+      }
+      if (variable_get('weblinks_urlnode', 'url') == 'node') {
+        $page_content .= l(t($row['title']), 'node/'. $row['nid']) ."</li>";
+      }
+      else {
+        $page_content .= l(t($row['title']), $row['url'], $options) ."</li>";
+      }
+    }
+    else {
+      if (variable_get('weblinks_urlnode', 'url') == 'node') {
+        $page_content .= "<li class=\"weblinks\">". l(t($row['title']), 'node/'. $row['nid']);
+      }
+      else {
+        $page_content .= "<li class=\"weblinks\">". l(t($row['title']), $row['url'], $options);
+      }
+      if ($description) {
+        $page_content .= "<p>". filter_xss($row['body']) ."</p>"; // @@@ EMERGENCY FIX, apply filters properly later.
+      }
+      if ($info) {
+        $page_content .= "<p>created: ". date("d M Y", $row['created']) ." by ". check_plain($user->name) ."  :::   updated: ". date("d M Y", $row['changed']) ."</p>";
+      }
+      $page_content .= "</li>";
+    }
+  }
+  $page_content .= "</ul>";
+  return $page_content;
+}
+
+/**
+ * Prepare block content.
+ */
+function _weblinks_block($tid) {
+  global $user;
+
+  // Get the max number of posts to display
+  $limitnum = variable_get('weblinks_maxdisp_block_'. $tid, 10);
+  $query = "SELECT nr.body, n.*, bw.url 
+    FROM {node} n
+    INNER JOIN {node_revisions} nr ON nr.nid = n.nid 
+    INNER JOIN {weblinks} bw ON bw.nid = n.nid 
+    WHERE bw.tid = %d AND n.status = 1
+    ORDER BY bw.weight ASC, n.title ASC";
+
+  if ($limitnum) {
+    $result = db_query_range($query, $tid, 0, $limitnum);
+  }
+  else {
+    $result = db_query($query, $tid);
+  }
+
+  $block_content = "<div class=\"item-list\"><ul>";
+  while ($row = db_fetch_array($result)) {
+    $title = $row['title'];
+    if (variable_get('weblinks_block_urlnode', 'url') == 'node') {
+      $block_content .= "<li>". l(t($row['title']), 'node/'. $row['nid']) ."</li>";
+    }
+    else {
+      if (variable_get('weblinks_external', 1)) {
+        $options = array('target' => '_new');
+      }
+      else {
+        $options = array();
+      }
+      $block_content .= "<li class=\"weblinks\">". l(t($row['title']), $row['url'], $options) ."</li>";
+    }
+  }
+  $block_content .= "</ul></div>";
+  return $block_content;
+}
+
+/**
+* Prepare "recent" block content
+*/
+function _weblinks_block_recent() {
+  // Get the max number of posts to display
+  $limitnum = variable_get("weblinks_maxdisp_block_recent", 10);
+  // @@@ Bdragon: Not to mention forgetting to db_rewrite_sql...
+  // @@@ Also: joining node to node_revisions on *nid*?
+  $query = "SELECT nr.body, n.*, bw.url 
+    FROM {node} n
+    INNER JOIN {node_revisions} nr ON nr.nid = n.nid 
+    INNER JOIN {weblinks} bw ON bw.nid = n.nid 
+    WHERE n.status = 1
+    ORDER BY n.changed DESC, n.title ASC";
+
+  if ($limitnum) {
+    $result = db_query_range($query, 0, $limitnum);
+  }
+  else {
+    $result = db_query($query);
+  }
+
+  $block_content = "<div class=\"item-list\"><ul>";
+  while ($row = db_fetch_array($result)) {
+    $title = $row['title'];
+    $title = stripslashes($title); // @@@ Bdragon: No, no, no.
+    if (variable_get('weblinks_block_urlnode', 'url') == 'node') {
+      $block_content .= "<li>". l(t($row['title']), 'node/'. $row['nid']) ."</li>";
+    }
+    else {
+      if (variable_get('weblinks_external', 1)) {
+        $options = array('target' => '_new');
+      }
+      else {
+        $options = array();
+      }
+      $block_content .= "<li class=\"weblinks\">". l(t($row['title']), $row['url'], $options) ."</li>";
+    }
+  }
+  $block_content .= "</ul></div>";
+  return $block_content;
+}
+
+/**
+ * Implementation of hook_block().
+ */
+function weblinks_block($op='list', $delta=0) {
+  if ($op == 'list') {
+    $tree = module_invoke('taxonomy', 'get_tree', _weblinks_get_vid());
+    if ($tree) {
+      foreach ($tree as $linkcat) {
+        $block['weblink-'. $linkcat->tid]['info'] = 'Web Link: '. $linkcat->name;
+      }
+    }
+    $block['weblink-recent']['info'] = 'Recent Web Links';
+    return $block;
+  }
+  else if ($op == 'view') {
+    list($type, $tid) = explode('-', $delta);
+    if ($type == 'weblink') {
+      if ($linkcat = module_invoke('taxonomy', 'get_term', $tid)) {
+        $block['subject'] = check_plain($linkcat->name);
+        $block['content'] = _weblinks_block($tid);
+      }
+      else if ($tid == 'recent') {
+        $block['subject'] = t('Recent Web Links');
+        $block['content'] = _weblinks_block_recent();
+      }
+    }
+  return $block;
+  }
+}

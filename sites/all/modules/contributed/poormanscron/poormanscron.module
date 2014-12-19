@@ -1,0 +1,154 @@
+<?php
+// $Id: poormanscron.module,v 1.18.2.1 2007/01/14 12:34:37 uwe Exp $ $Name: DRUPAL-5--1-1 $
+
+/**
+ * @file
+ * A module which runs Drupal cron jobs without the cron application.
+ */
+
+/**
+ * Implementation of hook_help().
+ */
+function poormanscron_help($section = 'admin/help#poormanscron') {
+  switch ($section) {
+    case 'admin/help#poormanscron':
+    case 'admin/settings/modules#description':
+    case 'admin/settings/poormanscron':
+      $output = t('Runs Drupal cron jobs without the cron application.');
+      break;
+  }
+  return $output;
+}
+
+/**
+ * Implementation of hook_exit().
+ *
+ * Checks if poormanscron needs to be run. If this is the case, it invokes
+ * the cron hooks of all enabled modules, which are executed after
+ * all HTML is returned to the browser. So the user who kicks off the cron
+ * jobs should not notice any delay.
+ */
+function poormanscron_exit() {
+
+  // Calculate when the next poormanscron run is due.
+  $lastrun = variable_get('poormanscron_lastrun', 0);
+  $nextrun = $lastrun + 60 * variable_get('poormanscron_interval', 60);
+
+  // If the configured time has passed, start the next poormanscron run.
+  if (time() > $nextrun) {
+
+    // If this cron run fails to complete, wait a few minutes before retrying.
+    variable_set('poormanscron_lastrun',
+       $lastrun + 60 * variable_get('poormanscron_retry_interval', 10));
+
+    // Get the current Drupal messages. Use drupal_set_message() so that
+    // the messages aren't deleted in case the cron run fails and
+    // we don't get a chance to restore them below.
+    $saved_messages = drupal_set_message();
+
+    // Invoke the cron hooks of all enabled modules.
+    if (variable_get('poormanscron_log_progress', 0) == 1) {
+      // Invoke the cron hooks of all enabled modules and log the progress.
+      $modules = module_list();
+      foreach ($modules as $key => $value) {
+        if (module_hook($key, 'cron')) {
+          $tt = time();
+          module_invoke($key, 'cron');
+          watchdog('cron', "Executed ${key}_cron via poormanscron, took " . format_interval(time() - $tt, 1) . '.', WATCHDOG_NOTICE);
+        }
+      }
+    }
+    else {
+      // Invoke the cron hooks of all enabled modules, no progress logging.
+      module_invoke_all('cron');
+    }
+
+    // Write a message to the logs if the user wants us to do so.
+    if (variable_get('poormanscron_log_cron_runs', 1) == 1) {
+      watchdog('cron', 'Cron run completed (via poormanscron).',
+               WATCHDOG_NOTICE);
+    }
+
+    $t = time();
+
+    // Update the time of the last poormanscron run (this one).
+    variable_set('poormanscron_lastrun', $t);
+
+    // Update the $cron_last variable, in order to update the
+    // cron status in admin/settings.
+    variable_set('cron_last', $t);
+
+    // Delete any messages added during the cron run (and existing prior
+    // messages).
+    drupal_get_messages();
+
+    // Restore any prior messages.
+    if (isset($saved_messages)) {
+      foreach ($saved_messages as $type => $types_messages) {
+        foreach ($types_messages as $message) {
+          drupal_set_message($message, $type);
+        }
+      }
+    }
+
+  }
+}
+
+/**
+ * With hook_settings() obsoleted in 5.0, we now need a menu handler
+ * for settings.
+ *
+ * @param bool $may_cache
+ * @return array
+ */
+function poormanscron_menu($may_cache) {
+
+  if ($may_cache) {
+    $items[] = array(
+      'path' => 'admin/settings/poormanscron',
+      'title' => t('Poormanscron'),
+      'description' => t('A module which runs Drupal cron jobs without the cron application.'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => 'poormanscron_admin_settings',
+      'access' => user_access('administer site configuration'),
+      'type' => MENU_NORMAL_ITEM,
+    );
+  }
+
+  return $items;
+}
+
+/**
+ * 5.0 version of obsolete hook_settings().
+ */
+function poormanscron_admin_settings() {
+  $form['time_intervals'] = array('#type' => 'fieldset', '#title' => t('Time intervals'));
+  $form['time_intervals']['poormanscron_interval'] = array(
+    '#type' => 'textfield', '#title' => t('Cron runs interval'),
+    '#default_value' => variable_get('poormanscron_interval', 60),
+    '#size' => 5, '#maxlength' => 10,
+    '#description' => t('Minimum number of minutes between cron runs. Cron will actually execute during the first page request after the interval has elapsed.')
+  );
+  $form['time_intervals']['poormanscron_retry_interval'] = array(
+    '#type' => 'textfield', '#title' => t('Retry interval'),
+    '#default_value' => variable_get('poormanscron_retry_interval', 10),
+    '#size' => 5, '#maxlength' => 10,
+    '#description' => t('The number of minutes to wait after a cron run error before retrying.')
+  );
+
+  $form['logging'] = array('#type' => 'fieldset', '#title' => t('Logging'));
+  $form['logging']['poormanscron_log_cron_runs'] = array(
+    '#type' => 'select', '#title' => t('Log successful cron runs'),
+    '#default_value' => variable_get('poormanscron_log_cron_runs', 1),
+    '#options' => array('1' => t('Yes'), '0' => t('No')),
+    '#description' => t('If you want to log successful cron runs to the Drupal watchdog, say Yes here. If those messages annoy you, disable them by selecting No.')
+  );
+  $form['logging']['poormanscron_log_progress'] = array(
+    '#type' => 'select', '#title' => t('Log poormanscron progress'),
+    '#default_value' => variable_get('poormanscron_log_progress', 0),
+    '#options' => array('1' => t('Yes'), '0' => t('No')),
+    '#description' => t('If you want to log the progress of a poormanscron run to the Drupal watchdog, say Yes here. If those messages annoy you, disable them by selecting No.')
+  );
+
+  return system_settings_form($form);
+}

@@ -1,0 +1,30 @@
+<?php
+// $Id: artmob_glossary.install,v 1.0 2008/03/07 01:30:00 drumm Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function artmob_glossary_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+			db_query("CREATE TABLE IF NOT EXISTS {am_glossary} (
+			`gid` int(10) unsigned NOT NULL auto_increment,
+			`nid` int(10) unsigned NOT NULL default '0',
+			`term` text NOT NULL,
+			`context` text,
+			`definition` text,
+			PRIMARY KEY  (`gid`)
+			) ENGINE=MyISAM  DEFAULT CHARSET=utf8 ");
+      break;
+    case 'pgsql':
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function artmob_glossary_uninstall() {
+  db_query('DROP TABLE {am_glossary}');
+}

@@ -1,0 +1,10 @@
+; $Id: artmob_migrate.info,v 1.0 2008/03/07 20:55:33 dries Exp $
+name = Artmob Migrate
+description = Migrate module that contains tools to help migrate an artmob site up to phase 3d
+package = Artmob
+version = VERSION
+
+; Information added by drupal.org packaging script on 2007-01-30
+version = "5.1"
+project = "drupal"
+

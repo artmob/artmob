@@ -1,0 +1,379 @@
+<?php
+
+/*
+ * Some of these test rely on form_set_error, but there does not seem to be anyway to clear this
+ * 	error state once it has been triggered.  To have these tests succed, you much patch form.inc:
+ * 
+function form_set_error($name = NULL, $message = '') {
+  static $form = array();
+  
+  // hacked by tao to allow error clearing
+  if( !empty($name) && empty($message) ) {
+    unset( $form[$name] );
+  }
+  else {
+	  if (isset($name) && !isset($form[$name])) {
+	    $form[$name] = $message;
+	    if ($message) {
+	      drupal_set_message($message, 'error');
+	    }
+	  }
+  }
+	return $form;
+}
+ * 
+ */
+
+
+class SubformTest extends DrupalTestCase {
+  /**
+   * Implementation of get_info() for information
+   */
+  function get_info() {
+    return array('name' => t('Subform test'), 
+			'desc' => t('foobar'),
+    	'group' => 'Ahah Tests');
+  }
+  
+  function setUp() {
+    require_once(SIMPLE_TEST . '/mock_objects.php');
+    Mock::generate( 'SimpleHttpResponse' );
+    // clean up session & post
+    unset( $_SESSION );
+    unset( $_POST );
+  }
+
+  function setSource( $html ) {
+    $this->_mockResponse = new MockSimpleHttpResponse();
+    $this->_mockResponse->setReturnValue( 'isError', false );  
+    $this->_mockResponse->setReturnValue( 'getContent', $html );
+    $this->_browser->_page = $this->_browser->_parse( $this->_mockResponse );
+  }
+
+  // test getting raw Subform, single pass
+  function testRawSubform() {
+    $form_id = 'fake_form';
+    $subform_id = 'dynamic_subform_test_subform';
+    // get the raw form by pretending to embed it
+    $form = dynamic_subform_get_embedded( $form_id, $subform_id, 'bar-one' );
+    $this->assertNotNull( $form );
+    $this->assertTrue( is_array( $form ) );
+    $this->assertEqual( $form['setme']['#default_value'], 'one' );
+    $key = $form['subform_build_ids'][$subform_id]['#value'];
+    $this->assertNotNull( $key );
+    
+    drupal_prepare_form( $form_id, $form );
+    $html = drupal_render( $form );
+    $this->assertNotNull( $html );
+
+    
+    $this->setSource( "<form>$html</form>" ); // wrap subform in form, for field assertions 
+
+    // test that subform renders properly
+    $this->assertText( 'bar-one' );
+    $this->assertField( 'setme', 'one');
+    $this->assertField( "subform_build_ids[$subform_id]", $key);
+
+    // test that $_SESSION was set correctly
+    $this->assertNotNull( $_SESSION['subforms'][$key]['args'] );
+    $this->assertEqual( $_SESSION['subforms'][$key]['args'][0], $subform_id );
+        
+//    print_r( $html );
+//    print( "<p>***************************************************</p>\n" );
+//    print $this->showSource();
+//    print_r( $form );
+//    print( "<p>***************************************************</p>\n" );
+  }
+
+  /**
+   *  testDirectFlow: test how ahah subform will usually be used - starts in form, then goes direct
+   */
+  function testDirectFlow() {
+    // ********************************************************************************
+    // Pass #1 - Inside form **********************************************************
+    // ********************************************************************************
+    $subform_id = 'dynamic_subform_test_subform';
+    $form_id = 'dynamic_subform_test_form';
+    $html = drupal_get_form( $form_id, 'foo' );
+    $this->assertNull( form_get_errors() );
+    $this->setSource( $html ); 
+    $this->assertText( 'foo' );
+    $this->assertField( 'setme', 'one');
+    $this->assertNull( $this->_browser->getField('added') ); // not here yet
+        
+//    $form_build_id = $this->_browser->getField('form_build_id');
+//    $this->assertNotNull( $form_build_id );
+    $form_token = $this->_browser->getField('form_token');
+    $this->assertNotNull( $form_token );
+    $this->assertEqual( $form_id, $this->_browser->getField('form_id') );
+    $subform_build_id = $this->_browser->getField("subform_build_ids[$subform_id]");//$form['subform_build_ids'][$subform_id]['#value'];
+    $this->assertNotNull( $subform_build_id );
+    
+    // ********************************************************************************
+    // Pass #2 - Go direct ************************************************************
+    // ********************************************************************************
+    $_POST['form_id'] = $form_id; // to pass validation
+    $_POST['form_token'] = $form_token; // to pass validation
+    $_POST['subform_build_ids'] = array ( $subform_id => $subform_build_id ); // to find the SESSION key
+    $_POST['setme'] = 'two';  // to trigger the dynamic build
+    $_POST['poison'] = 'toxic';  // to test filtering
+
+    $form = dynamic_subform_get_prepped( $form_id, $subform_id, 'bar-one' ); // now use the values in the post
+    
+    $this->assertNull( form_get_errors() );
+    $this->assertEqual( $form['setme']['#value'], 'two' );
+    $this->assertNull( $form['poison']['#value'] ); // filtered
+    $this->assertEqual( $form['added']['#value'], 'dynamic' );  
+    $this->assertNull( $form['last']['#value'] ); // not yet in place
+
+    $html = drupal_render( $form );
+    
+    $this->assertNotNull( $html );
+    $this->setSource( '<form>'. $html .'</form>' ); 
+    $this->assertField('setme', 'two');
+    $this->assertField('added', 'dynamic');
+    $this->assertNull( $this->_browser->getField('poison') );
+    $this->assertNull( $this->_browser->getField('last') );
+    
+    // ********************************************************************************
+    // Pass #3 - Go direct again ******************************************************
+    // ********************************************************************************
+    $_POST['added'] = 'three';  // to test multistep build
+    $form = dynamic_subform_get_prepped( $form_id, $subform_id, 'bar-two' ); // use the field that did not initial exist
+    $this->assertNull( form_get_errors() );
+    $this->assertEqual( $form['setme']['#value'], 'two' );
+    $this->assertNull( $form['poison']['#value'] ); // still filtered
+    $this->assertEqual( $form['added']['#value'], 'three' );  
+    $this->assertEqual( $form['last']['#value'], 'yay' ); // now in place
+  }
+
+  /**
+   *  testEmbeddedFlow: test how ahah subform will behave w/out js - stays in form
+   */
+  function testEmbeddedFlow() {
+    // ********************************************************************************
+    // Pass #1 - Start inside form ****************************************************
+    // ********************************************************************************
+    $subform_id = 'dynamic_subform_test_subform';
+    $form_id = 'dynamic_subform_test_form';
+    $html = drupal_get_form( $form_id, 'foo' );
+    $this->assertNull( form_get_errors() );
+    $this->setSource( $html ); 
+    $this->assertText( 'foo' );
+    $this->assertField( 'setme', 'one');
+    $this->assertNull( $this->_browser->getField('added') ); // not here yet
+        
+    $form_token = $this->_browser->getField('form_token');
+    $this->assertNotNull( $form_token );
+    $this->assertEqual( $form_id, $this->_browser->getField('form_id') );
+    $subform_build_id = $this->_browser->getField("subform_build_ids[$subform_id]");//$form['subform_build_ids'][$subform_id]['#value'];
+    $this->assertNotNull( $subform_build_id );
+    
+    // ********************************************************************************
+    // Pass #2 - Still inside form ****************************************************
+    // ********************************************************************************
+    $_POST['form_id'] = $form_id; // to pass validation
+    $_POST['form_token'] = $form_token; // to pass validation
+    $_POST['subform_build_ids'] = array ( $subform_id => $subform_build_id ); // to find the SESSION key
+    $_POST['setme'] = 'two';  // to trigger the dynamic build
+    $_POST['poison'] = 'toxic';  // to test filtering
+
+    $html = drupal_get_form( $form_id, 'foo-two' ); // now use the values in the post
+	  $this->assertNull( form_get_errors() );
+    $this->assertNotNull( $html );
+    $this->setSource( $html ); 
+    $this->assertField('setme', 'two');
+    $this->assertField('added', 'dynamic');
+    $this->assertText( 'foo-two' );
+    $this->assertNull( $this->_browser->getField('poison') );
+    $this->assertNull( $this->_browser->getField('last') );
+
+    
+    // ********************************************************************************
+    // Pass #3 - Last inside form *****************************************************
+    // ********************************************************************************
+    $_POST['added'] = 'three';  // to test multistep build
+    $html = drupal_get_form( $form_id, 'foo-three' ); // use the field that did not initial exist
+	  $this->assertNull( form_get_errors() );
+    $this->assertNotNull( $html );
+    $this->setSource( $html ); 
+    $this->assertField('setme', 'two');
+    $this->assertField('added', 'three');
+    $this->assertText( 'foo-three' );
+    $this->assertField( 'last', 'yay' );
+    $this->assertNull( $this->_browser->getField('poison') ); // still filtered
+  }
+  
+  
+  
+  /**
+   * Testing attack vectors
+   * 1) Adding in unrequested parameters (tested above)
+   * 2) Bad form_id - Attempting to slip valid parameter for one form into invalid form -  
+   * 3) Bad form_token - Attempting to resubmit form saved earlier - 
+   * 4) Bad subform_id - 
+   * 5) Bad subform_build_ids - 
+   * 6) Not filling in required data - Todo 
+   * 7) Inappropriately formated data - Todo
+   * X) Putting SQL/PHP/JS into the field - not blocked by FormAPI, module writer needs to filter before consuming or displaying
+   * 
+   * Q: Should I be doing more than just setting form_set_error?  Should I abort form building? 
+   * 		I wish there was an error serverity setting. 
+   * 
+   * Note: these last two only work b/c I have hacked my version of form.inc:form_set_error to allow
+   * 			 me to clear out form_get_error() ***pain in the ass***
+   */ 
+    function testDirectAttacks() {
+	    // ********************************************************************************
+	    // Set up form as normal *************************************************
+	    // ********************************************************************************
+	    $subform_id = 'dynamic_subform_test_subform';
+	    $form_id = 'dynamic_subform_test_form';
+	    $html = drupal_get_form( $form_id, 'foo' );
+	    $this->assertNull( form_get_errors() );
+	    $this->setSource( $html ); 
+	    $form_token = $this->_browser->getField('form_token');
+	    $this->assertNotNull( $form_token );
+	    $this->assertEqual( $form_id, $this->_browser->getField('form_id') );
+	    $subform_build_id = $this->_browser->getField("subform_build_ids[$subform_id]");
+	    $this->assertNotNull( $subform_build_id );
+      
+	    // ********************************************************************************
+	    // Attack #2 - Bad Form Id ********************************************************
+	    // ********************************************************************************
+	    $_POST['form_id'] = 'bad_form_id';
+	    $_POST['form_token'] = $form_token;
+	    $_POST['subform_build_ids'] = array ( $subform_id => $subform_build_id ); 
+	    $form = dynamic_subform_get_prepped( $form_id, $subform_id, 'bar-one' ); 
+	    $this->assertNotNull( form_get_errors() );
+	    
+      form_set_error( 'form_id' );  // reset form_get_errors    
+	    $this->assertNull( form_get_errors() ); 
+	    
+	    // ********************************************************************************
+	    // Attack #3 - Bad Form Token ********************************************************
+	    // ********************************************************************************
+	    $_POST['form_id'] = $form_id;
+	    $_POST['form_token'] = 'bad_form_token';
+	    $_POST['subform_build_ids'] = array ( $subform_id => $subform_build_id ); 
+	    $form = dynamic_subform_get_prepped( $form_id, $subform_id, 'bar-one' ); 
+	    $this->assertNotNull( form_get_errors() );
+	    
+      form_set_error( 'form_id' );  // reset form_get_errors    
+	    $this->assertNull( form_get_errors() ); 
+	    
+	    // ********************************************************************************
+	    // Attack #4 - Bad Subform Id ********************************************************
+	    // ********************************************************************************
+	    $_POST['form_id'] = $form_id;
+	    $_POST['form_token'] = $form_token;
+	    $_POST['subform_build_ids'] = array ( 'bad_subform_id' => $subform_build_id ); 
+	    $form = dynamic_subform_get_prepped( $form_id, $subform_id, 'bar-one' ); 
+	    $this->assertNotNull( form_get_errors() );
+
+	    form_set_error( 'form_id' );  // reset form_get_errors    
+	    $this->assertNull( form_get_errors() ); 
+	    
+	    // ********************************************************************************
+	    // Attack #5 - Bad Subform Id ********************************************************
+	    // ********************************************************************************
+	    $_POST['form_id'] = $form_id;
+	    $_POST['form_token'] = $form_token;
+	    $_POST['subform_build_ids'] = array ( $subform_id => 'bad_subform_build_id' ); 
+	    $form = dynamic_subform_get_prepped( $form_id, $subform_id, 'bar-one' ); 
+	    $this->assertNotNull( form_get_errors() );    
+
+	    form_set_error( 'form_id' );  // reset form_get_errors    
+	    $this->assertNull( form_get_errors() ); 
+    }
+    /**
+     * Attacking with JS turned off.  
+     * Harder to see if the attack is being handled correctly, as dynamic_subform's defenses are mixed in 
+     *   with drupal_get_form's subtiler defenses and responses.
+     */
+    function testEmbeddedAttacks() {
+	    // ********************************************************************************
+	    // Set up form as normal *************************************************
+	    // ********************************************************************************
+	    $subform_id = 'dynamic_subform_test_subform';
+	    $form_id = 'dynamic_subform_test_form';
+	    $html = drupal_get_form( $form_id, 'foo' );
+	    $this->assertNull( form_get_errors() );
+	    $this->setSource( $html ); 
+	    $form_token = $this->_browser->getField('form_token');
+	    $this->assertNotNull( $form_token );
+	    $this->assertEqual( $form_id, $this->_browser->getField('form_id') );
+	    $subform_build_id = $this->_browser->getField("subform_build_ids[$subform_id]");
+	    $this->assertNotNull( $subform_build_id );
+      	    
+      // ********************************************************************************
+	    // Attack #2 - Bad Form Id ********************************************************
+	    // ********************************************************************************
+	    $_POST['form_id'] = 'bad_form_id';
+	    $_POST['form_token'] = $form_token;
+	    $_POST['subform_build_ids'] = array ( $subform_id => $subform_build_id ); 
+	    $_POST['setme'] = 'two';  // attempt to trigger dynamic build should be rejected    
+	    $html = drupal_get_form( $form_id, 'bar-one' ); 
+	    $this->assertNotNull( $html );
+	    $this->assertNotNull( form_get_errors() ); 
+
+	    form_set_error( 'form_id' );  // reset form_get_errors    
+	    $this->assertNull( form_get_errors() ); 
+	    	    
+	    // ********************************************************************************
+	    // Attack #3 - Bad Form Token ********************************************************
+	    // ********************************************************************************
+	    $_POST['form_id'] = $form_id;
+	    $_POST['form_token'] = 'bad_form_token';
+	    $_POST['subform_build_ids'] = array ( $subform_id => $subform_build_id ); 
+	    $html = drupal_get_form( $form_id, 'bar-one' ); 
+	    $this->assertNotNull( $html );
+	    $this->assertNotNull( form_get_errors() ); 
+
+	    form_set_error( 'form_id' );  // reset form_get_errors    
+	    $this->assertNull( form_get_errors() ); 
+	    	    
+	    // ********************************************************************************
+	    // Attack #4 - Bad Subform Id ********************************************************
+	    // ********************************************************************************
+	    $_POST['form_id'] = $form_id;
+	    $_POST['form_token'] = $form_token;
+	    $_POST['subform_build_ids'] = array ( 'bad_subform_id' => $subform_build_id ); 
+	    $html = drupal_get_form( $form_id, 'bar-one' ); 
+	    $this->assertNotNull( $html );
+	    // Doesn't trigger form_error, dynamic_subform_get see this as coming in for the first time
+	    $this->assertNull( form_get_errors() ); 
+      $this->setSource( $html ); 
+      // show attempt to trigger dynamic form additon failed
+      $this->assertNull( $this->_browser->getField('added') ); 
+	    
+	    
+	    // ********************************************************************************
+	    // Attack #5 - Bad Subform Id ********************************************************
+	    // ********************************************************************************
+	    $_POST['form_id'] = $form_id;
+	    $_POST['form_token'] = $form_token;
+	    $_POST['subform_build_ids'] = array ( $subform_id => 'bad_subform_build_id' ); 
+	    $html = drupal_get_form( $form_id, 'bar-one' ); 
+	    $this->assertNotNull( $html );
+	    // Doesn't trigger form_error, dynamic_subform_get see this as coming in for the first time
+	    $this->assertNull( form_get_errors() ); 
+      $this->setSource( $html ); 
+      // show attempt to trigger dynamic form additon failed
+      $this->assertNull( $this->_browser->getField('added') ); 
+	    	    
+      // ********************************************************************************
+	    // Reality Check - everything still works *****************************************
+	    // ********************************************************************************
+	    $_POST['form_id'] = $form_id;
+	    $_POST['form_token'] = $form_token;
+	    $_POST['subform_build_ids'] = array ( $subform_id => $subform_build_id ); 
+	    $html = drupal_get_form( $form_id, 'bar-one' ); 
+	    $this->assertNotNull( $html );
+	    $this->assertNull( form_get_errors() ); 
+      $this->setSource( $html ); 
+	    $this->assertField( 'setme', 'two');  // show dynamic build still works	    
+      $this->assertField( 'added', 'dynamic');  // show dynamic build still works	    
+    }
+    
+}

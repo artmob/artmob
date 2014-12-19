@@ -1,0 +1,5 @@
+; $Id: artmob_blackout.info,v 3.1 2010/04/26 20:55:33 stop14 Exp $
+name = Artmob Blackout
+package = Artmob
+description = Allows administrators to remove disputed content from general view while still presenting its archival and supporting information.
+version = 3.1

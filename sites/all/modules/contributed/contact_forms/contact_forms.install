@@ -1,0 +1,36 @@
+<?php
+// $Id: contact_forms.install,v 1.1.2.1 2008/01/13 04:38:58 gpdinoz Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function contact_forms_install() {
+  // contact_list.module is enabled - disable and put message in watchdog saying contact_forms replaces contact_lists
+  if (module_exists('contact_list')){
+    module_disable( array('contact_list'));
+    watchdog ('Contact Forms', 'contact_list module disabled because contact_forms module replaces it.', $severity = WATCHDOG_WARNING , $link = NULL);
+  }
+  watchdog ('Contact Forms', 'contact_forms module installed');
+  drupal_set_message(t("Contact Forms module has been enabled. You can edit it's settings at !link",
+    array( '!link' => l('Administer > Site building > contact form ',  'admin/build/contact/settings' ) )
+  ));
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function contact_forms_uninstall() {
+
+  // remove variables
+  variable_del('contactforms_information');
+  variable_del('contactform_title');
+  variable_del('contactform_redirect');
+
+  // clear the cache tables
+  cache_clear_all(null, 'cache');
+  cache_clear_all(null, 'cache_filter');
+  cache_clear_all(null, 'cache_menu');
+  cache_clear_all(null, 'cache_page');
+
+  watchdog ('Contact Forms', 'Contact Forms module removed');
+}

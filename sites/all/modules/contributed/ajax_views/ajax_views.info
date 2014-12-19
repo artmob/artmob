@@ -1,0 +1,13 @@
+; $Id: ajax_views.info,v 1.1.2.1 2008/03/25 18:14:24 febbraro Exp $
+name = "Ajax Views"
+description = "Implementation of a dynamic view block that can paginate via ajax to update just that specific block "
+dependencies = views
+package = Views
+
+
+
+; Information added by drupal.org packaging script on 2008-05-21
+version = "5.x-1.5"
+project = "ajax_views"
+datestamp = "1211388302"
+

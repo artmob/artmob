@@ -1,0 +1,10 @@
+; $Id: date.info,v 1.2.2.5 2007/06/18 23:06:36 dww Exp $
+name = Date
+description = Defines a date/time field type.
+dependencies = content date_api
+package = CCK
+; Information added by drupal.org packaging script on 2007-12-28
+version = "5.x-1.8"
+project = "date"
+datestamp = "1198842003"
+

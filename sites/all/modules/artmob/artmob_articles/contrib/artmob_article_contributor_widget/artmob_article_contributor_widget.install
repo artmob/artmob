@@ -1,0 +1,37 @@
+<?php
+// $Id$
+
+function artmob_article_contributor_widget_uninstall() {
+    db_query("DROP TABLE IF EXISTS {am_article_contributor_widget}");
+    drupal_set_message( "Dropped the article contributor table" );
+}
+
+/**
+ * Implementation of hook_install()
+ */
+function artmob_article_contributor_widget_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+    
+    drupal_set_message( "Creating contributor table");
+
+    db_query(
+      "CREATE TABLE {am_article_contributor_widget} (
+        `nid` int(10) unsigned NOT NULL default '0',
+        `widget_name` varchar(255)  NOT NULL default '',
+        `subwidget_id` int(10) unsigned NOT NULL default '0',
+        `contributor_id` int(10) unsigned NOT NULL default '0',
+        PRIMARY KEY  (`subwidget_id`)
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;"
+    );
+    
+  }
+}
+
+/**
+ * Updates
+ */
+function artmob_article_contributor_widget_update_1() {
+  return _system_update_utf8( array( 'am_article_contributor_widget' ) );
+}

@@ -1,0 +1,187 @@
+<?php
+/**
+ * @file
+ * ADDDOCDESCRIPTION
+ */
+ 
+// $Id: flashvideo_cck.module,v 1.3.2.2 2008/02/20 04:33:04 travist Exp $
+
+define('FLASHVIDEO_PARAM_PREFIX', "field_flashvideo_");
+
+/**
+ * Implementation of hook_help()
+ */
+function flashvideo_cck_help($section = 'admin/help#flashvideo_cck') {
+   switch ($section) {
+      case 'admin/help#flashvideo_cck':
+         $output = '<h2>Using CCK to Customize and Regenerate Thumbnails and Videos with specific parameters</h2><br/>';
+         $output .= '<p>Since FlashVideo version 2.2, a method has been in place to provide node specific parameters to create or regenerate the thumbnail or video.  ';
+         $output .= 'This method allows for any node creator or updater to override the parameters specified by the FlashVideo Settings to create custom functionality out of their ';
+         $output .= 'specific node.  Below are several examples of where this functionality would be required.</p>';
+         $output .= '<ul>';
+         $output .= '<li>You wish to allow your users to customize how many seconds to delay before taking the image snapshot of their video when they submit their video.</li>';
+         $output .= '<li>You wish to be able to Regenerate your video using different conversion commands, or even a different conversion application besides ffmpeg without changing the whole node type and then uploading again.</li>';
+         $output .= '<li>You wish to be able to Regenerate your thumbnail after realizing that the snap-shot provided is not good enough.</li>';
+         $output .= '</ul>';
+         $output .= '<p>These are just a sample of the added power with the new version of FlashVideo 2.2.  Now, with the power of the <a href="http://www.drupal.org/project/cck">Content Creation Kit</a>, specific parameters can be ';
+         $output .= 'given to the FlashVideo node type that will customize how that node generates the Video or Thumbnail.  Here\'s how it works.  When you create your new node type ';
+         $output .= 'using the <a href="http://www.drupal.org/project/cck">Content Creation Kit</a> module, you can now provide several different parameters that will be used to command the FlashVideo module during the conversion process.  With these CCK ';
+         $output .= 'parameters defined, they will then be visible during the node entry and updating, allowing very specific power over the conversion of that node.  ';
+         $output .= 'In other words, any parameter that you provide in these CCK data fields will simply override the default functionality provided in the FlashVideo Settings for that Node Type.  The whole idea is fairly straight forward if you are familiar with CCK.  ';
+         $output .= 'You can basically think of this new feature as placing the customizable that the FlashVideo Settings has within each node submitted or updated.</p>';
+         $output .= '<p>Below are the parameters that you can create to override FlashVideo functionality.  Please note that each parameter MUST be labeled the same as below, otherwise the FlashVideo Module will just ignore it.</p><br/>';
+         
+            $header = array(t('Parameter Name'), t('Type'), t('Description')); 
+            $rows[] = array(t('<b>flashvideo_regen_thumb</b>'), t('Integer'), t('Used to allow the node editor to regenerate the thumbnail after an edit.') ); 
+            $rows[] = array(t('<b>flashvideo_regen_video</b>'), t('Integer'), t('Used to allow the node editor to regenerate the video after an edit.') ); 
+            $rows[] = array(t('<b>flashvideo_output_dir</b>'), t('Text'), t('Used to command the output directory.  This is relative to the system files directory.') ); 
+            $rows[] = array(t('<b>flashvideo_cmd_path</b>'), t('Text'), t(' Used to specify the CWD path to the conversion utility executable.  Be sure to include the executable in the path.  Example <em>/usr/bin/ffmpeg</em>') ); 
+            $rows[] = array(t('<b>flashvideo_video_args</b>'), t('Text'), t('The arguments given to the conversion utility executable to generate a video.  The same format should be used as in the FlashVideo Settings.') ); 
+            $rows[] = array(t('<b>flashvideo_thumb_args</b>'), t('Text'), t(' The arguments given to the conversion utility executable to generate a thumbnail.  The same format should be used as in the FlashVideo Settings.') );
+            $rows[] = array(t('<b>flashvideo_thumbsize</b>'), t('Text'), t('The thumbnail size specified in the following format "WIDTH x HEIGHT".  Example <em>130x100</em>') ); 
+            $rows[] = array(t('<b>flashvideo_thumbwidth</b>'), t('Integer'), t('The integer representation of the thumbnail width.') ); 
+            $rows[] = array(t('<b>flashvideo_thumbheight</b>'), t('Integer'), t('The integer representation of the thumbnail height.') ); 
+            $rows[] = array(t('<b>flashvideo_thumbtime</b>'), t('Text'), t('The amount of time to delay before taking a snapshot of the video. Denoted as "00:00:00"') );
+            $rows[] = array(t('<b>flashvideo_thumbsecs</b>'), t('Integer'), t('The amount of time in seconds to delay before taking a snapshot of the video.') );
+            $rows[] = array(t('<b>flashvideo_thumbext</b>'), t('Text'), t('The extension of the output thumbnail.  Example: For JPG\'s this would be <em>jpg</em>') ); 
+            $rows[] = array(t('<b>flashvideo_videoext</b>'), t('Text'), t('The extension of the output video.  Example: For output FLV\'s, this would be <em>flv</em>') ); 
+            $rows[] = array(t('<b>flashvideo_videomime</b>'), t('Text'), t('The mime type of the output video.') ); 
+            
+            $output .= '<br/>'. theme('table', $header, $rows) .'<br/>';
+            $output .= '<br/>';
+            $output .= '<p>After you have created these custom CCK fields for your node type, you will then have the power over the FlashVideo module during node insertions and updates.</p>';
+           return $output;
+
+      case 'admin/settings/modules#description':  
+         return t('Allows you to use CCK to override FlashVideo Settings for each node entry.');
+   }
+}
+
+/**
+ * Hook from the FlashVideo module that gets all params to overate.
+ */
+
+function flashvideo_cck_flashvideo_get_params($file, $flags, $params) {
+   if ( ($flags > 0) ) {                                                                               // We only want to do this on the pending files.
+      $node = node_load($file->nid);                                                                  // We need to load the node to get the CCK variables.
+      if (flashvideo_cck_get_overloaded_params($node, $params)) {                                      // Only if they don't already provide a FLASHVIDEO_USE_CUSTOM flag.
+         $params['create_thumb'] = (($flags & FLASHVIDEO_REGEN_THUMB) == FLASHVIDEO_REGEN_THUMB);     // Do we regenerate a thumbnail?
+         $params['create_video'] = (($flags & FLASHVIDEO_REGEN_VIDEO) == FLASHVIDEO_REGEN_VIDEO);     // Do we regenerate a video?
+      }
+   }
+   
+   return $params;
+}
+
+/**
+ * Gets the overloaded parameters specified by that particular node.  
+ *
+ * You can override any of the conversion parameters by using CCK.
+ * This will allow you to create or regenerate the thumbnail or video according to new parameters provided in the CCK fields.
+ * This section will search for any parameters provided with CCK and then re-generate the thumbnail
+ * according to those overrided parameters.
+ *
+ * @param $node
+ *   A standard Drupal node
+ *
+ * @param $params
+ *   An array of the default parameters.
+ */
+
+function flashvideo_cck_get_overloaded_params($node, &$params) {
+
+   $params_overloaded = FALSE;
+   
+   $params['regen_thumb'] = 0;                                                                  // New parameter to regenerate the thumbnail.
+   $params['regen_video'] = 0;                                                                  // New parameter to regenerate the video.
+   
+   foreach ($params as $param => $value) {                                                       // Iterate through all of our parameters.
+      $overload_name = FLASHVIDEO_PARAM_PREFIX . $param;                                        // Get the overloaded variable name.
+      if (isset($node->{$overload_name}) && ($node->{$overload_name}[0]['value'] != $value)) {   // Is it set in our node and different from the default?
+         $params[$param] = $node->{$overload_name}[0]['value'];                                 // If so, then add it to our new parameters.
+         $params_overloaded = TRUE;
+      }
+   } 
+
+   return $params_overloaded;
+}
+
+/**
+ * FlashVideo hook once each node get submitted..
+ *
+ * This is the FlashVideo CCK hook to set up all the default values for the overidable parameters.
+ */
+
+function flashvideo_cck_flashvideo_submit($node, $params) {
+   if (flashvideo_cck_get_overloaded_params($node, $params)) {                          // If we decide to overide some paramters.
+      $flags = 0; 
+       
+      if ($params['regen_video']) {                
+         $flags = $flags | FLASHVIDEO_REGEN_VIDEO;                                     // Set the regenerate video flag.
+      }                   
+                  
+      if ($params['regen_thumb']) {                
+         $flags = $flags | FLASHVIDEO_REGEN_THUMB;                                     // Set the regenerate thumbnail flag.
+      } 
+      
+      if ( $params['regen_video'] || $params['regen_thumb'] ) {   
+          // Grab all files in this node that are from the FlashVideo table, except the Original Video
+         $files = db_query("SELECT * FROM {flashvideo} fv LEFT JOIN {files} f ON fv.fid = f.fid WHERE (f.nid=%d) AND (fv.fid <> fv.oid)", $node->nid);
+                  
+            while ($file = db_fetch_object($files)) {
+            $file_is_flash = flashvideo_is_flash($file->filemime);
+               if ( ($params['regen_video'] && $file_is_flash) || ($params['regen_thumb'] && !$file_is_flash) ) {
+               file_delete($file->filepath);                                           // Delete the file from the disk.
+               db_query("DELETE FROM {flashvideo} WHERE (fid = %d)", $file->fid);      // Delete the file from the flahvideo table.
+               db_query("DELETE FROM {file_revisions} WHERE (fid = %d)", $file->fid);  // Delete the file from the files table.
+               db_query("DELETE FROM {files} WHERE (fid = %d)", $file->fid);           // Delete the file from the files table.
+            }
+            
+            db_query("DELETE FROM {ffmpeg_data} WHERE (fid = %d)", $file->fid);        // Delete all unsuccessful conversions.      
+         }
+               
+         db_query("UPDATE {flashvideo} SET flags=%d WHERE nid=%d AND oid=fid", $flags, $node->nid);   // Update the flags for the original video.
+      }
+   }
+}
+
+/**
+ * Hook Form Alter.
+ *
+ * This is the FlashVideo CCK hook to set up all the default values for the overidable parameters.
+ */
+
+function flashvideo_cck_form_alter($form_id, &$form) {
+   if (isset($form['type'])) {                                                // Is the form set.
+      $node_type = $form['type']['#value'];                                   // Get the Node Type.
+      if ($form_id == $node_type .'_node_form') {                               // Check for the Node Editor.
+         if (flashvideo_variable_get($node_type, 'enable', 0)) {          // Make sure the FlashVideo module is enabled for this node type.
+            $params = flashvideo_get_convert_params($node_type);              // Get the Default Conversion parameters.
+            
+            foreach ($params as $param => $value) {                            // Iterate through all parameters.
+               $field = FLASHVIDEO_PARAM_PREFIX . $param;                     // Set the field name for each parameters.
+               if (isset($form[$field])) {                                     // Is this form variable set.
+                  if (!$form[$field][0]['value']['#default_value']) {          // Only set this if they haven't already provided a value.
+                     $form[$field][0]['value']['#default_value'] = $value;    // If so, then overide the default value.
+                  }
+               }
+            }
+            
+            /**
+             * We need to make sure that the regenerate parameters are set to 0... 
+             * This will keep from having unnecessary regenerates.
+             */
+            
+            $field = FLASHVIDEO_PARAM_PREFIX .'regen_thumb';
+            if (isset($form[$field])) {                                        // Is this form variable set.
+               $form[$field][0]['value']['#default_value'] = 0;               // If so, then overide the default value.
+            }
+            
+            $field = FLASHVIDEO_PARAM_PREFIX .'regen_video';
+            if (isset($form[$field])) {                                        // Is this form variable set.
+               $form[$field][0]['value']['#default_value'] = 0;               // If so, then overide the default value.
+            }            
+         }
+      }
+   }
+}

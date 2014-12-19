@@ -1,0 +1,420 @@
+<?php
+// $Id: artmob_articles.module,v 1.0 2007/05/17 08:31:22 drumm Exp $
+
+/**
+ * @file
+ * Allows users to enter a Link to an Article.
+ */
+
+
+//* Implementation of hook_node_info().
+function artmob_articles_node_info() {
+  return array(
+    'Articles' => array(
+    'name' => t('Articles'),
+    'module' => 'artmob_articles',
+    'description' => t("This allows a user to enter a new Article")
+    ),
+  );
+}
+
+// Implementation of hook_perm().
+function artmob_articles_perm() {
+  return array('Add Article', 'Edit Article', 'Remove Article', 'View Article');
+}
+
+
+// Implementation of hook_access().
+function artmob_articles_access($op, $node) {
+  global $user;
+
+  if ($op == 'create') {
+    // Only registered users can create Articles.
+    return user_access('Add Article');
+  }
+
+  else if ($op == 'update') {
+    // Only registered users can update an Article.
+    return user_access('Edit Article');
+  }
+  else if ($op == 'delete') {
+    // Only registered users can delete an Article.
+    return user_access('Delete Article');
+  }
+  else if ($op == 'view') {
+    // Only registered users can view an Article if it is locked.
+    return user_access('View Article');
+  }
+  else {
+    return FALSE;
+  }
+}
+
+/**
+ * Implementation of hook_menu().
+function artmob_articles_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+  } else {
+  }
+
+  return $items;
+}
+*/
+
+function artmob_articles_view($node, $teaser = FALSE, $page = FALSE) {
+  if ($page) {
+    $node->body = check_markup($node->body, $node->filter, FALSE);
+  $node->content['artmob_articles'] = array('#value' => theme( 'artmob_articles_basic_view', $node, $page ));
+  } 
+  else {
+    $node->teaser = check_markup($node->teaser, $node->filter, FALSE);
+    $node->content['artmob_articles'] = array('#value' => theme( 'artmob_articles_teaser_view', $node, $page ));
+  }
+  return $node;
+}
+
+function theme_artmob_articles_basic_view( &$node, $page ) {
+  $content = '';
+  $content .= $node->Author ? '<div class="byline">By: '. $node->Author .'</div>' : '';
+  $content .= $node->body;
+  return $content;
+}
+
+function theme_artmob_articles_teaser_view( &$node, $page ) {
+  $content = '';
+  $content .= $node->Author ? '<div class="byline"><p>By: '. $node->Author .'</p></div>' : '';
+  $content .= $node->teaser;
+  return $content;
+}
+
+
+/**
+ * Implementation of hook_block().
+ *
+ */
+function artmob_articles_block($op = 'list', $delta = 0) {
+  if ($op == 'list') {
+    $block[0]['info'] = t('Articles');
+    $block[1]['info'] = t('Associated Articles');
+    return $block;
+  }
+  else if ($op == 'configure') {
+    switch ($delta) {
+      case 0: //Articles
+        $form['recent_articles_num_posts'] = array(
+          '#type' => 'textfield',
+          '#title' => t('Number of recent articles to display'),
+          '#default_value' => variable_get('recent_articles_num_posts', 5)
+        );
+        break;
+    }
+    return $form;
+  }
+  else if ($op == 'save') {
+    switch ($delta) {
+      case 0: //Recent Articles
+        variable_set('recent_articles_num_posts', (int)$edit['recent_articles_num_posts']);
+        break;
+    }
+  }
+  else if ($op == 'view') {
+    switch ($delta) {
+      case 0:
+        if ( (arg(0) == 'node') and (is_numeric(arg(1)))) {
+          $result = db_query_range("SELECT nid FROM {node} WHERE TYPE = 'Articles' ORDER BY changed DESC", 0, 5);
+          if (db_num_rows($result)) {
+            while ($row = db_fetch_object($result)) {
+              $node = node_load($row->nid);
+              $node = node_prepare($node);
+              $contentarray[] = $node;
+            }
+          }
+        }
+        $block['subject'] = 'Articles';
+        $block['content'] = theme('artmob_articles_block', $contentarray);
+        return $block;
+      case 1:
+        $articles = array();
+        if ( (arg(0) == 'node') and (is_numeric(arg(1)))) {
+          $nid = arg(1);
+          $current_node = node_load( $nid );
+          if (  artmob_articles_is_article_link ( $current_node->type ) ) {
+            $articles = artmob_articles_get_all_associated_articles( $nid );
+          }
+
+          if ( count ( $articles ) ) {
+            $block['subject'] = 'Associated Articles';
+            $block['content'] = theme('artmob_articles_associated_articles_block', $articles);
+          }
+        }
+        return $block;
+    }
+  }
+}
+
+function theme_artmob_articles_block( $contentarray ) {
+  //return (PCMain_node_title_list($result));
+  $content = $contentarray[0]->body;
+  return $content;
+}
+
+function theme_artmob_articles_associated_articles_block( $contentarray ) {
+  $content = '';
+  $content .= '<div associated-articles>';
+  $content .= '<ul>';
+  if ( count ($contentarray) ) {
+    foreach ( $contentarray as $nid => $node ) {
+      $content .= '<li>';
+      $content .= l( $node->title, 'node/'. $nid );
+      $content .= '</li>';
+    }
+  }
+  $content .= '</ul>';
+  $content .= '</div>';
+  return $content;
+}
+
+// Implementation of hook_insert().
+
+function artmob_articles_insert($node) {
+}
+
+// Implementation of hook_update().
+function artmob_articles_update($node) {
+}
+
+// Implementation of hook_delete().
+function artmob_articles_delete($node) {
+}
+
+// Implementation of hook_load().
+function artmob_articles_load($node) {
+}
+
+
+/**
+ * Implementation of hook_submit().
+ */
+function artmob_articles_submit(&$node) {
+  global $user;
+  // Set default values for non-administrators.
+  if (!user_access('administer nodes')) {
+    $node->revision = 1;
+    $node->uid = $user->uid;
+  }
+}
+
+// Implementation of hook_form().
+function artmob_articles_form(&$node) {
+
+  $type = node_get_types('type', $node);
+
+  $form['Articles'] = array(
+    '#type'          => 'fieldset',
+    '#title'         => t('Articles'),
+    '#weight'        => -5,
+    '#collapsible'   => TRUE,
+    '#collapsed'     => FALSE
+  );
+
+  $form['Articles']['title'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Title'),
+    '#default_value' => $node->title,
+    '#description'   => t('enter the title of the article'),
+    '#tree'          => 'FALSE',
+    '#required'      => True,
+    '#weight'        => -8,
+  );
+
+  $form['Articles']['widgetam1'] = array(
+    '#type' => 'artmob_article_contributor_widget',
+    '#title' => '',
+    '#process' => array('artmob_article_contributor_widget_expand' => array($node) )
+  );
+
+  $form['body_filter']['body'] = array('#type' => 'textarea',
+    '#title' => check_plain($type->body_label),
+    '#default_value' => $node->body,
+    '#rows' => 20,
+    '#required' => FALSE
+  );
+  $form['body_filter']['format'] = filter_form($node->format);
+
+
+  return $form;
+
+}
+
+/**
+ * Implementation of hook_form_alter().
+ *
+*/
+function artmob_articles_form_alter($form_id, &$form) {
+  // boilerplate code to determine the node type of the form
+  if (isset($form['type'])) {
+      $type = $form['type']['#value'];
+    }
+  elseif (isset($form['orig_type'])) {
+      $type = $form['orig_type']['#value'];
+    }
+  else {
+      return;
+  }
+  $enabled_article_link = variable_get('is_article_link_'. $type, 0 );
+  switch ($form_id) {
+    case $type .'_node_form':
+      // Form addition to all Enabled node types.
+      if ( $enabled_article_link ) {
+        $form['article_link'] = array(
+          '#type'          => 'fieldset',
+          '#title'         => t('Associate Articles'),
+          '#weight'        => 3,
+          '#collapsible'   => TRUE,
+          '#collapsed'     => FALSE
+        );
+
+        $result = db_query("SELECT * FROM {am_articles_association} WHERE nid = %d", $form['nid']['#value']);
+        while ($item = db_fetch_object($result)) {
+          //!!!Build articles array
+          $associated_articles[] = $item->article_nid;
+        }
+        //!!!create multi-select and populate it
+        $article_list = artmob_articles_get_article_list( False );
+        $form['article_link']['associated_articles'] = array(
+          '#type'          => 'select',
+          '#title'         => t('Associated Articles'),
+          '#default_value' => $associated_articles,
+          '#description'   => t('Select any associated articles for this exhibit'),
+          '#multiple'      => 'TRUE',
+          '#tree'          => 'FALSE',
+          '#required'      => False,
+          '#options' => $article_list
+        );
+
+      }
+      break;
+    case 'node_type_form':
+      if ( $type != 'Articles' ) {
+        $form['workflow']['is_article_link'] = array(
+          '#type' => 'radios',
+          '#title' => t('Use Articles Association Link'),
+          '#default_value' => $enabled_article_link,
+          '#options' => array(0 => t('Disabled'), 1 => t('Enabled')),
+          '#description' => t('Should this node type use the artible association link?'),
+        );
+      }
+      break;
+  }
+}
+
+
+/**
+ * Implementation of hook_nodeapi().
+*/
+function artmob_articles_nodeapi(&$node, $op, $teaser, $page) {
+  switch ($op) {
+    case 'prepare':
+      break;
+    case 'update':
+      $bupdate = TRUE;
+
+      //Fall through, with flag.  Therefore with every update we delete
+      //the old associated records and then resave the new ones
+
+    case 'delete':
+      db_query('DELETE FROM {am_articles_association} WHERE nid=%d', $node->nid);
+
+      if (!$bupdate) {
+        break;
+      }
+
+    case 'insert':
+      $type = $node->type;
+      if (artmob_articles_is_article_link( $node->type ) ) {
+        foreach ( $node->associated_articles as $article_nid ) {
+          db_query("INSERT INTO {am_articles_association}
+                                (nid, article_nid, node_type)
+                                 VALUES (%d, %d, '%s')",
+                                 $node->nid, $article_nid, $node->type );
+        }
+      }
+      break;
+    case 'load':
+      if (artmob_articles_is_article_link( $node->type ) ) {
+        $result = artmob_articles_get_all_associated_articles_as_query( $node->nid );
+        while ($row = db_fetch_object($result)) {
+          $article_list[] = $row->article_nid;
+        }
+        $aload['associated_articles'] = $article_list;
+      }
+      return $aload;
+      break;
+
+    case 'view':
+      break;
+    case 'delete revision':
+      break;
+    case 'submit':
+      break;
+  }
+}
+
+
+
+// Implementation of hook_help().
+function artmob_articles_help($section) {
+  switch ($section) {
+    case 'admin/help#description':
+      return t('Enables the creation of articles.');
+      break;
+    case 'admin/modules#description':
+      return t('Enables the creation of articles.');
+      break;
+    case 'admin/node/add#artmob_articles':
+      return t('An Article. Use this page to add an article.');
+      break;
+  }
+}
+
+function theme_article_list_items($list = array()) {
+  $content = '<ul>';
+  foreach ($list as $list_item) {
+    $content .= '<li>'. $list_item .'</li>';
+  }
+  $content .= '</ul>';
+  return $content;
+}
+
+function artmob_articles_get_article_list( $include_none = True, $none_text = 'None' ) {
+  $result = db_query("SELECT * FROM {node} WHERE TYPE = 'Articles' ORDER BY title");
+  if ( $include_none ) {
+    $articles[0] = $none_text;
+  }
+  while ($row = db_fetch_object($result)) {
+    $articles[$row->nid] = $row->title;
+  }
+  return $articles;
+}
+
+function artmob_articles_is_article_link( $type ) {
+  return variable_get('is_article_link_'. $type, 0 );
+}
+
+function artmob_articles_get_all_associated_articles_as_query( $nid ) {
+  $result = db_query("SELECT * FROM {am_articles_association} WHERE nid = %d ", $nid);
+  return $result;
+}
+
+function artmob_articles_get_all_associated_articles( $nid ) {
+  $articles = array();
+  $result = artmob_articles_get_all_associated_articles_as_query( $nid );
+  while ($row = db_fetch_object($result)) {
+    $article_nid = $row->article_nid;
+    $article_node = node_load( $article_nid );
+    $articles[$article_nid] = $article_node;
+  }
+  return $articles;
+}

@@ -1,0 +1,581 @@
+<?php
+// $Id: content_access.module,v 1.1.2.5 2007/08/20 09:39:31 fago Exp $
+
+/* @file
+ * Implementation of hook_menu().
+ */
+function content_access_menu($may_cache) {
+  global $user;
+  $items = array();
+
+  if (!$may_cache) {
+    if (arg(0) == 'node' && is_numeric(arg(1))) {
+      $node = node_load(arg(1));
+      if (!empty($node) && content_access_get_settings('per_node', $node->type)) {
+        $items[] = array('path' => 'node/'. $node->nid .'/access', 'title' => t('Access control'),
+          'callback' => 'drupal_get_form', 'callback arguments' => array('content_access_page', $node->nid),
+          'access' => user_access('grant content access') || (user_access('grant own content access') && ($user->uid == $node->uid)),
+          'weight' => 5,
+          'type' => MENU_LOCAL_TASK);
+      }
+    }
+    if (arg(0) == 'admin' && arg(1) == 'content' && arg(2) == 'types' && arg(3)) {
+      $type = str_replace('-', '_', arg(3));
+      if ($type_name = node_get_types('name', $type)) {
+        $items[] = array(
+          'path' => 'admin/content/types/'. arg(3) .'/edit',
+          'title' => t('Edit'),
+          'type' => MENU_DEFAULT_LOCAL_TASK,
+        );
+        $items[] = array(
+          'path' => 'admin/content/types/'. arg(3) .'/access',
+          'title' => t('Access control'),
+          'description' => t('Configure content access control.'),
+          'callback' => 'drupal_get_form',
+          'callback arguments' => array('content_access_admin_settings', $type),
+          'access' => user_access('administer nodes') && user_access('administer content types'),
+          'type' => MENU_LOCAL_TASK,
+          'weight' => 2,
+        );
+      }
+    }
+  }
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function content_access_perm() {
+  return array('grant content access', 'grant own content access');
+}
+
+/*
+ * Implementation of hook_node_grants()
+ */
+function content_access_node_grants($account, $op) {
+  $return = array('content_access_rid' => array_keys($account->roles));
+  return $account->uid ? array('content_access_author' => array($account->uid)) + $return : $return;
+}
+
+/*
+ * Per node settings page
+ */
+function content_access_page($nid) {
+  $roles = content_access_get_roles_and_author();
+  $node = node_load($nid);
+  drupal_set_title(check_plain($node->title));
+
+  $form['settings'] = array(
+    '#type' => 'fieldset', 
+    '#title' => t('Role access control settings'),
+    '#collapsible' => TRUE,
+  );
+  drupal_add_css(drupal_get_path('module', 'content_access') .'/content_access.css');
+  $form['settings']['view'] = array('#type' => 'checkboxes',
+    '#prefix' => '<div class="content_access-div">',
+    '#suffix' => '</div>',
+    '#options' => $roles,
+    '#title' => t('View'),
+    '#default_value' => content_access_per_node_setting('view', $node),
+  );
+  $form['settings']['update'] = array('#type' => 'checkboxes',
+    '#prefix' => '<div class="content_access-div">',
+    '#suffix' => '</div>',
+    '#options' => $roles,
+    '#title' => t('Edit'),
+    '#default_value' => content_access_per_node_setting('update', $node),
+  );
+  $form['settings']['delete'] = array('#type' => 'checkboxes',
+    '#prefix' => '<div class="content_access-div">',
+    '#suffix' => '</div>',
+    '#options' => $roles,
+    '#title' => t('Delete'),
+    '#default_value' => content_access_per_node_setting('delete', $node),
+  );
+  $form['settings']['clearer'] = array(
+    '#value' => '<br clear="all" />',
+  );
+  if (module_exists('acl')) {
+    $form['acl'] = array(
+      '#type' => 'fieldset', 
+      '#title' => t('User access control lists'),
+      '#description' => t('These settings allow you to grant access to specific users.'),
+      '#collapsible' => TRUE,
+      '#tree' => TRUE,
+    );
+    foreach (array('view', 'update', 'delete') as $op) {
+      $acl_id = acl_get_id_by_name('content_access', $op .'_'. $node->nid);
+      if (!$acl_id) { // create one
+        $acl_id = acl_create_new_acl('content_access', $op .'_'. $node->nid);
+        acl_node_add_acl($node->nid, $acl_id, $op == 'view', $op == 'update', $op == 'delete');
+      }
+      $form['acl'][$op] = acl_edit_form($acl_id, 'Grant '. $op .' access');
+      $form['acl'][$op]['#collapsed'] = !isset($_POST['acl'][$op]['add_button']) && !isset($_POST['acl'][$op]['delete_button']); 
+    }
+  }
+
+  $form['node'] = array('#type' => 'value', '#value' => $node);
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+    '#weight' => 10,
+  );
+  return $form;
+}
+
+function content_access_page_submit($form_id, $form_values) {
+  $node = $form_values['node'];
+  $settings = array();
+  foreach (array('view', 'update', 'delete') as $op) {
+    //set the settings so that further calls will return this settings
+    unset($form_values[$op][0]);
+    $settings[$op] = array_filter($form_values[$op]);
+
+    if (module_exists('acl') && isset($form_values['acl'][$op])) {
+      acl_save_form($form_values['acl'][$op]);
+    }
+  }
+  //save new settings for later..
+  content_access_save_per_node_settings($node, $settings);
+
+  //apply new settings
+  node_access_acquire_grants($node);
+  drupal_set_message('Your changes have been saved.');
+}
+
+/*
+ * Per content type administration page form
+ */
+function content_access_admin_settings($type) {
+  $roles = content_access_get_roles_and_author();
+  //per node
+  $form['node'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Per node access control settings'),
+    '#collapsible' => TRUE,
+    '#description' => t('Optionally you can enable per node access control settings. '.
+      'Configure access to the per node access settings at drupal\'s access control permission page.'),
+  );
+  $form['node']['per_node'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable per node access control settings'),
+    '#default_value' => content_access_get_settings('per_node', $type),
+  );
+  //defaults
+  $form['defaults'] = array(
+    '#type' => 'fieldset', 
+    '#title' => t('Default access control settings'),
+    '#collapsible' => TRUE,
+    '#description' => t('If per node settings are available, the default settings will be overridden by them.'),
+  );
+  drupal_add_css(drupal_get_path('module', 'content_access') .'/content_access.css');
+  $form['defaults']['view'] = array('#type' => 'checkboxes',
+    '#prefix' => '<div class="content_access-div">',
+    '#suffix' => '</div>',
+    '#options' => $roles,
+    '#title' => t('View'),
+    '#default_value' => content_access_get_settings('view', $type),
+  );
+  $form['defaults']['update'] = array('#type' => 'checkboxes',
+    '#prefix' => '<div class="content_access-div">',
+    '#suffix' => '</div>',
+    '#options' => $roles,
+    '#title' => t('Edit'),
+    '#default_value' => content_access_get_settings('update', $type),
+  );
+  $form['defaults']['delete'] = array('#type' => 'checkboxes',
+    '#prefix' => '<div class="content_access-div">',
+    '#suffix' => '</div>',
+    '#options' => $roles,
+    '#title' => t('Delete'),
+    '#default_value' => content_access_get_settings('delete', $type),
+  );
+  $form['defaults']['clearer'] = array(
+    '#value' => '<br clear="all" />',
+  );
+  $priority = content_access_get_settings('priority', $type);
+  $form['advanced'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Advanced'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  $form['advanced']['priority'] = array(
+    '#type' => 'weight',
+    '#title' => t('Give node grants priority'),
+    '#default_value' => $priority,
+    '#description' => t('If you are only using this access control module, you can safely ignore this. '.
+      'If you are using multiple access control modules you can adjust the priority of this module.'),
+  );
+  $form['type'] = array('#type' => 'value', '#value' => $type);
+  $form['submit'] = array(
+  '#type' => 'submit',
+  '#value' => t('Submit'),
+  '#weight' => 10,
+  );
+  return $form;
+}
+
+function content_access_admin_settings_submit($form_id, $form_values) {
+  $per_node_old = content_access_get_settings('per_node', $form_values['type']);
+  $settings = content_access_get_settings();
+
+  foreach (content_access_available_settings() as $setting) {
+    if (is_array($form_values[$setting])) {
+      unset($form_values[$setting][0]);
+      $form_values[$setting] = array_filter($form_values[$setting]);
+    }
+    $settings[$setting][$form_values['type']] = $form_values[$setting];
+  }
+  content_access_set_settings($settings);
+
+  // mass update all nodes that use default settings
+  if (content_access_get_settings('per_node', $form_values['type']) && $per_node_old) {
+    $sql = "SELECT n.nid FROM {node} n LEFT JOIN {content_access} na ON na.nid = n.nid 
+      WHERE type = '%s' AND na.nid IS NULL";
+  }
+  else {
+    $sql = "SELECT n.nid FROM {node} n WHERE type = '%s'";
+  }
+  $result = db_query($sql, $form_values['type']);
+  while ($node = db_fetch_object($result)) {
+    node_access_acquire_grants(node_load($node->nid));
+  }
+  drupal_set_message('Your changes have been saved.');
+}
+
+/*
+ * Implementation of hook_node_access_records()
+ * @param $optimize If the grants should be returned optimized
+ */
+function content_access_node_access_records($node, $optimize = TRUE) {
+  if (content_access_disabling()) {
+    return;
+  }
+
+  //apply per node settings if necessary
+  if (content_access_get_settings('per_node', $node->type)) {
+    $grants = array();
+    foreach (array('view', 'update', 'delete') as $op) {
+      foreach (content_access_per_node_setting($op, $node) as $rid) {
+        $grants[$rid]['grant_'. $op] = 1;
+      }
+    }
+    foreach ($grants as $rid => $grant) {
+      $grants[$rid] = content_access_proccess_grant($grant, $rid, $node);
+    }
+  }
+  else {
+    //apply the content type defaults
+    $grants = content_access_get_default_grant($node);
+  }
+
+  if (empty($grants)) {
+    //this means we grant no access
+    $grants[] = array('grant_view' => 0, 'realm' => 'content_access_rid', 'gid' => 0);
+  }
+  else if ($optimize && content_access_optimize_grants($grants, $node)) {
+    if (empty($grants)) {
+      //insert default permissons: 1,0,0
+      $grants = array(array('realm' => 'all', 'gid' => 0, 'grant_view' => 1, 'grant_update' => 0, 'grant_delete' => 0,
+        'priority' => content_access_get_settings('priority', $node->type)));
+    }
+  }
+  return $grants;
+}
+
+/*
+ * Implementation of hook_nodeapi()
+ */
+function content_access_nodeapi($node, $op, $teaser, $page) {
+  if ($op == 'delete') {
+    db_query("DELETE FROM {content_access} WHERE nid = %d", $node->nid);
+  }
+}
+
+/*
+ * Implementation of hook_enable()
+ */
+function content_access_enable() {
+  node_access_rebuild();
+}
+
+/*
+ * Used by the ACL module
+ */
+function content_access_enabled() {
+  return !content_access_disabling();
+}
+
+/*
+ * Implementation of hook_disable()
+ */
+function content_access_disable() {
+  content_access_disabling(TRUE);
+  node_access_rebuild();
+}
+
+/*
+ * Remembers if we have disabled access
+ */
+function content_access_disabling($set = NULL) {
+  static $disabling = FALSE;
+
+  if (isset($set)) {
+    $disabling = $set;
+  }
+  return $disabling;
+}
+
+/*
+ * Returns the content_access' settings
+ * @param $return One of the content_access_available_settings(), e.g. 'view' or 'pernode'
+ * @param $type If not all, return the setting for the specified type
+ */
+function content_access_get_settings($return = 'all', $type = NULL) {
+  if ($return == 'all') {
+    return variable_get('content_access_settings', array());
+  }
+  if (isset($type)) {
+    $settings = content_access_get_settings($return);
+    return isset($settings[$type]) ? $settings[$type] : content_access_get_setting_defaults($return, $type);
+  }
+  if (!isset($type)) {
+    $settings = content_access_get_settings();
+    return isset($settings[$return]) ? $settings[$return] : array();
+  }
+  return array();
+}
+
+/*
+ * Saves the content_access settings - needs the complete settings array
+ */
+function content_access_set_settings($settings) {
+  //cleanup the settings before saving
+  foreach (content_access_available_settings() as $setting) {
+    if (isset($settings[$setting])) {
+      foreach ($settings[$setting] as $type => $value) {
+        if (!isset($value)) {
+          unset($settings[$setting][$type]);
+        }
+      }
+    }
+  }
+  variable_set('content_access_settings', $settings);
+}
+
+/*
+ * returns an array containing all available content_access settings
+ */
+function content_access_available_settings() {
+  return array('view', 'update', 'delete', 'per_node', 'priority');
+}
+
+/*
+ * Defines default values for settings
+ */
+function content_access_get_setting_defaults($setting, $type) {
+  switch ($setting) {
+    default:
+      return array();
+    case 'view':
+      return array(DRUPAL_ANONYMOUS_RID, DRUPAL_AUTHENTICATED_RID);
+    case 'delete':
+    case 'update':
+      $roles = content_access_get_permission_access('edit '. $type .' content');
+      if (count(array_diff(array(DRUPAL_ANONYMOUS_RID, DRUPAL_AUTHENTICATED_RID), content_access_get_permission_access('edit own '. $type .' content'))) == 0) {
+        $roles[] = 'author';
+      }
+      return $roles;
+    case 'priority':
+      return 0;
+  }
+}
+
+/*
+ * Returns an array of role ids, that contain the given permission
+ */
+function content_access_get_permission_access($perm) {
+  static $roles = array();
+
+  if (!isset($roles[$perm])) {
+    $roles[$perm] = array_keys(user_roles(0, $perm));
+  }
+  return $roles[$perm];
+}
+
+/*
+ * Returns all possible roles with an added item "author"
+ */
+function content_access_get_roles_and_author() {
+  static $roles;
+  if (!isset($roles)) {
+    $roles = array('author' => t('author')) + user_roles();
+  }
+  return $roles;
+}
+
+/*
+ * Returns the default grants for a given node type
+ */
+function content_access_get_default_grant($node) {
+  static $defaults = array(); //cache per type default grants in a static array
+
+  if (!isset($defaults[$node->type])) {
+    $grants = array();  //apply the defaults
+    $roles = content_access_get_roles_and_author();
+
+    foreach (array('view', 'update', 'delete') as $op) {
+      foreach (content_access_get_settings($op, $node->type) as $rid) {
+        $grants[$rid]['grant_'. $op] = 1;
+      }
+    }
+    foreach ($grants as $rid => $grant) {
+      $grants[$rid] = content_access_proccess_grant($grant, $rid, $node);
+    }
+    $defaults[$node->type] = $grants;
+  }
+  //we might have to update the author uid before returning the grants
+  else if (isset($defaults[$node->type]['author'])) {
+    $defaults[$node->type]['author']['gid'] = $node->uid;
+  }
+
+  return $defaults[$node->type];
+}
+
+/*
+ * Process a grant, which means
+ * add priority, realm and other properties
+ */
+function content_access_proccess_grant($grant, $rid, $node) {
+  $grant['realm'] = ($rid == 'author') ? 'content_access_author' : 'content_access_rid';
+  $grant['gid'] = ($rid == 'author') ? $node->uid : $rid;
+  $grant['priority'] = content_access_get_settings('priority', $node->type);
+  return $grant;
+}
+
+
+/*
+ * Returns the per node role settings. If no per node settings are available, it will return the
+ * default settings
+ * 
+ * @param $op One of view, update or delete
+ * @param $node The node object
+ * @param $settings (optional) This may be used to update the settings cache with the given settings
+ * @return An array of role ids which have access
+ */
+function content_access_per_node_setting($op, $node, $settings = NULL) {
+  static $grants = array();
+ 
+  if (isset($settings)) {
+    //update settings cache
+    $grants[$node->nid] = $settings;
+    return;
+  }
+  if (!isset($grants[$node->nid])) {
+    //load settings from db
+    $grants[$node->nid] = content_access_get_per_node_settings($node);
+  }
+  //apply the defaults if no per node settings are available
+  return isset($grants[$node->nid][$op]) ? $grants[$node->nid][$op] : content_access_get_settings($op, $node->type);
+}
+
+/*
+ * Saves custom per node settings in the own content_access table
+ */
+function content_access_save_per_node_settings($node, $settings) {
+  db_query("UPDATE {content_access} SET settings = '%s' WHERE nid = %d", serialize($settings), $node->nid);
+  if (!db_affected_rows()) {
+    db_query("INSERT INTO {content_access} (nid, settings) VALUES(%d, '%s')", $node->nid, serialize($settings));
+  }
+  //make content_access_per_node_setting() use the new settings
+  content_access_per_node_setting(NULL, $node, $settings);
+}
+
+/*
+ * Gets the per node settings of a node
+ * Note: This function won't apply defaults, so if there are no other settings 
+ * it will return an empty array
+ */
+function content_access_get_per_node_settings($node) {
+  $settings = db_result(db_query("SELECT settings FROM {content_access} WHERE nid = %d", $node->nid));
+  if (!$settings) {
+    return array();
+  }
+  return unserialize($settings);
+}
+
+/*
+ * Removes grants that doesn't change anything
+ * Note: The grants are compared with the normal access control settings
+ */
+function content_access_optimize_grants(&$grants, $node) {
+  //populate $view, $update and $delete with roles, that have access
+  foreach (array('view', 'update', 'delete') as $op) {
+    $$op = array(); 
+  }
+  foreach ($grants as $key => $grant) {
+    foreach (array('view', 'update', 'delete') as $op) {
+      if ($grant['grant_'. $op]) {
+        ${$op}[] = $key; 
+      }
+    }
+  }
+  //compare the permissions
+  $all = array(DRUPAL_ANONYMOUS_RID, DRUPAL_AUTHENTICATED_RID);
+  if (count(array_diff($all, $view)) == 0) {
+    $view = $all;
+  }
+  $edit_perm_roles = content_access_get_permission_access('edit '. $node->type .' content');
+  $edit_own_roles = content_access_get_permission_access('edit own '. $node->type .' content');
+  if (in_array(DRUPAL_AUTHENTICATED_RID, $edit_own_roles)) {
+    $edit_perm_roles[] = 'author';
+  }
+  foreach (array('update', 'delete') as $op) {
+    $$op = array_diff($$op, $edit_perm_roles);
+  }
+  //$view, $update and $delete contain now only the necessary rids/author
+  //so let's remove unnecessary grants, if any
+  if ($view == $all && empty($update) && empty($delete)) {
+    $grants = array();
+  }
+  else {
+    foreach ($grants as $key => $grant) {
+      foreach (array('view', 'update', 'delete') as $op) {
+        if ($grant['grant_'. $op] && in_array($key, $$op)) {
+          //it's still here, so we can't remove this grant
+          continue 2;
+        }
+      }
+      //ok, remove it
+      unset($grants[$key]);
+    }
+  }
+}
+
+/**
+ * Implementation of hook_node_type():
+ * Update settings on node type name change
+ */
+function content_access_node_type($op, $info) {
+  switch ($op) {
+    case 'delete':
+      $settings = content_access_get_settings();
+      foreach (content_access_available_settings() as $setting) {
+        unset($settings[$setting][$info->type]);
+      }
+      content_access_set_settings($settings);
+      break;
+    case 'update':
+      if (!empty($info->old_type) && $info->old_type != $info->type) {
+        $settings = content_access_get_settings();
+        foreach (content_access_available_settings() as $setting) {
+          $settings[$setting][$info->type] = $settings[$setting][$info->old_type];
+          unset($settings[$setting][$info->old_type]);
+        }
+        content_access_set_settings($settings);
+      }
+      break;
+  }
+}

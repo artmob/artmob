@@ -1,0 +1,132 @@
+#attribute-tab #summary-icons, #attribute-tab .otherworks { display: none }
+
+#main {
+	color:#333;
+	font-family: Helvetica, Arial, sans-serif;
+	}
+
+
+
+/*   Tab Button Behaviour  --------------------------------*/
+#menu-local-tasks.tabs {
+	height:32px;
+	background: #333 url(../images/tab-bg.png) repeat-x center center;
+	padding:0;
+	width:100%;
+	border-width:0;
+	margin-bottom:10px;
+	}
+
+	#menu-local-tasks.tabs li {
+		display:block;
+		float:left;
+		background: transparent url(../images/tab-bevel.png) no-repeat right 9px ;
+		margin:0 0 0 2px;
+		height:32px;
+		border-width:0;
+		}
+		#menu-local-tasks.tabs li:last-child {
+			background-image:none;
+			}	
+		#menu-local-tasks.tabs li a,
+		#menu-local-tasks.tabs li a:active,
+		#menu-local-tasks.tabs li a:visited{
+			display:block;
+			float:left;
+			height:32px;
+			line-height:36px;
+			background: none;
+			color: white;
+			margin: 0 0 0 10px;
+			padding: 0 14px 0 0;
+			border-width: 0;
+			text-decoration: none;
+			text-transform:uppercase;
+			font-size:.8em;
+			letter-spacing: .1em;
+			font-weight:bold;
+			text-shadow: #000 0px -2px 2px; 
+			}
+			
+		#menu-local-tasks.tabs li a:hover, 		#menu-local-tasks.tabs li:hover{
+			border-width:0;
+			background: transparent url(../images/tab-hover.png) repeat-x center center;
+			}
+		
+	/*   The current active tab  ------------------------------*/
+	#menu-local-tasks.tabs li.active a {
+		border-width: 0; 
+		background: #fff url(../images/tab-active.png) repeat-x top right;
+		color: #252525;
+		text-shadow: none;
+		}
+	#menu-local-tasks.tabs li.active {
+		border-width: 0; 
+		background: #fff url(../images/tab-active.png) repeat-x top left;
+		margin-bottom:-1px;
+		border-bottom: 1px solid #fff;
+		color: #252525;
+		}
+
+
+/* Audio */
+
+.content-amAudio .swftools-wrapper {
+	height:24px;
+}
+
+
+
+/*   ----------------------------------------------------------------------*/
+/*   License Page ---------------------------------------------------------*/
+/*   ----------------------------------------------------------------------*/
+.copyright-module .subtitle {
+	font-size: 1.25em;
+	font-weight: normal;
+	}
+#tabs-tabbed_content li {
+	-moz-border-radius-topleft:5px; -webkit-border-top-left-radius:3px; 
+	-moz-border-radius-topright:5px; -webkit-border-top-right-radius:3px;
+	text-shadow: #333 0px -1px 1px;
+	}
+
+
+	
+/*   ----------------------------------------------------------------------*/
+/*   Citation Page---------------------------------------------------------*/
+/*   ----------------------------------------------------------------------*/
+
+.work h2 {
+	margin-top:0;
+	}
+#work-collection-init .keyroles {
+	border:none;}
+#work-collection-init .keyroles h3, #work-collection-init .keyinfo h3 {
+	margin-bottom:0;
+	border-bottom:1px solid #ccc;
+	padding-bottom:5px;
+	margin-bottom:5px;
+	font-weight: normal;
+	font-size:1em;
+	color:#333;
+	text-transform: none;
+	}
+#work-collection-init .fd-worktype {
+	border-top: none;
+	color: #000;
+	font-weight: normal;
+	}
+#work-collection-init table {
+	margin-bottom:10px;
+	}
+#work-collection-init th {
+	background-color:#fff;
+	}
+#work-collection-init td {
+	padding:10px;
+	}
+#work-collection-init tr {
+	border-bottom:1px solid #fff;
+	background-color: #f7f7f7 ;}
+#work-collection-init tr:nth-child(2n) {
+	background-color:#ededed;}

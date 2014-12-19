@@ -1,0 +1,4 @@
+name = Ahah support
+description = Supports ahah fields in Artmob Citation.
+package = Artmob Support Modules
+version = 3.1

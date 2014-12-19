@@ -1,0 +1,3 @@
+TAXONOMY_BROWSER MODULE
+M: Moshe Weitzman <weitzman AT [tejasa DOT com]>
+S: maintained

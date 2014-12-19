@@ -1,0 +1,10 @@
+; $Id: tac_lite.info,v 1.1 2007/01/11 01:48:49 yogadex Exp $
+name = Taxonomy Access Control Lite
+description = Simple access control based on categories.
+dependencies = taxonomy
+
+; Information added by drupal.org packaging script on 2008-09-17
+version = "5.x-1.3"
+project = "tac_lite"
+datestamp = "1221620121"
+

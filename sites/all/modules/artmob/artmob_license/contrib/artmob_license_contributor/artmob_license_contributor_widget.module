@@ -1,0 +1,938 @@
+<?php
+// $Id: artmob_license_contributor_widget.module,v 1.0 2011/09/15 15:27:33 ramani Exp $
+
+/* @file
+ * ADDDOCUMENTATION
+ **/
+
+/**
+ * hook_elements - define the widget type
+ */
+function artmob_license_contributor_widget_elements() {
+  $type = array();
+  $type['artmob_license_contributor_widget'] = array( '#input' => TRUE, );
+  return $type;
+}
+
+// ***************************************************************************
+// EXPAND WIDGET FUNCTIONS
+// ***************************************************************************
+
+/**
+ * Called by #process for widget emements
+ *
+ * Don't know what arg2 is or why it is there
+ */
+function artmob_license_contributor_widget_expand($element, $arg2, $node) {
+  //I had to do a silly work-around because
+  //when the last element was deleted
+  //(so there were no more of this element type left
+  //on the form <except for the template one>)
+  //for some reason the last deleted one gets
+  //added back when this function is called.
+  //I found out that the count($arg2) is always
+  //0 when loading and greater than 1 if there
+  //are any of this element on this form.
+  //If there never were elements on the form then
+  //it is 0.
+  //BUT!!!!
+  // if there were elements and they were deleted
+  //then the count($arg2) is 1.  So the workaround in this
+  //case is to blank out the widgets by setting
+  //$element[$name] to a blank array
+//  drupal_set_message( "count(arg2) = ". count($arg2) );
+  if ( count($arg2) == 1 ) {
+    $element[$name] = array();
+    return $element;
+  }
+
+  $name = $element['#name']; // name of this widget, set in the containing form
+  $edit = $element['#post']; // get the posted parameters
+//  drupal_set_message( 'artmob_license_contributor_widget_expand name = '.$name );
+//  drupal_set_message( 'am_expand edit = '.$edit );
+
+  /*
+  //add in required javascript files
+  $module_path = drupal_get_path('module', 'artmob_license_contributor_widget');
+  drupal_add_js("$module_path/form.js"); // jquery plugin for easy ahah form submition
+  drupal_add_js("$module_path/highlightFade.js");  // jquery plugin for highlighting dynamic changes
+  drupal_add_js("$module_path/contributorwidget.js");
+  // send important info to javascript
+  // need to get basePath to javascript so it know where to callback - use array to avoid String vs Array uncertainty
+  // need to know names of all widgets to do event attaching
+  drupal_add_js( array( 'widget' => array(
+    'basePath' => array( base_path() ), 
+    'contributornames' => array( $name ),
+  ), ), 'setting');
+  */
+
+  // set flag so nodeapi can find the widget
+  if ($node->type) {
+    variable_set('artmob_license_contributor_widget_'. $node->type, TRUE );
+//    drupal_set_message( 'am_ setting artmob_license_contributor_widget_'.$node->type.' to TRUE' );
+  }
+
+  // create a tree of the names of all widgets in the form -- needed for formapi:insert
+  $element['license_contributor_widget_names'] = array(
+    '#type' => 'item',
+    '#tree' => TRUE,
+  );
+  $element['license_contributor_widget_names'][$name] = array(
+    '#type' => 'hidden',
+    '#value' => $name,
+  );
+
+  // put in wrapper that will allow contents to be swapped out by the js update
+  $element[$name] = array(
+    '#tree' => TRUE,
+      '#prefix' => '<div id="widget_wrapper_'. $name .'">',
+      '#suffix' => '</div>',
+      '#ahah_bindings' => array(
+        array(
+          'selector' => 'input.widget_remove_'. $name,
+          'wrapper' => 'widget_wrapper_'. $name,
+          'event' => 'click',
+          'path' => 'artmob_license_contributor/widget_update_js',
+          'params' => array( 'widget_name_js' => $name, 'count' => 0 ),
+        ),
+        /*
+        array(
+          'selector' => 'select.widget_weight_'. $name,
+          'wrapper' => 'widget_wrapper_'. $name,
+          'event' => 'change',
+          'path' => 'artmob_contributor/widget_update_js',
+          'params' => array( 'widget_name_js' => $name ),
+        ),
+        */
+     ),
+  );
+
+  // actually build the widget and put it in the wrapper
+  $element[$name] += _artmob_license_contributor_build_widget( $name, $edit[$name], $node );
+  return $element;
+}
+
+
+function _artmob_license_contributor_build_widget($name, $edit, $node=NULL) {
+//  drupal_set_message( 'inside build widget' );
+  // get the preexisting subwidgets - can be in either $edit or $node
+  $subwidgets = _artmob_license_contributor_widget_extract_subwidgets($name, $edit, $node);
+//  drupal_set_message( "am_ Extracted Subwidget Count: ". count($subwidgets) );
+  // process add and remove commands - modifies $subwidgets
+  $subwidgets = _artmob_license_contributor_widget_process_subwidget_commands( $name, $edit, $subwidgets );
+//  drupal_set_message( "am_ After commands Subwidget Count: ". count($subwidgets) );
+  // expand the $subwidgets array into form elements - modifies $element
+  $widget = _artmob_license_contributor_widget_expand_subwidgets( $name, $subwidgets );
+  // add a control block for adding new subwidgets - modifies $element
+  //THIS IS AN ATTEMPT TO NOT ALLOW ANY MORE THAN ONE LICENSE PER CITATION
+  //watchdog( 'build widget', 'count(subwidgets) = '.count( $subwidgets) );
+  //if ( count( $subwidgets ) == 0 ) {
+    $widget += _artmob_license_contributor_widget_add_new_subwidget_control( $name, $edit, count( $subwidgets ) );
+  //}
+
+  return $widget;
+}
+
+/**
+ * Extract the widget description from the post array
+ * If post is empty, we may be doing an edit -> load into node
+ * Or fresh add with no widgets
+ */
+function _artmob_license_contributor_widget_extract_subwidgets($name, $edit, $node) {
+  //This can cause a problem when you remove the last widget
+  //because it would then take what was loaded
+  //which was the previous settings before the edit.
+  //See the silly work-around above in the _expand function
+  $subwidgets = array();
+
+  if ( is_array( $edit['subwidgets'] ) ) {
+    $subwidgets = $edit['subwidgets'];
+  }
+  elseif ( is_array($node->$name) ) {
+    // widgets have been loaded into node (by apinode:load)
+    $widget = $node->$name;
+    $subwidgets = $widget['subwidgets'];
+  }
+  return $subwidgets;
+}
+
+/**
+ * Modify the subwidgets array based on commands in the $edit
+ * Side effect: if subwidget is successfully added, remove entry from $edit
+ */
+function _artmob_license_contributor_widget_process_subwidget_commands( $name, &$edit, $subwidgets ) {
+  if ( is_array($edit) && count($edit) > 0 ) {
+    // process the potention addition...what is potention???
+    $new_subwidget = $edit['new_subwidget'];
+    if ( ( $new_subwidget['license_nid'] ) || ( $new_subwidget['keyname'] ) || $new_subwidget['contributor_nid']) {
+//      form_set_error( "widgets][$name][new_subwidget][contributor_nid", 'Need to include a contributor_nid value to add new dimension' );
+//    } else { // we are good to do add
+      $subwidget_id = db_next_id('subwidget'); // get distinct id for subwidget (overkill but easy)
+      $subwidgets[$subwidget_id] = $new_subwidget;
+      // remove from params, so it doesn't show up on the form (consume), but only on successful add
+      unset( $edit['new_subwidget'] );
+    }
+
+    // now process the removes
+    foreach ( $subwidgets as $subwidget_id => $subwidget ) {
+      if ( isset( $subwidget['remove'] ) )  {
+//        drupal_set_message( "_artmob_license_contributor_widget_process_subwidget_commands: deleting subwidget: $subwidget_id from widget $name" );
+        unset( $subwidgets[$subwidget_id] );
+      }
+    }
+  }
+  return $subwidgets;
+}
+
+/**
+ * Expand the subwidgets into form elements
+ */
+function _artmob_license_contributor_widget_expand_subwidgets( $name, $subwidgets ) {
+  $element['subwidgets'] = array(
+      '#tree' => TRUE,
+      '#attributes' => array( 'id' => 'widget_subwidgets_'. $name ),
+      '#theme' => 'artmob_license_contributor_widget_subwidgets',
+  );
+
+  foreach ( $subwidgets as $subwidget_id => $subwidget ) {
+    $license_name[$subwidget_id] = artmob_license_build_license_list();
+    //$contributor_name[$subwidget_id] = artmob_contributor_BuildContributorListByID( False );
+    $contributor_name[$subwidget_id] = artmob_license_build_contributor_list();
+    //$contributor_roles[$subwidget_id] = artmob_contributor_BuildRolesList();
+
+    $element['subwidgets'][$subwidget_id] = array(
+      '#tree' => TRUE,
+    );
+
+    $element['subwidgets'][$subwidget_id]['license_nid'] = array(
+      '#type'     => 'select',
+      '#options'    => $license_name[$subwidget_id],
+      '#default_value' => $subwidget['license_nid'],
+    );
+
+    if ( module_exists( 'artmob_contributor' )) {
+      $element['subwidgets'][$subwidget_id]['contributor_nid'] = array(
+        '#type'     => 'select',
+        '#options'    => $contributor_name[$subwidget_id],
+        '#default_value' => $subwidget['contributor_nid'],
+        '#multiple' => True,
+        '#size' => 5,
+      );
+    } 
+    else {
+      $element['subwidgets'][$subwidget_id]['contributor_nid'] = array(
+        '#type'     => 'hidden',
+        '#default_value' => $subwidget['contributor_nid'],
+        '#multiple' => True,
+        '#size' => 5,
+      );
+    }
+
+    $element['subwidgets'][$subwidget_id]['firstname'] = array(
+      '#type'          => 'textfield',
+      '#size'          => 10,
+      '#default_value' => $subwidget['firstname'],
+      '#required'      => FALSE,
+    );
+
+    $element['subwidgets'][$subwidget_id]['keyname'] = array(
+      '#type'          => 'textfield',
+      '#size'          => 10,
+      '#default_value' => $subwidget['keyname'],
+      '#required'      => FALSE,
+    );
+
+    /*
+    $default = artmob_citation_get_role_default( $subwidget['contributor_role'] );
+
+    $element['subwidgets'][$subwidget_id]['contributor_role'] = array(
+      '#type'     => 'select',
+      '#options'    => $contributor_roles[$subwidget_id],
+      '#default_value' => $default,
+      '#multiple' => True,
+      '#size' => 10
+    );
+    */
+
+    /*
+    $element['subwidgets'][$subwidget_id]['firstname'] = array(
+      '#type'          => 'textfield',
+      '#size'          => 10,
+      '#default_value' => $subwidget['firstname'],
+      '#required'      => FALSE,
+    );
+    $element['subwidgets'][$subwidget_id]['middlenames'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t(''),
+      '#size'          => 10,
+      '#default_value' => $subwidget['middlenames'],
+      '#required'      => FALSE,
+    );
+    $element['subwidgets'][$subwidget_id]['lastname'] = array(
+      '#type'          => 'textfield',
+      '#size'          => 10,
+      '#default_value' => $subwidget['lastname'],
+      '#required'      => FALSE,
+    );
+    */
+
+    $element['subwidgets'][$subwidget_id]['remove'] = array(
+        '#type' => 'checkbox',
+        '#default_value' => $subwidget['remove'],
+        '#attributes' => array( 'class' => 'widget_remove_'. $name ),
+    );
+  }
+  return $element;
+}
+
+/**
+ * control to add subwidget to widget
+ */
+function _artmob_license_contributor_widget_add_new_subwidget_control($name, $edit, $count = 0) {
+//  drupal_set_message( 'inside add new subwidget control' );
+  //Requirement was to only allow one license
+  //per citation. To accomplish this we pass in the count
+  //of how many licenses are currently attached.
+  //If there are 0 then display the fields
+  //if there are more than 0 then hide the fields (by hiding the fieldset)
+  //Note that it is necessary to hide them rather than not build them
+  //at all. If they are not built at all then the AHAH click event breaks.
+  //If this requirement changes so that unlimited licenses are allowed per citation
+  //then simply remove the condition so that the types are always set.
+  if ( $count == 0 ) {
+   $fieldset_type = 'fieldset';
+  } 
+  else {
+   $fieldset_type = 'hidden';
+  }
+
+  $element['new_subwidget'] = array(
+      '#type' => $fieldset_type,
+      '#title' => t( 'Add License' ),
+      '#theme' => 'artmob_license_contributor_widget_new_subwidget',
+      '#tree' => TRUE,
+  );
+
+  $license_name = artmob_license_build_license_list();
+  //$contributor_name = artmob_contributor_BuildContributorListByID( False );
+  //$contributor_roles = artmob_contributor_BuildRolesList();
+  $contributor_name = artmob_license_build_contributor_list();
+
+
+  $element['new_subwidget']['license_nid'] = array(
+    '#type'     => 'select',
+    '#title'    => 'License',
+    '#options'    => $license_name,
+    '#value' => $edit['new_subwidget']['license_nid'],
+  );
+
+  if ( module_exists( 'artmob_contributor' )) {
+    $element['new_subwidget']['contributor_nid'] = array(
+      '#type'     => 'select',
+      '#title'    => 'Contributors',
+      '#options'    => $contributor_name,
+      '#multiple' => True,
+      '#size' => 5,
+      '#value' => $edit['new_subwidget']['contributor_nid'],
+    );
+  } 
+  else {
+    $element['new_subwidget']['contributor_nid'] = array(
+      '#type'     => 'hidden',
+      '#title'    => 'Contributors',
+      '#multiple' => True,
+      '#size' => 5,
+      '#value' => $edit['new_subwidget']['contributor_nid'],
+    );
+  }
+
+  $element['new_subwidget']['firstname'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('First Name'),
+      '#size'          => 10,
+      '#value' => $edit['new_subwidget']['firstname'] ? $edit['new_subwidget']['firstname'] : '',
+      '#required'      => FALSE,
+  );
+
+  $element['new_subwidget']['keyname'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Key Name'),
+      '#size'          => 10,
+      '#value' => $edit['new_subwidget']['keyname'] ? $edit['new_subwidget']['keyname'] : '',
+      '#required'      => FALSE,
+  );
+  /*
+  $default = artmob_citation_get_role_default( $contributor_roles[$subwidget_id] );
+
+  $element['new_subwidget']['contributor_role'] = array(
+    '#type'     => 'select',
+    '#title'    => 'Role',
+    '#options'    => $contributor_roles,
+    '#value' => $edit['new_subwidget']['contributor_role'],
+    '#multiple' => True,
+    '#size' => 10
+  );
+  */
+
+  /*
+  $element['new_subwidget']['firstname'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('First Name'),
+      '#size'          => 10,
+      '#value' => $edit['new_subwidget']['firstname'] ? $edit['new_subwidget']['firstname'] : '',
+      '#required'      => FALSE,
+  );
+  $element['new_subwidget']['middlenames'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Middle Names'),
+      '#size'          => 10,
+      '#value' => $edit['new_subwidget']['middlenames'] ? $edit['new_subwidget']['middlenames'] : '',
+      '#required'      => FALSE,
+  );
+  $element['new_subwidget']['lastname'] = array(
+      '#type'          => 'textfield',
+      '#title'         => t('Last Name'),
+      '#size'          => 10,
+      '#value' => $edit['new_subwidget']['lastname'] ? $edit['new_subwidget']['lastname'] : '',
+      '#required'      => FALSE,
+  );
+  */
+  $element['new_subwidget']['add_subwidget_button'] = array(
+    '#type' => 'button',
+    '#value' => t( 'Add New License' ),
+    '#id' => 'widget_add_subwidget_button_'. $name,
+    '#ahah_bindings' => array(
+      array(
+        'wrapper' => 'widget_wrapper_'. $name,
+        'event' => 'click',
+        'path' => 'artmob_license_contributor/widget_update_js',
+        'params' => array( 'widget_name_js' => $name, 'count' => $count ),
+      ),
+    ),
+  );
+  return $element;
+}
+
+// ****************************************************************
+// JAVASCRIPT FUNCTIONS
+// ****************************************************************
+
+/**
+ * hook_menu - incremental update needs its own entry point
+ */
+function artmob_license_contributor_widget_menu($may_cache) {
+  $items = array();
+  if ($may_cache) {
+  } 
+  else {
+    $items[] = array(
+        'path' => 'artmob_license_contributor/widget_update_js',
+        'callback' => '_artmob_license_contributor_update_js',
+        'access' => TRUE,
+        'type' => MENU_CALLBACK,
+    );
+  }
+  return $items;
+}
+
+/**
+ * Called by javascript to do AJAH based form updating
+ */
+function _artmob_license_contributor_update_js() {
+  $name = $_POST['widget_name_js'];
+  $count = $_POST['count'];
+//  drupal_set_message( 'update js name = '.$name );
+//  watchdog( 'update js', 'update js count = '.$count );
+  print _artmob_license_contributor_build_widget_js( $name, $_POST );
+}
+
+// Pulled out of widget_update_js for easier testing
+function _artmob_license_contributor_build_widget_js( $name, $edit ) {
+  $widget[$name] = array( '#tree' => TRUE, );
+  $widget[$name] += _artmob_license_contributor_build_widget( $name, $edit[$name] );
+
+  $form = form_builder( 'ahah_widget', $widget );
+//  drupal_set_message( "am_ Rebuilt Widget ". $name );
+  return theme('status_messages') . drupal_render($form);
+}
+
+// ********************************************************************************
+// WIDGET_NODEAPI - handle the database interactions
+// ********************************************************************************
+
+function artmob_license_contributor_widget_load_widgets( $node, &$widget_name ) {
+  if ( $node->type == 'citation' ){
+    $nid = $node->link_nid;
+    if ( $nid ){
+      $temp_node = node_load( $nid );
+      $type = $temp_node->type;
+    }
+    else {
+      $type = $node->type;
+    }
+  }
+  else {
+    $type = $node->type;
+  }
+  //OLD -
+  //if ( variable_get('citation_compatible', 0 ) ) {
+  if ( variable_get( 'rdo_license_options_'.$type, ARTMOB_LICENSE_MODE_NONE ) == ARTMOB_LICENSE_MODE_FULL ){
+    /* - before the am_copyright_holders table was added
+    $result = db_query( "SELECT r.widget_name, r.sequence, r.contributor_id, r.license_id,
+                         c.nid as contributor_nid, l.nid as license_nid from {am_citation_license} r
+                         left join {am_contributor} c on r.contributor_id = c.contributor_id
+                         left join {am_license} l on r.license_id = l.license_id
+                         where r.citation_id = %d
+                         group by widget_name, sequence, license_id
+                         order by sequence", $node->citation_id );
+    */
+    $result = db_query( "SELECT r.widget_name, r.sequence, r.contributor_id, r.license_id,
+                         c.contributor_nid, l.nid as license_nid from {am_citation_license} r
+                         left join {am_copyright_holders} c on r.contributor_id = c.contributor_id
+                         left join {am_license} l on r.license_id = l.license_id
+                         where r.citation_id = %d
+                         group by widget_name, sequence, license_id
+                         order by sequence", $node->citation_id );
+  }
+  else {
+    /* - before the am_copyright_holders table was added
+    $result = db_query( "SELECT r.widget_name, r.sequence, r.contributor_id, r.license_id,
+                       c.nid as contributor_nid, l.nid as license_nid from {am_node_license} r
+                       left join {am_contributor} c on r.contributor_id = c.contributor_id
+                       left join {am_license} l on r.license_id = l.license_id
+                       where r.node_nid = %d
+                       group by widget_name, sequence, license_id
+                       order by sequence", $node->nid );
+    */
+    $result = db_query( "SELECT r.widget_name, r.sequence, r.contributor_id, r.license_id,
+                       c.contributor_nid, l.nid as license_nid from {am_node_license} r
+                       left join {am_copyright_holders} c on r.contributor_id = c.contributor_id
+                       left join {am_license} l on r.license_id = l.license_id
+                       where r.node_nid = %d
+                       group by widget_name, sequence, license_id
+                       order by sequence", $node->nid );
+
+  }
+
+  while ($row = db_fetch_array($result)) {
+    $widget_name = $row['widget_name'];
+    $subwidget_id = $row['sequence'];
+    if ( !is_array( $additions[$widget_name] ) ) {
+      $additions[$widget_name] = array();
+      $additions[$widget_name]['subwidgets'] = array();
+    }
+
+    $additions[$widget_name]['subwidgets'][$subwidget_id] = array(
+        //SINCE contributor_nid is a multi-select it must be handled below
+        //'contributor_nid' => $row['contributor_nid'],
+        'license_nid' => $row['license_nid'],
+        //We do not unserialize.  We set it below instead
+        //'contributor_role' => unserialize( $row['contributor_role'] ),
+    );
+
+    $widget_names[$widget_name] = $widget_name; // rebuild widget name list
+
+
+    //OLD -
+    //if ( variable_get('citation_compatible', 0 ) ) {
+    if ( variable_get( 'rdo_license_options_'.$type, ARTMOB_LICENSE_MODE_NONE ) == ARTMOB_LICENSE_MODE_FULL ){
+      //if the citation module is being used the we assume that so are contributors
+      $contributor_query = db_query( "select c.*, r.* from {am_citation_license} r
+                               left join {am_contributor} c on r.contributor_id = c.contributor_id
+                               where citation_id = %d
+                               and widget_name = '%s'
+                               and sequence = %d", $node->citation_id, $widget_name, $subwidget_id );
+    }
+    else {
+      if ( module_exists( 'artmob_contributor' ) ) {
+        //!!!! should we load from am_copyright_holders all of the time?
+        $contributor_query = db_query( "select c.*, r.* from {am_node_license} r
+                               left join {am_contributor} c on r.contributor_id = c.contributor_id
+                               where node_nid = %d
+                               and widget_name = '%s'
+                               and sequence = %d", $node->nid, $widget_name, $subwidget_id );
+      }
+      else {
+        $contributor_query = db_query( "select c.*, c.contributor_nid as nid, r.* from {am_node_license} r
+                               left join {am_copyright_holders} c on r.contributor_id = c.contributor_id
+                               where r.node_nid = %d
+                               and widget_name = '%s'
+                               and sequence = %d", $node->nid, $widget_name, $subwidget_id );
+      }
+    }
+    $license_contributors = array();
+    while ($contributor_row = db_fetch_object($contributor_query)) {
+      $contributor = $contributor_row->contributor_id;
+      $license_contributors[$contributor] = $contributor;
+      $first_name = $contributor_row->first_name;
+      $key_name = $contributor_row->key_name;
+      $contributor_type = $contributor_row->contributor_type;
+    }
+    $additions[$widget_name]['subwidgets'][$subwidget_id]['contributor_nid'] = $license_contributors;
+    $additions[$widget_name]['subwidgets'][$subwidget_id]['firstname'] = $first_name;
+    $additions[$widget_name]['subwidgets'][$subwidget_id]['keyname'] = $key_name;
+    $additions[$widget_name]['subwidgets'][$subwidget_id]['contributor_type'] = $contributor_type;
+
+//          drupal_set_message( "artmob_license_contributor_widget db widget name = ".$widget_name );
+    $additions['license_contributor_widget_names'] = $widget_names;
+  }
+  return $additions;
+}
+
+/**
+ * hook_nodeapi
+ */
+function artmob_license_contributor_widget_nodeapi( &$node, $op ) {
+//  drupal_set_message( "artmob_license_contributor_widget Widget_nodeapi: $op , $node->type" );//.
+  //drupal_set_message( print_r($node, TRUE) );
+
+  //If a contributor is deleted then blank out the contributor_id in
+  //the am_copyright_holders table
+  if ( $node->type == 'Contributor') {
+    switch ($op) {
+      case delete:
+        db_query( "update {am_copyright_holders} set contributor_id = 0, contributor_nid = 0 where contributor_id = %d", $node->contributor_id );
+        break;
+    }
+  }
+
+  if ( $node->type == 'citation' ){
+    $nid = $node->link_nid;
+    if ( $nid ){
+      $temp_node = node_load( $nid );
+      $type = $temp_node->type;
+    }
+    else {
+      $type = $node->type;
+    }
+    //$type = $temp_node->type;
+  }
+  else {
+    $type = $node->type;
+  }
+
+  if ( variable_get( 'artmob_license_contributor_widget_'. $node->type, FALSE ) ) {
+    switch ($op) {
+      // info flow db -> node -> form -> node -> db
+      case load: // Load Widgets in from db
+        return artmob_license_contributor_widget_load_widgets( $node, &$widget_name );
+        break;
+      case view:
+         /* handled by theme /bk
+            // just prove that the widgets are there - assume some .tpl file will actually shape output
+        $contributor_name = artmob_contributor_BuildContributorList();
+        $contributor_roles = artmob_contributor_BuildRolesList();
+            //The widget_names will be NULL if no widget is attached
+    //        drupal_set_message('contributor in view' );
+        if ($node->contributor_widget_names ) {
+            foreach ( $node->contributor_widget_names as $widget_name ) {
+    //            drupal_set_message('contributor $widget_name = '.$widget_name );
+    //            if ($widget_name == 'widgetprice1' ) {
+          $widget = $node->$widget_name;
+            foreach ( $widget as $subwidgets) {
+            $node->content['body']['#value'] .= '<h3>Contributors</h3>';
+                foreach ( $subwidgets  as $subwidget ) {
+              // //"widget $widget_name: ". dprint_r( $widget, TRUE );
+              //for each dimension we output it in a sentence.  ie width = 10 cm.
+                  $node->content['body']['#value'] .= 'Contributor = '.$contributor_name[$subwidget['contributor_nid']].'<br />';
+                }
+              }
+    //            }
+          }
+            }
+        */
+        break;
+      //What about delete???
+      case update:
+//        drupal_set_message( "am_ Update Widget - delete all widgets for $node->nid" );
+        // keep life simple and do update by just deleting and then inserting
+        //db_query("DELETE FROM {am_contributor_widget} WHERE nid = '%d'", $node->nid );
+        //OLD -
+        //if ( variable_get('citation_compatible', 0 ) ) {
+        if ( variable_get( 'rdo_license_options_'.$type, ARTMOB_LICENSE_MODE_NONE ) == ARTMOB_LICENSE_MODE_FULL ){
+          db_query("DELETE FROM {am_citation_license} WHERE citation_id = '%d'", $node->citation_id );
+          db_query("DELETE FROM {am_copyright_holders} WHERE node_nid = '%d'", $node->nid );
+        }
+        else {
+          db_query("DELETE FROM {am_node_license} WHERE node_nid = '%d'", $node->nid );
+          db_query("DELETE FROM {am_copyright_holders} WHERE node_nid = '%d'", $node->nid );
+        }
+      case insert:
+        if ( count( $node->license_contributor_widget_names ) ) {
+          foreach ( $node->license_contributor_widget_names as $widget_name ) {
+  //          if ( $widget_name == 'widgetprice1' ) {
+            $widget = $node->$widget_name;
+            if (count( $widget['subwidgets'] ) != 0 ) {
+              foreach ( $widget['subwidgets'] as $subwidget_id => $subwidget ) {
+                //drupal_set_message( "am_ Inserting $node->citation_id, $widget_name, $subwidget_id");
+    //!!! to do - do not save the name information but if contributor_nid = 0 then
+                //try to find firstname, lastname in contributor table
+                //if found then change contributor_nid to this
+                //if not found then insert a new contributor
+                //and update contributor_nid with this new nid
+                //$subwidget['firstname'], $subwidget['middlenames'], $subwidget['lastname']
+                $license_nid = $subwidget['license_nid'];
+                $license_id = artmob_license_get_id_from_nid( $license_nid );
+                if ( $license_nid <> 0 ) {
+                  if ( module_exists( 'artmob_contributor' )) {
+                    //save all selected contributors
+                    foreach ( $subwidget['contributor_nid'] as $contributor_id => $contributor_value ) {
+                      //OLD -
+                      //if ( variable_get('citation_compatible', 0 ) ) {
+                      if ( variable_get( 'rdo_license_options_'.$type, ARTMOB_LICENSE_MODE_NONE ) == ARTMOB_LICENSE_MODE_FULL ){
+                        db_query( "INSERT INTO {am_citation_license}
+                                   set contributor_id = %d,
+                                   license_id = %d,
+                                   widget_name = '%s',
+                                   sequence = %d,
+                                   citation_id = %d",
+                                   $contributor_id,
+                                   $license_id,
+                                   $widget_name,
+                                   $subwidget_id,
+                                   $node->citation_id);
+                      }
+                      else {
+                        db_query( "INSERT INTO {am_node_license}
+                                   set contributor_id = %d,
+                                   license_id = %d,
+                                   widget_name = '%s',
+                                   sequence = %d,
+                                   node_nid = %d",
+                                   $contributor_id,
+                                   $license_id,
+                                   $widget_name,
+                                   $subwidget_id,
+                                   $node->nid);
+                      }
+
+                      $query = db_query( "select nid, first_name, last_name from {am_contributor} where contributor_id = %d", $contributor_id );
+                      $row = db_fetch_object( $query );
+
+                      db_query( "INSERT INTO {am_copyright_holders}
+                                 set contributor_id = %d,
+                                 contributor_nid = %d,
+                                 license_id = %d,
+                                 first_name = '%s',
+                                 key_name = '%s',
+                                 node_nid = %d",
+                                 $contributor_id,
+                                 $row->nid,
+                                 $license_id,
+                                 $row->first_name ,
+                                 $row->last_name,
+                                 $node->nid);
+                    } //end for each contributor
+
+
+                    //also add in a contributor if the firstname and/or keyname is filled in
+                    $nid = 0;
+                    $result = db_query( "SELECT nid from {am_contributor} where first_name = '%s' and last_name = '%s'", $subwidget['firstname'], $subwidget['keyname'] );
+                    while ($row = db_fetch_object($result)) {
+                      $nid = $row->nid;
+                      $contributor_id = $row->contributor_id;
+                      //drupal_set_message( 'contributor found. nid = '.$row->nid );
+                      break;
+                    }
+                    if ( $nid == 0 ) {
+                      if (( $subwidget['firstname'] <> '' ) and ( $subwidget['keyname'] <> '' )) {
+                        //add this person as a contributor
+                        global $user;
+                        $contributor_node = new stdClass();
+                        $contributor_node->nid = '';
+                        $contributor_node->uid = $user->uid;
+                        $contributor_node->type = 'Contributor';
+                        $contributor_node->status = 1;
+                        $contributor_node->first_name = $subwidget['firstname'];
+                        $contributor_node->last_name = $subwidget['keyname'];
+                        $contributor_node->title = $subwidget['firstname'] .' '. $subwidget['keyname'];
+                        $contributor_node->contributor_type = $subwidget['contributor_type'];
+                        node_save( $contributor_node );
+                        $nid = $contributor_node->nid;
+                        $contributor_id = artmob_contributor_get_id_from_nid( $nid );
+                        //drupal_set_message( 'saved nid = '.$nid );
+                      }
+                    }
+                    if ( $nid <> 0 ) {
+                      //OLD -
+                      //if ( variable_get('citation_compatible', 0 ) ) {
+                      if ( variable_get( 'rdo_license_options_'.$type, ARTMOB_LICENSE_MODE_NONE ) == ARTMOB_LICENSE_MODE_FULL ){
+                        db_query( "INSERT INTO {am_citation_license}
+                                   set contributor_id = %d,
+                                   license_id = %d,
+                                   widget_name = '%s',
+                                   sequence = %d,
+                                   citation_id = %d",
+                                   $contributor_id,
+                                   $license_id,
+                                   $widget_name,
+                                   $subwidget_id,
+                                   $node->citation_id);
+                      }
+                      else {
+                        db_query( "INSERT INTO {am_node_license}
+                                   set contributor_id = %d,
+                                   license_id = %d,
+                                   widget_name = '%s',
+                                   sequence = %d,
+                                   node_nid = %d",
+                                   $contributor_id,
+                                   $license_id,
+                                   $widget_name,
+                                   $subwidget_id,
+                                   $node->nid);
+                      }
+
+                      db_query( "INSERT INTO {am_copyright_holders}
+                                 set contributor_id = %d,
+                                 contributor_nid = %d,
+                                 license_id = %d,
+                                 first_name = '%s',
+                                 key_name = '%s',
+                                 node_nid = %d",
+                                 $contributor_id,
+                                 $nid,
+                                 $license_id,
+                                 $subwidget['firstname'] ,
+                                 $subwidget['keyname'],
+                                 $node->nid);
+
+                    }
+                  }
+                  else { //contributor module does not exist
+                    if (( $subwidget['firstname'] <> '' ) or ( $subwidget['keyname'] <> '' )) {
+                      $contributor_id = db_result( db_query( "select max(contributor_id) from {am_copyright_holders}" ));
+                      $contributor_id +=1;
+
+                      db_query( "INSERT INTO {am_copyright_holders}
+                                 set contributor_id = %d,
+                                 license_id = %d,
+                                 first_name = '%s',
+                                 key_name = '%s',
+                                 node_nid = %d",
+                                 $contributor_id,
+                                 $license_id,
+                                 $subwidget['firstname'] ,
+                                 $subwidget['keyname'],
+                                 $node->nid);
+
+
+                      //OLD -
+                      //if ( variable_get('citation_compatible', 0 ) ) {
+                      if ( variable_get( 'rdo_license_options_'.$type, ARTMOB_LICENSE_MODE_NONE ) == ARTMOB_LICENSE_MODE_FULL ){
+                        //in theory it should never come here because
+                        //the contributor module should be turned on when
+                        //citations are turned on.
+                        db_query( "INSERT INTO {am_citation_license}
+                                   set contributor_id = %d,
+                                   license_id = %d,
+                                   widget_name = '%s',
+                                   sequence = %d,
+                                   citation_id = %d",
+                                   $contributor_id,
+                                   $license_id,
+                                   $widget_name,
+                                   $subwidget_id,
+                                   $node->citation_id);
+                      } 
+                      else {
+                        db_query( "INSERT INTO {am_node_license}
+                                   set contributor_id = %d,
+                                   license_id = %d,
+                                   widget_name = '%s',
+                                   sequence = %d,
+                                   node_nid = %d",
+                                   $contributor_id,
+                                   $license_id,
+                                   $widget_name,
+                                   $subwidget_id,
+                                   $node->nid);
+                      }
+                    }
+                  }
+                } //end if license_id <> 0
+              } //end for each subwidget
+            }
+          }
+        }
+        break;
+    }
+  }
+}
+
+// ************************************************************************************
+// THEMING FUNCTIONS
+// ************************************************************************************
+
+/**
+ * Make sure the widget acutally shows up on the form
+ */
+function theme_artmob_license_contributor_widget($element) {
+  $output .= theme('form_element', $element, $element['#children']);
+  return $output;
+}
+
+/**
+ * Theme the subwidgets as a table, one subwidget per row
+ */
+function theme_artmob_license_contributor_widget_new_subwidget(&$form) {
+  $rows = array();
+  $row = array();
+  $row[] = drupal_render($form['license_nid']);
+  if ( module_exists( 'artmob_contributor' ) ) {
+    $row[] = drupal_render($form['contributor_nid']);
+  }
+  $row[] = drupal_render($form['firstname']);
+  $row[] = drupal_render($form['keyname']);
+  //$row[] = drupal_render($form['contributor_role']);
+  //$row[] = drupal_render($form['firstname']);
+  //$row[] = drupal_render($form['middlenames']);
+  //$row[] = drupal_render($form['lastname']);
+  $rows[] = $row;
+  $output = theme('table', array('class' => ''), $rows);
+  $output .= drupal_render($form);
+  return $output;
+}
+
+function artmob_license_contributor_widget_sort_by_subwidget_id($a, $b) {
+  if ($a['subwidget_id'] == $b['subwidget_id']) {
+    return 0;
+  }
+  return ($a['subwidget_id'] < $b['subwidget_id']) ? -1 : 1;
+}
+
+/**
+ * Theme the add new subwidget subform as a single row.
+ */
+function theme_artmob_license_contributor_widget_subwidgets(&$form) {
+  foreach (element_children($form) as $key) {
+    $row = array();
+    $row[] = drupal_render($form[$key]['remove']);
+    $row[] = drupal_render($form[$key]['license_nid']);
+    if ( module_exists( 'artmob_contributor' ) ) {
+      $row[] = drupal_render($form[$key]['contributor_nid']);
+    }
+    $row[] = drupal_render($form[$key]['firstname']);
+    $row[] = drupal_render($form[$key]['keyname']);
+    //$row[] = drupal_render($form[$key]['contributor_role']);
+    //$row[] = drupal_render($form[$key]['firstname']);
+    //$row[] = drupal_render($form[$key]['middlenames']);
+    //$row[] = drupal_render($form[$key]['lastname']);
+    //sort by the key (subwidget_id)
+    $rows[] = array( 'data' => $row, 'class' => 'sortableitem', 'subwidget_id' => $key );
+  }
+  if ( count($rows) > 0 ) {
+    usort( $rows, artmob_license_contributor_widget_sort_by_subwidget_id ); // sort the subwidgets by subwidget_id
+    //$header = array(t('Profile'), t('Role'), t('First Name'), t('Middle Names'), t('Last Name'), t('Delete'));
+    if ( module_exists( 'artmob_contributor' ) ) {
+      $header = array(t('Remove'), t('License'), t('Contributors'), t('First Name'), t('Key Name') );
+    } 
+    else {
+      $header = array(t('Remove'), t('License'), t('First Name'), t('Key Name') );
+    }
+    $output = theme('table', $header, $rows, array( 'class' => 'sortable', 'id' => $form['#attributes']['id'] ) );
+  }
+  $output .= drupal_render($form);
+  return $output;
+}
+

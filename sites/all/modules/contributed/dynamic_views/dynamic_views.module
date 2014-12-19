@@ -1,0 +1,265 @@
+<?php
+// $Id $
+
+/**
+ * Implemenation of hook_menu()
+ */
+function dynamic_views_menu($may_cache) {
+  if ($may_cache) {
+    $items[] = array('path' => 'dynamic/views', 'type' => MENU_CALLBACK, 'access' => TRUE,
+      'callback' => 'dynamic_views_view');
+  }
+
+  return $items;
+}
+
+/**
+ * Menu Callback: Create a dynamic view
+ */
+function dynamic_views_view($name, $type, $nid = NULL, $place = NULL) {
+  global $dynamic_view_updating;
+  $dynamic_view_updating = TRUE;
+  
+  $view = views_get_view($name);
+  $_GET['q'] = $view->url;
+  if ($type == 'node') {
+    if (!$nid) {
+      $view = views_build_view('page', $view, array(), $view->use_pager, $view->nodes_per_page);
+    }
+    else if ($view->use_pager) {
+      $current_page = explode(',', (string)$_GET['page']);
+      $current_page = $current_page[1];
+      $_GET['page'] = ($current_page * $view->nodes_per_block) + $place;
+
+      $view = views_build_view('page', $view, array(), $view->use_pager, $view->nodes_per_page);
+    }
+    else {
+      $view = views_build_view('page', $view, array($nid), $view->use_pager, $view->nodes_per_page);
+    }
+  }
+  else if ($type == 'teaser') {
+    $use_pager = $view->block_more ? 2 : false;
+    $view->block_more = false;
+    
+    $view = views_build_view('block', $view, array($nid), $use_pager, $view->nodes_per_block);
+    $search = '?page='. $_GET['page'];
+  }
+  else if ($type == 'filter') {
+    $view = views_build_view('page', $view, array(), $view->use_pager, $view->nodes_per_page);
+  }
+  
+  $settings = drupal_add_js('');
+  $settings = $settings['setting'];
+  if (!empty($settings)) {
+    $settings = call_user_func_array('array_merge_recursive', $settings);
+  }
+
+  if ($search) {
+    $settings['search'] = $search;
+  }
+
+  print drupal_to_js(array('html' => $view, 'settings' => $settings, 'updated_view' => $name));
+  exit;
+}
+
+/**
+ * Implementation of hook_views_style_plugins()
+ */
+function dynamic_views_views_style_plugins() {
+  return array(
+    'dynamic_teaser' => array(
+      'name' => t('Dynamic Teaser List'),
+      'theme' => 'views_view_teasers',
+      'validate' => 'dynamic_views_plugin_validate',
+      'weight' => -12,
+    ),
+    'dynamic_node' => array(
+      'name' => t('Dynamic Full Node'),
+      'theme' => 'views_view_nodes',
+      'validate' => 'dynamic_views_plugin_validate',
+      'weight' => -14,
+    ),
+    'dynamic_filter_tease' => array(
+      'name' => t('Dynamic Filter: Teaser List'),
+      'theme' => 'views_view_teasers',
+      'validate' => 'dynamic_views_plugin_validate',
+      'weight' => -15,
+    ),
+    'dynamic_filter_node' => array(
+      'name' => t('Dynamic Filter: Full Nodes'),
+      'theme' => 'views_view_nodes',
+      'validate' => 'dynamic_views_plugin_validate',
+      'weight' => -18,
+    ),
+    'dynamic_filter_list' => array(
+      'name' => t('Dynamic Filter: List'),
+      'theme' => 'views_view_list',
+      'validate' => 'dynamic_views_plugin_validate',
+      'needs_fields' => true,
+      'weight' => -20,
+    ),
+    'dynamic_filter_table' => array(
+      'name' => t('Dynamic Filter: Table'),
+      'theme' => 'views_view_table',
+      'validate' => 'dynamic_views_plugin_validate',
+      'needs_fields' => true,
+      'needs_table_header' => true,
+      'weight' => -22,
+    )
+  );
+}
+
+/**
+ * Implementation of hook_block()
+ * 
+ * Since views does not allow pagers in blocks, provide dynamic views as blocks here
+ */
+function dynamic_views_block($op = 'list', $delta = 0) {
+  $block = array();
+  if ($op == 'list') {
+    views_load_cache();
+    // Grab views from the database and provide them as blocks.
+    $result = db_query('SELECT vid, block_title, page_title, name FROM {view_view} WHERE block = 1 AND block_type IN ("%s", "%s")', 'dynamic_node', 'dynamic_teaser');
+    while ($view = db_fetch_object($result)) {
+      $block[$view->name]['info'] = t('Dynamic: !s', array('!s' => filter_xss_admin(views_get_title($view, 'block-info'))));
+    }
+
+    $default_views = _views_get_default_views();
+    $views_status = variable_get('views_defaults', array());
+
+    foreach ($default_views as $name => $view) {
+      if (!isset($block[$name]) && $view->block &&
+        ($views_status[$name] == 'enabled' || (!$view->disabled && $views_status[$name] != 'disabled'))) {
+        $block[$name]['info'] = filter_xss_admin(views_get_title($view, 'block'));
+      }
+    }
+    return $block;
+  }
+  else if ($op == 'view') {
+    return dynamic_views_view_block($delta);
+  }
+}
+
+function dynamic_views_view_block($vid) {
+  views_load_cache();
+  $view = views_get_view($vid);
+
+  if (!$view || !$view->block) {
+    return NULL;
+  }
+
+  global $user;
+  if (!$user->roles) {
+    return NULL;
+  }
+
+  $roles = array_keys($user->roles);
+  if ($view->access && !array_intersect($roles, $view->access)) {
+    return NULL;
+  }
+  
+  $use_pager = $view->block_more ? 2 : false;
+  $view->block_more = false;
+
+  $content = views_build_view('block', $view, array(), $use_pager, $view->nodes_per_block);
+  if ($content) {
+    $block['content'] = $content;
+    $block['subject'] = filter_xss_admin(views_get_title($view, 'block'));
+    return $block;
+  }
+  else {
+    return NULL;
+  }
+}
+
+/**
+ * Implementation of hook_views_post_view()
+ */
+function dynamic_views_views_post_view($view, $items, &$output) {
+  global $dynamic_view_updating;
+  static $loaded;
+  
+  if (!$dynamic_view_updating && in_array($view->type, array('dynamic_teaser', 'dynamic_node', 'dynamic_filter_tease', 'dynamic_filter_node', 'dynamic_filter_list', 'dynamic_filter_table'))) {
+    dynamic_views_load_js();
+    
+    if (!$loaded[$view->vid]) {
+      $settings = array(
+        'dynamic_views_url_'. $view->name => url('dynamic/views/'. $view->name .'/')
+      );
+      
+      drupal_add_js($settings, 'setting');
+      $loaded[$view->vid] = TRUE;
+    }
+  }
+  
+  if ($view->type == 'dynamic_teaser') {
+    foreach($items AS $order => $item) {
+      $list[$item->nid] = $order;
+      $paths[url('node/'. $item->nid, NULL, NULL, TRUE)] = $item->nid;
+    }
+    drupal_add_js(array('dynamic_views_paths' => $paths, 'list' => $list, 'view_url' => $view->url, 'base_path' => $GLOBALS['base_path'], 'view_front' => (variable_get('site_frontpage', 'node') == $view->url && drupal_is_front_page())), 'setting');
+  }
+  
+  if ($view->type == 'dynamic_teaser' && !$dynamic_view_updating) {
+    $output = '<div class="dynamic-teaser" id="dynamic-teaser-'. $view->name .'">'. $output . '</div>';
+  }
+  else if ($view->type == 'dynamic_node' && !$dynamic_view_updating) {
+    $output = '<div class="dynamic-node" id="dynamic-node-'. $view->name .'">'. $output .'</div>';
+  }
+  else if (strstr($view->type, 'dynamic_filter') && !$dynamic_view_updating) {
+    $output = '<div class="dynamic-filter" id="dynamic-filter-'. $view->name .'">'. $output .'</div>';
+  }
+}
+
+/**
+ * Dynamic views validation callback
+ */
+function dynamic_views_plugin_validate($type, $view, $form) {
+  // Ensure Dynamic Node is coupled with Dynamic Teaser
+  if (($view['block_type'] == 'dynamic_teaser' && $view['page_type'] != 'dynamic_node') || ($view['page_type'] == 'dynamic_teaser' && $view['block_type'] != 'dynamic_node')) {
+    form_error($form["$type-info"]['page_type'], t('Dynamic Teaser type requires the use of a Dynamic Node type as well.'));
+  }
+
+  // Ensure Dynamic Node only displays one node at a time and that an argument is set
+  if (($type == 'block' && $view['block_type'] == 'dynamic_node' && $view['nodes_per_block'] != 1) || ($type == 'page' && $view['page_type'] == 'dynamic_node' && $view['nodes_per_page'] != 1)) {
+    form_error($form["$type-info"]['nodes_per_page'], t('Dynamic Node type can only display one node at a time.'));
+  }
+  
+  if ($type == 'page' && $view['page_type'] == 'dynamic_node' && !$view['use_pager'] && count(array_filter(array_keys($view['argument']), 'is_numeric')) != 1) {
+    form_error($form['argument'], t('Dynamic Node type requires one node id argument if a pager isn\'t used.'));    
+  }
+  else if ($type == 'page' && $view['page_type'] == 'dynamic_node' && !$view['use_pager'] && $view['argument'][0]['id'] != 'nid') {
+    form_error($form['argument'][0], t('Only Node ID arguments are acceptable for Dynamic Node type when a pager is not used.'));
+  }
+  else if ($type == 'page' && $view['page_type'] == 'dynamic_node' && !$view['use_pager'] && $view['argument'][0]['argdefault'] != 2) {
+    form_error($form['argument'][0], t('Dynamic Node type requires the argument default to be set at \"Display All Values\" when a pager isn\'t used.'));    
+  }
+  else if ($type == 'page' && $view['page_type'] == 'dynamic_node' && !$view['use_pager'] && $view['block_type'] == 'dynamic_teaser' && $view['view_args_php'] != 'if ($type == "block") return array();') {
+    form_error($form['view_args_php_fieldset']['view_args_php'], t('Dynamic Node type requires the following php argument handling code when used with the Dynamic Teaser block, please copy and paste it into the correct field: if ($type == "block") return array();'));
+  }
+
+  $exposed = array_filter(array_keys($view['exposed_filter']), 'is_numeric');
+  // Ensure Dynamic Filters have a select filter enabled
+  if (preg_match('/^dynamic_filter_(.*?)/', $type, $match)) {
+    $filter_type = $match[1];
+    
+    foreach($view->exposed_filter AS $filter) {
+      if ($filter) {
+        $found = TRUE;
+      }
+    }
+    
+    if (!$found) {
+      form_error($form["$type-info"]['exposed_filter'], t('Dynamic Filter types require an exposed select filter.'));
+    }
+    
+    if ($filter_type == 'list' || $filter_type == 'table') {
+      call_user_func('views_ui_plugin_validate_'. $filter_type, $filter_type, $view, $form);
+    }
+  }
+}
+
+function dynamic_views_load_js() {
+  drupal_add_js(drupal_get_path('module', 'dynamic_views') . '/js/dynamic_views.js');
+  drupal_add_js(drupal_get_path('module', 'dynamic_views') . '/js/jquery.history_remote.js');
+}

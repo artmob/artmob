@@ -1,0 +1,11 @@
+<?php
+// $Id: tabs.install,v 1.2.2.2 2008/03/29 13:37:28 nedjo Exp $
+
+/** 
+ * Implementation of hook_uninstall(). 
+ */
+function tabs_uninstall() {
+ foreach (array('slide', 'fade', 'speed', 'navigation', 'auto_height') as $type) {
+   variable_del('tabs_'. $type);
+ }
+}

@@ -1,0 +1,233 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: imagefield-5.x-2.1\n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: 2008-05-26 13:40+0200\n"
+"Last-Translator: Juhani Pirinen <juhani.pirinen@netti.in>\n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Poedit-Language: Finnish\n"
+"X-Poedit-Country: FINLAND\n"
+
+#: imagefield/imagefield.module:125
+msgid "Default image"
+msgstr "Oletuskuva"
+
+#: imagefield/imagefield.module:130
+msgid "Use default image"
+msgstr "Käytä oletuskuvaa"
+
+#: imagefield/imagefield.module:132
+msgid "Check here if you want to use a image as default."
+msgstr "Valitse tämä, jos tahdot käyttää oletuskuvaa."
+
+#: imagefield/imagefield.module:142
+msgid "Upload image"
+msgstr "Siirrä kuva"
+
+#: imagefield/imagefield.module:143
+msgid "Choose a image that will be used as default."
+msgstr "Valitse kuva, jota käytetään oletuksena."
+
+#: imagefield/imagefield.module:168
+msgid "The default image could not be uploaded. The destination(%d) does not exist or is not writable by the webserver."
+msgstr "Oletuskuvaa ei voitu siirtää palvelimelle.  Kohdetta (%d) ei ole olemassa tai webpalvelimella ei ole sinne kirjoitusoikeuksia."
+
+#: imagefield/imagefield.module:173
+msgid "The default image could not be uploaded. Failed saving to destination(%d)."
+msgstr "Oletuskuvaa ei voitu siirtää palvelimelle. Kohteeseen (%d) tallentaminen epäonnistui."
+
+#: imagefield/imagefield.module:197
+msgid "Has Image"
+msgstr "On kuva"
+
+#: imagefield/imagefield.module:265
+msgid "Image upload was unsuccessful."
+msgstr "Kuvan siirtäminen palvelimelle epäonnistui."
+
+#: imagefield/imagefield.module:423
+msgid "Maximum resolution for Images"
+msgstr "Maksimiresoluutio kuville"
+
+#: imagefield/imagefield.module:428
+msgid "The maximum allowed image size expressed as WIDTHxHEIGHT (e.g. 640x480). Set to 0 for no restriction. If a larger image is uploaded, it will be resized to reflect the given width and height."
+msgstr "Suurin sallittu kuvakoko muodossa LEVEYSxKORKEUS (esim 640x480).  Aseta arvoksi 0, jos ei rajoitusta.  Jos suurempi kuva siirretään, sen kokoa pienennetään vastaamaan annettua leveyttä ja korkeutta."
+
+#: imagefield/imagefield.module:432
+msgid "Maximum filesize for Images"
+msgstr "Maksimi tiedostokoko kuville"
+
+#: imagefield/imagefield.module:435
+msgid "The maximum allowed image file size expressed in kilobytes. Set to 0 for no restriction."
+msgstr "Suurin sallittu kuvatiedoston koko kilotavuissa.  Aseta arvoksi 0, jos ei rajoitusta."
+
+#: imagefield/imagefield.module:439
+msgid "Maximum number of images"
+msgstr "Maksimimäärä kuvia"
+
+#: imagefield/imagefield.module:442
+msgid "The maximum number of images allowed. Set to 0 for no restriction. This only applies if multiple values are enabled."
+msgstr "Suurin sallittu määrä kuvia.  Aseta arvoksi 0, jos ei rajoitusta.  Tätä käytetään vain, jos 'Useita arvoja' on käytössä."
+
+#: imagefield/imagefield.module:446
+msgid "Image path"
+msgstr "Kuvien hakupolku"
+
+#: imagefield/imagefield.module:448
+msgid "Optional subdirectory within the \"%dir\" directory where images will be stored. Do not include trailing slash."
+msgstr "Valinnainen alikansio hakemistossa \"%dir\", missä kuvia säilytetään.  Älä laita alkuun kenoviivaa."
+
+#: imagefield/imagefield.module:451
+msgid "You can use the following tokens in the image path."
+msgstr "Voit käyttää seuraavia korvausmerkkauksia kuvapolussa."
+
+#: imagefield/imagefield.module:456
+msgid "Permitted upload file extensions."
+msgstr "Sallitut tiedostopäätteet"
+
+#: imagefield/imagefield.module:460
+msgid "Extensions a user can upload to this field. Seperate extensions with a space and do not include the leading dot."
+msgstr "Siirrettävän tiedostonimen päätteet, joita voi käyttää tässä kentässä.  Erota päätteet välilyönnillä ja älä laita alkuun pistettä."
+
+#: imagefield/imagefield.module:465
+msgid "Enable custom alternate text"
+msgstr "Käytä omaa vaihtoehtoista tekstiä"
+
+#: imagefield/imagefield.module:467
+msgid "Enable custom alternate text for images. Filename will be used if not checked."
+msgstr "Ota käyttöön mukautettava vaihtoehtoinen teksti kuville.  Tiedostonimeä käytetään, jos ei valittuna."
+
+#: imagefield/imagefield.module:471
+msgid "Enable custom title text"
+msgstr "Käytä omaa otsikkotekstiä"
+
+#: imagefield/imagefield.module:473
+msgid "Enable custom title text for images. Filename will be used if not checked."
+msgstr "Ota käyttöön mukautettava otsikkoteksti kuville.  Tiedostonimeä käytetään, jos ei valittuna."
+
+#: imagefield/imagefield.module:512
+msgid "Imagefield failed to create directory(%d) at (%p)."
+msgstr "Hakemiston (%d) luominen epäonnistui hakupolkuun (%p)."
+
+#: imagefield/imagefield.module:527
+msgid "The image %filename was resized to fit within the maximum allowed resolution of %resolution pixels"
+msgstr "Kuvan %filename kokoa pienennettiin sopimaan suurimpaan sallittuun resoluutioon %resolution pikseliä"
+
+#: imagefield/imagefield.module:672
+msgid "Images are not saved until the form is submitted."
+msgstr "Kuvia ei ole tallennettu, ennen kuin lomake on lähetetty."
+
+#: imagefield/imagefield.module:704
+msgid "<br />Allowed extensions: %ext"
+msgstr "<br />Sallitut tiedostopäätteet: %ext"
+
+#: imagefield/imagefield.module:710
+msgid "Upload a new image"
+msgstr "Siirrä uusi kuva"
+
+#: imagefield/imagefield.module:719
+msgid "Upload"
+msgstr "Siirrä"
+
+#: imagefield/imagefield.module:740
+msgid "Delete"
+msgstr "Poista"
+
+#: imagefield/imagefield.module:759
+msgid "Filename: "
+msgstr "Tiedostonimi:"
+
+#: imagefield/imagefield.module:770
+msgid "Alternate text"
+msgstr "Vaihtoehtoinen teksti"
+
+#: imagefield/imagefield.module:772
+msgid "Alternate text to be displayed if the image cannot be displayed."
+msgstr "Näytettävä vaihtoehtoinen teksti, kun kuvaa ei voida näyttää."
+
+#: imagefield/imagefield.module:786
+msgid "Title"
+msgstr "Otsikko"
+
+#: imagefield/imagefield.module:788
+msgid "Text to be displayed on mouse overs."
+msgstr "Näytettävä teksti, kun hiiren osoitin on päällä."
+
+#: imagefield/imagefield.module:798
+msgid "If a new image is chosen, the current image will be replaced upon submitting the form."
+msgstr "Jos uusi kuva on valittu, nykyinen kuva korvataan, kun lomake lähetetään."
+
+#: imagefield/imagefield.module:857
+msgid "@field is required. Please upload an image."
+msgstr "@field on pakollinen. Siirrä kuvatiedosto palvelimelle."
+
+#: imagefield/imagefield.module:860
+msgid "@field is required. Please uncheck at least one delete checkbox or upload another image."
+msgstr "@field on pakollinen. Poista valinta vähintään yhdestä 'Poista'-valintaruudusta tai siirrä toinen kuva."
+
+#: imagefield/imagefield.module:877
+msgid "Files with the extension %ext are not allowed. Please upload a file with an extension from the following list: %allowed_extensions"
+msgstr "Tiedostoja ei sallita, joiden pääte on %ext. Voit siirtää tiedoston, jonka pääte on jokin seuraavista: %allowed_extensions"
+
+#: imagefield/imagefield.module:885
+msgid "The file you uploaded has a filesize greater than the maximum allowed filesize of %sizekb."
+msgstr "Siirtämäsi tiedoston koko on suurempi kuin suurin sallittu tiedostokoko %sizekb."
+
+#: imagefield/imagefield.module:893
+msgid "Mime Type mismatch. Only image files may be upload. You uploaded a file with mime type: %mime"
+msgstr "Mime-tyyppi epäyhteensopiva.  Vain kuvatiedostoja voi siirtää palvelimelle.  Siirsit tiedoston, jonka mime-tyyppi on: %mime"
+
+#: imagefield/imagefield.module:901
+msgid "You are only allowed to upload up to %maximages images."
+msgstr "Enintään %maximages kuvan siirtäminen on mahdollista."
+
+#: imagefield/imagefield.module:921
+msgid "link to node"
+msgstr "linkki noodiin"
+
+#: imagefield/imagefield.module:925
+msgid "link to image"
+msgstr "linkki kuvaan"
+
+#: imagefield/imagefield.module:929
+msgid "path to image"
+msgstr "hakupolku kuvaan"
+
+#: imagefield/imagefield.module:933
+msgid "url to image"
+msgstr "verkko-osoitepolku kuvaan"
+
+#: imagefield/imagefield.module:512
+#: imagefield/imagefield.info:0
+msgid "imagefield"
+msgstr "imagefield"
+
+#: imagefield/imagefield.module:691
+msgid "You can only attach one image to this field. Delete the image if you wish to be able to upload a different one."
+msgid_plural "You can only attach @count images to this field. Delete an image if you wish to be able to upload different images."
+msgstr[0] "Voit liittää vain yhden kuvan tähän kenttään.  Poista kuva, jos haluat siirtää eri kuvan."
+msgstr[1] "Voit liittää vain @count kuvaa tähän kenttään.  Poista kuvia, jos haluat siirtää eri kuvia."
+
+#: imagefield/imagefield.module:101
+msgid "view imagefield uploads"
+msgstr "näytä siirretyt kuvakenttätiedostot"
+
+#: imagefield/imagefield.info:0
+msgid "ImageField"
+msgstr "Kuvakenttä"
+
+#: imagefield/imagefield.info:0
+msgid "Defines an image field type."
+msgstr "Määrittelee kuvakenttä tyypin."
+
+#: imagefield/imagefield.info:0
+msgid "CCK"
+msgstr "CCK"
+
+#: imagefield/imagefield.info:0
+msgid "1210637113"
+msgstr "1210637113"
+

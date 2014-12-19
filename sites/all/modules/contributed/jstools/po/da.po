@@ -1,0 +1,28 @@
+# Danish translation of Drupal (jstools.module)
+# Copyright 2007 Morten Wulff <wulff@ratatosk.net>
+msgid ""
+msgstr ""
+"Project-Id-Version: Danish translation of Drupal (jstools.module) $Id: da.po,v 1.1.2.1 2007/09/22 13:27:48 wulff Exp $\n"
+"POT-Creation-Date: 2007-09-22 15:20+0200\n"
+"PO-Revision-Date: 2007-09-22 15:21+0100\n"
+"Last-Translator: Morten Wulff <wulff@ratatosk.net>\n"
+"Language-Team: Danish <l10n@drupaldanmark.dk>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Poedit-Language: Danish\n"
+"X-Poedit-Country: DENMARK\n"
+
+#: jstools.module:0
+msgid "jstools"
+msgstr "jstools"
+
+#: jstools.info:0;0
+msgid "Javascript tools"
+msgstr "Javascript værktøjer"
+
+#: jstools.info:0
+msgid "Provides common methods used by Javascript Tools modules."
+msgstr "Fælles metoder der bruges af javascript-modulerne."
+

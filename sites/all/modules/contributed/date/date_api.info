@@ -1,0 +1,9 @@
+; $Id: date_api.info,v 1.1.2.3 2007/06/18 23:06:36 dww Exp $
+name = Date API
+description = Makes the date api available to other modules.
+
+; Information added by drupal.org packaging script on 2007-12-28
+version = "5.x-1.8"
+project = "date"
+datestamp = "1198842003"
+

@@ -1,0 +1,6 @@
+; $Id: artmob_licensing_ticket.info,v 3.1 2010/04/15 20:55:33 stop14 Exp $
+name = Artmob Licensing Ticket
+description = A helper module for Artmob Respond.  Allows visitors to add or correct license infomation.
+package = Artmob Respond
+version = 3.1
+

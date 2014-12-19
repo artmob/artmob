@@ -1,0 +1,156 @@
+# $Id: ja.po,v 1.1.2.2 2007/05/01 17:46:54 imagine Exp $
+# -----------------------------------------------------------------------------
+# Japanese translation of Drupal (lightbox2.module)
+#
+# Copyright (c) 2006-2007  Drupal Japan  ( http://drupal.jp/ )  /
+#                          Drupal Nippon ( http://drupon.org/ ) /
+#                          Takafumi      ( jp.drupal@imagine **reverse order**)
+#
+# Generated from file:
+#  lightbox2.info,v 1.1 2007/04/30 10:33:29 snpower
+#
+# -----------------------------------------------------------------------------
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2007-05-01 19:11+0900\n"
+"Last-Translator: Takafumi <jp.drupal@imagine **reverse order**>\n"
+"Language-Team: Drupal Japan / Drupal Nippon\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n!=1);\n"
+
+# 既知の問題に言及している箇所は、翻訳時に当該箇所がコメントアウトされていたのでコメントアウト
+#: lightbox2.module:37
+msgid ""
+"<h3>Overview</h3>\n"
+"      <p align=\"justify\">Lightbox JS V2 is a simple, unobtrusive script used to overlay images on the current page. It's a snap to setup and works on all modern browsers. The module comes with a Lightbox2 Lite option which does not use the Scriptaculous/Prototype libraries; it is therefore less likely to conflict with anything else.</p>\n"
+"      <p align=\"justify\">Places images above your current page, not within. This frees you from the constraints of the layout, particularly column widths. Keeps users on the same page. Clicking to view an image and then having to click the back button to return to your site is bad for continuity (and no fun!).</p>\n"
+"      <p align=\"justify\"><h3>Usage</h3></p>\n"
+"      <p>Add rel=&quot;lightbox&quot; attribute to any link tag to activate the lightbox. For example: </p>\n"
+"      <p>&lt;a href=&quot;image-1.jpg&quot; rel=&quot;lightbox&quot; title=&quot;my caption&quot;&gt;image #1&lt;/a&gt;</p>\n"
+"      <p>Optional: Use the title attribute if you want to show a caption.</p>\n"
+"\t  <p>If you have a set of related images that you would like to group, follow step one but additionally include a group name between square brackets in the rel attribute. For example:</p><p>&lt;a href=\"images/image-1.jpg\" rel=\"lightbox[roadtrip]\"&gt;image #1&lt;/a&gt;<br>\n"
+"&lt;a href=\"images/image-2.jpg\" rel=\"lightbox[roadtrip]\"&gt;image #2&lt;/a&gt;<br>\n"
+"&lt;a href=\"images/image-3.jpg\" rel=\"lightbox[roadtrip]\"&gt;image #3&lt;/a&gt;<br></p>\n"
+"<p>No limits to the number of image sets per page or how many images are allowed in each set. Go nuts!</p>\n"
+"\t<p align=\"justify\"><h3>Known Issues</h3></p>\n"
+"\t<p>Image Issues - An issue has been identified with the loading of certain images when using the module. (closelabel.gif, expand.gif, loading.gif)</p>\n"
+"    <p>If your installation of Drupal exists in the root of your domain, i.e., www.yourinstallation.com then you shouldn't have any problems. The issue only occurs when Drupal is installed in a subdirectory, i.e., www.yourinstallation.com/subdirectory.</p>\n"
+"    <p>If this is the case, you will need to edit the lightbox.js on lines 63, 64 and 65 to reflect the fully qualified URL of your images. In the above case, this would be as follows;</p>\n"
+"    <p>var fileLoadingImage = &quot;/modules/lightbox2/images/loading.gif&quot;;<br>\n"
+"      var fileBottomNavCloseImage = &quot;/modules/lightbox2/images/closelabel.gif&quot;;<br>\n"
+"      var fileBottomNavZoomImage = &quot;/modules/lightbox2/images/expand.gif&quot;; //Update to 2.02+</p>\n"
+"    <p>should be changed to</p>\n"
+"    <p>var fileLoadingImage = &quot;/subdirectory/modules/lightbox2/images/loading.gif&quot;;<br>\n"
+"      var fileBottomNavCloseImage = &quot;/subdirectory/modules/lightbox2/images/closelabel.gif&quot;;<br>\n"
+"      var fileBottomNavZoomImage = &quot;/subdirectory/modules/lightbox2/images/expand.gif&quot;; //Update to 2.02+</p>\n"
+"    <p>There may be other methods that can be used to achieve this, but this should be the simplest for those with little or no programming experience. If you choose to use Lightbox2 Lite option, then you will need to edit the lightbox_lite.js file in a similar manner on lines 39 and 40.</p>"
+msgstr ""
+"<h3>概観</h3>\n"
+"      <p align=\"justify\">Lightbox JS V2 は、表示中のページに画像をオーバーレイするために使用される、シンプルで地味なスクリプトです。 これは簡単にセットアップでき、現代のすべてのブラウザで動作します。 このモジュールには、Scriptaculous/Prototype ライブラリを使用しない Lightbox2 Lite オプションが装備されています。 このオプションを使用することで、その他のスクリプトとのコンフリクトの可能性が低くなります。</p>\n"
+"      <p align=\"justify\">画像は、表示中ページの中ではなく、上（前面）に配置されます。 これにより、レイアウト、特にカラム幅の制約からあなたを解放します。 これはまた、ユーザを同じページ上に留めることにも役立ちます。 画像を見るためにクリックし、見終わったら「戻る」ボタンでサイトに戻るのは、流れが悪く、つまらないものです。</p>\n"
+"      <p align=\"justify\"><h3>使い方</h3></p>\n"
+"      <p>Lightbox を有効にするには、任意のリンクタグに rel=&quot;lightbox&quot; 属性を加えてください。 例えば、次のようにします：</p>\n"
+"      <p>&lt;a href=&quot;image-1.jpg&quot; rel=&quot;lightbox&quot; title=&quot;画像の見出し&quot;&gt;image #1&lt;/a&gt;</p>\n"
+"      <p>オプション： 見出しを表示したい場合は title 属性を使用してください。</p>\n"
+"\t  <p>グループ化したい関連した画像セットがある場合、rel=&quot;lightbox&quot; に加え、角括弧にグループ名を含めて指定してください。 例えば、次のようにします：</p><p>&lt;a href=\"images/image-1.jpg\" rel=\"lightbox[roadtrip]\"&gt;image #1&lt;/a&gt;<br>\n"
+"&lt;a href=\"images/image-2.jpg\" rel=\"lightbox[roadtrip]\"&gt;image #2&lt;/a&gt;<br>\n"
+"&lt;a href=\"images/image-3.jpg\" rel=\"lightbox[roadtrip]\"&gt;image #3&lt;/a&gt;<br></p>\n"
+"<p>1ページあたりの画像セット数や、各セットでの画像数に制限はありません。</p>\n"
+"<!-- "
+"\t<p align=\"justify\"><h3>既知の問題</h3></p>\n"
+"\t<p>Image Issues - An issue has been identified with the loading of certain images when using the module. (closelabel.gif, expand.gif, loading.gif)</p>\n"
+"    <p>If your installation of Drupal exists in the root of your domain, i.e., www.yourinstallation.com then you shouldn't have any problems. The issue only occurs when Drupal is installed in a subdirectory, i.e., www.yourinstallation.com/subdirectory.</p>\n"
+"    <p>If this is the case, you will need to edit the lightbox.js on lines 63, 64 and 65 to reflect the fully qualified URL of your images. In the above case, this would be as follows;</p>\n"
+"    <p>var fileLoadingImage = &quot;/modules/lightbox2/images/loading.gif&quot;;<br>\n"
+"      var fileBottomNavCloseImage = &quot;/modules/lightbox2/images/closelabel.gif&quot;;<br>\n"
+"      var fileBottomNavZoomImage = &quot;/modules/lightbox2/images/expand.gif&quot;; //Update to 2.02+</p>\n"
+"    <p>should be changed to</p>\n"
+"    <p>var fileLoadingImage = &quot;/subdirectory/modules/lightbox2/images/loading.gif&quot;;<br>\n"
+"      var fileBottomNavCloseImage = &quot;/subdirectory/modules/lightbox2/images/closelabel.gif&quot;;<br>\n"
+"      var fileBottomNavZoomImage = &quot;/subdirectory/modules/lightbox2/images/expand.gif&quot;; //Update to 2.02+</p>\n"
+"    <p>There may be other methods that can be used to achieve this, but this should be the simplest for those with little or no programming experience. If you choose to use Lightbox2 Lite option, then you will need to edit the lightbox_lite.js file in a similar manner on lines 39 and 40.</p>"
+" -->"
+
+#: lightbox2.module:69
+msgid "administer lightbox2"
+msgstr "Lightbox2の管理"
+
+#: lightbox2.module:88 lightbox2.info:0
+msgid "Lightbox2"
+msgstr "Lightbox2"
+
+#: lightbox2.module:92
+msgid "Allows the user to configure the lightbox2 settings"
+msgstr "Lightbox2の設定を行います。"
+
+#: lightbox2.module:126
+msgid "Lightbox2 Plus"
+msgstr "Lightbox2 Plus"
+
+#: lightbox2.module:134
+msgid "Use Lightbox2 Plus"
+msgstr "Lightbox2 Plusを使用"
+
+#: lightbox2.module:135
+msgid "Un-checking this box will enable Lightbox2 Lite."
+msgstr "Plusバージョンを使用するかどうかを指定してください。 ここにチェックを入れるとPlusバージョンが使用され、外すとLiteバージョンが使用されます。"
+
+#: lightbox2.module:142
+msgid "Lightbox2 Plus Image Node options"
+msgstr "Lightbox2 Plus イメージノードオプション"
+
+#: lightbox2.module:150
+msgid "Enable for Image Nodes"
+msgstr "イメージノードで有効にする"
+
+#: lightbox2.module:151
+msgid "Checking this box will enable automatic URL formatting for Image Nodes."
+msgstr "ここにチェックを入れると、イメージノードのために自動的なURLの書式化を行います。"
+
+#: lightbox2.module:158
+msgid "Enable Grouping"
+msgstr "グループ化を有効にする"
+
+#: lightbox2.module:159
+msgid "Checking this box will enable automatic grouping of Image Nodes on a page. Useful for image galleries."
+msgstr "ここにチェックを入れると、ページでのイメージノードの自動的なグループ化を行います。 これはイメージギャラリーに役立ちます。"
+
+#: lightbox2.module:166
+msgid "Enable Gallery 2 Filter"
+msgstr "Gallery 2フィルタを有効にする"
+
+#: lightbox2.module:167
+msgid "Checking this box will enable the Gallery 2 filter."
+msgstr "ここにチェックを入れると、Gallery 2フィルタが有効になります。"
+
+# ----------
+#: lightbox2.module:173;181
+#msgid "Update"
+#msgstr "更新"
+
+#: lightbox2.module:193
+msgid "Image links from G2 are formatted for use with Lightbox.V2"
+msgstr "G2の画像リンクがLightbox.V2を使用するように書式化されます。"
+
+#: lightbox2.module:201
+msgid "Lightbox filter"
+msgstr "Lightboxフィルタ"
+
+#: lightbox2.module:203
+msgid "Turns g2_filter links into Lighbox.V2 appropriate links"
+msgstr "g2_filterのリンクをLightbox.V2に適合するリンクに変更します。"
+
+#: lightbox2.module:253
+msgid "The script.aculo.us library is in not installed correctly. Please download from <a href=\"http://script.aculo.us/downloads\">http://script.aculo.us/downloads</a>, follow the instructions in the Lightbox V.2 README.TXT file to copy the files to their correct locations."
+msgstr "現在、script.aculo.usライブラリがインストールされていません。 <a href=\"http://script.aculo.us/downloads\">http://script.aculo.us/downloads</a> からダウンロードし、Lightbox V.2 README.TXTの指示に従って、それらを正しい場所にコピーしてください。"
+
+#: lightbox2.module:0 lightbox2.install:9;22
+msgid "lightbox2"
+msgstr "lightbox2"
+
+#: lightbox2.module:35 lightbox2.info:0
+msgid "Enables Lightbox V2 for Drupal"
+msgstr "Lightbox2 V2をDrupalで利用できるようにします。"
+

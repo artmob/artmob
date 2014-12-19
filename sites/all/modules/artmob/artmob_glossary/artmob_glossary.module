@@ -1,0 +1,381 @@
+<?php
+// $Id: artmob_glossary.info,v 1.0 2010/12/10 20:55:33 stop14 Exp $
+
+/* @file
+ * ADDDOCUMENTATION
+ **/
+
+
+//----------------------------------------------
+// CONSTANTS
+//----------------------------------------------
+
+
+define('ARTMOB_GLOSSARY_MODULE_PATH',drupal_get_path('module', 'artmob_glossary'));
+define('ARTMOB_GLOSSARY_IMAGE_PATH', base_path() . ARTMOB_GLOSSARY_MODULE_PATH . '/templates/images');
+
+//* Implementation of hook_node_info().
+//Note that module must match the module name
+function artmob_glossary_node_info() {
+  return array(
+    'am_glossary' => array(
+      'name' => t('Glossary Entry'),
+      'module' => 'artmob_glossary',
+      'description' => t("Add a glossary or inline help entry to your site."),
+      'has_title' => TRUE,
+      'title_label' => t( 'Term' ),
+      'has_body' => TRUE,
+      'body_title' => t('Definition')
+    ),
+  );
+}
+
+function artmob_glossary_perm() {
+    return array('Add Glossary Entry', 'Edit Glossary Entry', 'Remove Glossary Entry', 'View Glossary Entry');
+}
+
+
+// Implementation of hook_access().
+
+function artmob_glossary_access($op, $node) {
+  global $user;
+
+  if ($op == 'create') {
+    // Only registered users can create Articles.
+    return user_access('Add Glossary Entry');
+  }
+
+  else if ($op == 'update') {
+    // Only registered users can update an Article.
+    return user_access('Edit Glossary Entry');
+  }
+  else if ($op == 'delete') {
+    // Only registered users can delete an Article.
+    return user_access('Delete Glossary Entry');
+  }
+  else if ($op == 'view') {
+    // Only registered users can view an Article if it is locked.
+    return user_access('View Glossary Entry');
+  }
+  else {
+    return FALSE;
+  }   
+}
+
+
+//----------------------------------------------
+/**
+ * Implementation of hook_help().
+ */
+function artmob_glossary_help($section) {
+  switch ($section) {
+    case 'admin/help#artmob_glossary':
+      $output = '<p>'. t('Add glossary entries and inline help texts to your site.') .'</p>';
+      return $output;
+    case 'admin/modules#description':
+    case 'admin/settings/artmob_glossary':
+      return (t('Administrate settings for adding glossary entries'));
+  }
+}
+
+//----------------------------------------------
+/**
+ * Implementation of hook_menu().
+ */
+function artmob_glossary_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+  } 
+  else {
+  }
+  return $items;
+}
+
+function artmob_glossary_admin_settings() {
+}
+
+// Implementation of hook_form().
+function artmob_glossary_form(&$node) {
+
+  $type = node_get_types('type', $node);
+
+  $form['artmob_glossary'] = array(
+    '#type'          => 'fieldset',
+    '#title'         => t('Picture'),
+    '#weight'        => -5,
+    '#collapsible'   => TRUE,
+    '#collapsed'     => FALSE
+  );
+
+  $form['artmob_glossary']['title'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Title'),
+    '#default_value' => $node->title,
+    '#description'   => t('Enter a title for the entry. This may be an identical or expanded version of the term below.'),
+    '#tree'          => 'FALSE',
+    '#required'      => TRUE,
+    '#weight'        => -8,
+  );
+  
+  $form['artmob_glossary']['term'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Term'),
+    '#default_value' => $node->term,
+    '#description'   => t('Enter the searchable term for this entry.  The searchable term will be the word or phrase that will be marked with a glossary entry. In most cases the searchable term should be unpluralized, as the system will look for common plurals alongside its singular form.'),
+    '#tree'          => 'FALSE',
+    '#required'      => FALSE,
+    '#weight'        => -6,
+  );
+  
+	$form['artmob_glossary']['context'] = array(
+	'#type'          => 'textfield',
+	'#title'         => t('context'),
+	'#default_value' => $node->context,
+	'#description'   => t('Enter the context in which to add glossary entries.  Contexts should be written as HTML DOM references (e.g. #my-id or .my-class), separated by commas. All occurrences of the term within that context will be affected.'),
+	'#tree'          => 'FALSE',
+	'#required'      => FALSE,
+	'#weight'        => -4,
+);
+
+
+ $form['artmob_glossary']['body'] = array(
+    '#type'          => 'textarea',
+    '#title'         => t('Definition'),
+    '#default_value' => $node->body,
+    '#description'   => 'Enter the definition of the term.',
+    '#tree'          => 'FALSE',
+    '#rows'          => 10,
+    '#required'      => FALSE
+  );
+//  $form['artmob_glossary']['format'] = filter_form($node->format);
+
+  return $form;
+
+}
+
+function artmob_glossary_insert($node) {
+  db_query("INSERT INTO {am_glossary} (nid, term, context, definition) VALUES (%d, '%s', '%s', '%s')", $node->nid, $node->term ? $node->term : $node->title, $node->context, $node->body);
+}
+
+// Implementation of hook_update().
+function artmob_glossary_update($node) {
+  db_query("UPDATE {am_glossary}
+            SET gid = %d,
+            nid = %d,
+            term = '%s',
+            context = '%s',
+            definition = '%s'
+            WHERE nid = %d",
+            
+            $node->gid,
+            $node->nid,
+            $node->term ? $node->term : $node->title,
+            $node->context,
+            $node->body,
+            $node->nid);
+            
+            drupal_set_message($node->context);
+}
+
+// Implementation of hook_delete().
+function artmob_glossary_delete($node) {
+  db_query("DELETE FROM {am_glossary} WHERE nid = %d", $node->nid);
+}
+
+
+// Implementation of hook_load().
+function artmob_glossary_load($node) {
+  $t = db_fetch_array(db_query('SELECT * FROM {am_glossary} WHERE nid = %d', $node->nid));
+  return $t;
+}
+
+
+/**
+ * Implementation of hook_submit().
+ */
+function artmob_glossary_submit(&$node) {
+  global $user;
+  // Set default values for non-administrators.
+  if (!user_access('administer nodes')) {
+    $node->revision = 1;
+    $node->uid = $user->uid;
+  }
+}
+
+
+function artmob_glossary_init() {
+        drupal_add_js(ARTMOB_GLOSSARY_MODULE_PATH .'/js/artmob_glossary.js');
+        drupal_add_css(ARTMOB_GLOSSARY_MODULE_PATH . '/css/artmob_glossary.css');
+        
+        $context = artmob_glossary_get_contexts();
+        
+        $artmob_glossary_settings = array(
+         'modulepath' => ARTMOB_GLOSSARY_MODULE_PATH,
+         'imagepath' => ARTMOB_GLOSSARY_IMAGE_PATH,
+         'imagelink' => theme('artmob_glossary_help_icon'),
+         'contexts' => json_encode($context),
+         'inlinehtml' => theme('artmob_glossary_hide_inline','%term%','%text%')
+       );
+
+       drupal_add_js(array('amglossary' => $artmob_glossary_settings), "setting");
+}
+
+/**
+ *	Creates an array keyed by DOM element to pass to the glossary javascript.
+ */
+
+function artmob_glossary_get_contexts() {
+		$db_query = db_query('SELECT g.*, n.changed, n.created, n.title FROM am_glossary AS g, node AS n WHERE g.nid=n.nid AND n.status=1');
+		
+		$contexts = array();
+		
+		while($term = db_fetch_object($db_query)) {
+				if (!$term->context) { continue; }
+				
+				$elements = explode(',',str_replace(' ','',$term->context));
+				
+				foreach($elements as $elem) {
+					$elem = trim($elem);
+					$elemkey = $elem; //base64_encode($elem); 
+					$termkey = $term->term; // base64_encode($term->term);
+					$contexts[$elemkey][$termkey] = theme('artmob_glossary_hide_inline',$term->title,$term->definition);
+				}
+		
+		}
+				
+		if (count($contexts) > 0) {
+			return $contexts;
+		}
+
+}
+
+//--------------------------------------------------------------------
+//This hook is used to add form fields to the forms
+//of other module's add node screens.  The fields
+//are defined here just as they were in the hook_form hook.
+function artmob_glossary_form_alter($form_id, &$form) {
+  // boilerplate code to determine the node type of the form
+  if (isset($form['type'])) {
+      $type = $form['type']['#value'];
+    }
+  elseif (isset($form['orig_type'])) {
+      $type = $form['orig_type']['#value'];
+    }
+  else {
+    return;
+  }
+
+
+  switch ($form_id) {
+    // Form addition to all Enabled node types.  
+    case $type .'_node_form':
+      break;
+     case 'node_type_form':
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ *
+*/
+function artmob_glossary_nodeapi(&$onode, $op, $teaser=NULL, $page=NULL) {
+  switch ($op) {
+    case 'update':
+      $bupdate = TRUE;
+
+      //Fall through, with flag.  Therefore with every update we delete
+      //the old associated records and then resave the new ones
+
+    case 'delete':
+      if (!$bupdate) {
+        break;
+      }
+
+    case 'insert':
+      break;
+    case 'load':
+      return $aload;
+      break;
+    case 'prepare':
+      break;
+    case 'view':
+     break;
+    case 'delete revision':
+      break;
+    case 'submit':
+      break;
+  }
+}
+
+//----------------------------------------------
+function artmob_glossary_user($op, &$edit, &$currentuser) {
+  global $user;
+  switch ($op) {
+    case 'load':
+    case 'view':
+    case 'form':
+  };
+}
+
+//----------------------------------------------
+function artmob_glossary_view($node, $teaser = FALSE, $page = FALSE) {
+  if ($page) {    
+    $node->body = check_markup($node->body, $node->format, FALSE);
+    $node->content['glossary'] = array('#value' => theme( 'artmob_glossary_basic_entry', $node, $page ));
+  } 
+  else {
+  //  $node->teaser = check_markup($node->teaser, $node->format, FALSE);
+    $node->content['glossary'] = array('#value' => theme( 'artmob_glossary_basic_entry', $node, $page ));
+  }
+  return $node;
+}
+
+//----------------------------------------------
+function theme_artmob_glossary_basic_entry( &$node, $page ) {
+	drupal_set_title('Glossary: ' . $node->title);
+	$content = $node->body;
+  //$content .= theme('artmob_glossary_digest_entry',$node->title,$node->body); 
+  
+  return $content;
+}
+
+//----------------------------------------------
+function theme_artmob_glossary_digest_entry( $term, $definition ) {
+  $content = '<span class="glossary-item" style="display:none">';
+  $content .=  sprintf('<span class="gterm">%s</span><span class="gtext">%s</span>',$term,htmlspecialchars($definition,ENT_COMPAT, 'UTF-8' ));
+  $content .= '</span>';
+  return $content;
+}
+
+function theme_artmob_glossary_hide_inline($term,$definition) {
+	$inbound = theme('artmob_glossary_digest_entry',$term,$definition);
+	$content = '<span class="glossary-inline">';
+	$content .= $inbound;
+	$content .= '</span>';
+	return $content;
+
+}
+
+function theme_artmob_glossary_help_icon() {
+	return sprintf('<a class="%s" title="%s"><img src="%s" alt="%s" /></a>','gloss-link','Tell about this term',ARTMOB_GLOSSARY_IMAGE_PATH . '/help_icon.png','term link image');
+}
+
+/*
+
+FULL GLOSSARY CODE
+
+<span class="glossary-inline" style="display:inline">
+	<span class="glossary-item" style="display:none">
+			<span class='gterm'>TERM</span>
+			<span class='gtext'>ENTRY</span>
+	</span>
+</span>
+*/
+
+/* Inline Javascript 
+
+<span id='someuniqueid'></span><script type='text/javascript'>glossaryPlaceInlineEntry('Term','Text','someuniqueid');</script> 
+*/
+

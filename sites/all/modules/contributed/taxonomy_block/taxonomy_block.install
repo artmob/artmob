@@ -1,0 +1,53 @@
+<?php
+// $Id: taxonomy_block.install,v 1.3 2007/01/17 17:03:49 drewish Exp $
+
+/**
+ * Implementation of hook_install()
+ */
+function taxonomy_block_install() {
+  $ret = array();
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      $ret[] = db_query("
+        CREATE TABLE {taxonomy_block} (
+          bid int(10) unsigned NOT NULL auto_increment,
+          type enum('vocabulary','term') NOT NULL default 'vocabulary',
+          tid int(10) unsigned NOT NULL default '0',
+          description varchar(100) NOT NULL default '',
+          teaser int(10) unsigned NOT NULL default '0',
+          name varchar(100) NOT NULL default '',
+          length int(10) unsigned NOT NULL default '1',
+          PRIMARY KEY  (bid)
+        ) /*!40100 DEFAULT CHARACTER SET utf8 */;
+      ");
+      break;
+
+    case 'pgsql':
+      db_query("
+        CREATE TABLE {taxonomy_block} (
+          bid serial NOT NULL ,
+          type text check (type in ('vocabulary'::text,'term'::text)) default 'vocabulary',
+          tid integer NOT NULL default 0,
+          description text NOT NULL default '',
+          teaser integer NOT NULL default 0,
+          name text NOT NULL default '',
+          length integer NOT NULL default 1,
+          PRIMARY KEY (bid)
+        );
+      ");
+      break;
+  }
+  return $ret;
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function taxonomy_block_uninstall() {
+  db_query('DROP TABLE {taxonomy_block}');
+}
+
+function taxonomy_block_update_1() {
+  return _system_update_utf8(array('taxonomy_block'));
+}

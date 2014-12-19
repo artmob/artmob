@@ -1,0 +1,47 @@
+<?php
+// $Id: artmob_digitized_works install,v 1.0 2008/03/01 01:30:00 drumm Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function artmob_digitized_works_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+    // NOT NEEDED NOW THAT WE NO LONGER SAVE HTMLBODY OR FORMAT
+    //  db_query("CREATE TABLE {am_digitizedworks} (
+    //    cid integer unsigned auto_increment primary key,
+    //    vid int unsigned NOT NULL default '0',
+    //    nid int unsigned NOT NULL default '0',
+    //				HTMLBody text,
+    //				HTMLBodyFormat int unsigned NOT NULL default '0'
+    //  ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+      break;
+    case 'pgsql':
+      break;
+  }
+
+  /*
+  drupal_set_message( 'before cck import' );
+  include_once './'. drupal_get_path('module', 'node') .'/content_types.inc';
+  include_once('./'. drupal_get_path('module', 'content') .'/content_admin.inc');
+  $filename = drupal_get_path('module', 'artmob_digitized_works') . "/cck_digitized_works_fields.txt";
+  drupal_set_message( '$filename = '.$filename );
+  $form_state = array();
+  $form_state['type_name'] = 'DigitizedWorks';
+  $form_state['macro'] = file_get_contents($filename);
+  drupal_set_message( 'macro = '.$form_state['macro'] );
+  content_copy_import_form_submit(null, $form_state);
+  //drupal_execute("content_copy_import_form_submit", null, $form_state);
+  drupal_set_message( 'after cck import' );
+  */
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function artmob_digitized_works_uninstall() {
+  //db_query('DROP TABLE {am_digitizedworks}');
+}
+?>

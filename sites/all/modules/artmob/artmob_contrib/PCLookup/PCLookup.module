@@ -1,0 +1,249 @@
+<?php
+// $Id: PCLookup.module,v 1.0 2007/05/26 08:31:22 drumm Exp $
+
+/**
+ * @file
+ * Allows users to enter a Lookup.
+ */
+
+
+//* Implementation of hook_node_info().
+function pclookup_node_info() {
+  return array(
+    'PCLookup' => array(
+      'name' => t('PC Lookup'),
+      'module' => 'PCLookup',
+      'description' => t("This allows a user to enter a new lookup variables")
+    ),
+  );
+}
+
+/*
+// Implementation of hook_perm().
+function pclookup_perm() {
+    return array('Add PC Lookup', 'Edit PC Lookup', 'Remove PC Lookup', 'View PC Lookup');
+}
+*/
+
+// Implementation of hook_access().
+function pclookup_access($op, $node) {
+  global $user;
+
+  if ($op == 'create') {
+    // Only registered users can create Lookups.
+    return user_access('administer nodes');
+  }
+
+  else if ($op == 'update') {
+    // Only registered users can update a lookup.
+    if (user_access('administer nodes')) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
+  }
+  else if ($op == 'delete') {
+    // Only registered users can delete a lookup.
+    if (user_access('administer nodes')) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
+  }
+  else if ($op == 'view') {
+    // Only registered users can view a lookup.
+    if (user_access('administer nodes')) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
+  }
+  else {
+    return FALSE;
+  }
+}
+
+function pclookup_view($node, $teaser = FALSE, $page = FALSE) {
+  //The view hook is used to act as the stepping point to prepare the node
+  //as it will be displayed in the content section.
+  //There are a few rules/tricks:
+  //1. It should return $node
+
+  //2. The content should be filled in $node->content['array_id_name']
+  //   where array_id_name is either made up or matches the array id given
+  //   in the _form hook to your $form array.
+
+  //3. The $node->content['array_id_name'] should be an array with it's '#value'
+  //   property filled in using a theme function.  The name of this function
+  //   doesn't really matter but Bill uses the convention of calling it module_basicview.
+  //   Therefore we call theme ('module_basicview', $node ) to build our html text string
+  //   and somewhere in this module we need to define the function theme_module_basicview.
+
+  //We want to be able to view all Lookups grouped by LookupType
+  //perhaps in a tabbed interface.  This will come later (once I figure out tabs).
+  //$node =  node_prepare($node, $teaser);
+
+  $teaser = TRUE;
+  $node->content['Lookup'] = array('#value' => theme( 'PCLookup_basic_view', $node, $page ));
+  $node =  node_prepare($node, $teaser);
+  return $node;
+}
+
+function theme_pclookup_basic_view( &$node, $page ) {
+  $content = '<h3>'. $node->LookupType .' = '. $node->title .'</h3>';
+  return $content;
+}
+
+/**
+ * Implementation of hook_block().
+ *
+ */
+function pclookup_block($op = 'list', $delta = 0) {
+  if ($op == 'list') {
+    //THIS IS STRICTLY FOR LOOKUP PURPOSES SO NO NEED TO SEND A BLOCK
+    //$block[0]['info'] = t('PCLookup');
+    //return $block;
+  }
+  else if ($op == 'view') {
+  }
+}
+
+// Implementation of hook_insert().
+function pclookup_insert($node) {
+  db_query("INSERT INTO {PC_Lookup} (nid, vid, LookupType, DisplayText)
+                       VALUES ( %d, %d, '%s', '%s' )",
+                        $node->nid,
+                        $node->vid,
+                        $node->LookupType,
+                        $node->title);
+}
+
+// Implementation of hook_update().
+function pclookup_update($node) {
+  db_query("UPDATE {PC_Lookup} set
+     LookupType='%s',
+     DisplayText ='%s'
+     where nid = %d",
+
+     $node->LookupType,
+     $node->title,
+     $node->nid);
+}
+
+/**
+ * Implementation of hook_submit().
+ */
+
+
+function pclookup_submit(&$node) {
+  global $user;
+  // Set default values for non-administrators.
+  if (!user_access('administer nodes')) {
+    $node->revision = 1;
+    $node->uid = $user->uid;
+  }
+}
+
+
+// Implementation of hook_form().
+function pclookup_form(&$node) {
+  $type = node_get_types('type', $node);
+
+  $form['PCLookup'] = array(
+    '#type'          => 'fieldset',
+    '#title'         => t('Lookup'),
+    '#weight'        => 1,
+    '#collapsible'   => TRUE,
+    '#collapsed'     => FALSE
+  );
+
+  $form['PCLookup']['LookupType'] = array(
+    '#type'          => 'select',
+    '#title'         => t('Lookup Type'),
+    '#default_value' => $node->LookupType,
+    '#description'   => t('Select the type of lookup'),
+    '#options' => array(
+                  'Province' => t('Province/State'),
+                  'Country' => t('Country'),
+                  'ContributorRole' => t('Contributor Role'),
+                  'EventTopic' => t('Event Topic'),
+                  'EventAudience' => t('Event Audience'),
+                  'CitationStyle' => t('Citation Style')
+                  ),
+    '#tree'          => 'FALSE',
+    '#required'      => True
+  );
+
+ $form['PCLookup']['title'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Display Text'),
+    '#default_value' => $node->title,
+    '#description'   => 'enter the lookup text',
+    '#tree'          => 'FALSE',
+    '#required'      => True
+  );
+  return $form;
+}
+
+// Implementation of hook_help().
+function pclookup_help($section) {
+  switch ($section) {
+    case 'admin/help#description':
+      return t('Enables the creation of lookups used in other modules.');
+      break;
+    case 'admin/modules#description':
+      return t('Enables the creation of lookups used on other modules.');
+      break;
+    case 'admin/node/add#Lookup':
+      return t('A lookup. Use this page to add a lookup to be used in other modules.');
+      break;
+  }
+}
+
+// Implementation of hook_load().
+function pclookup_load($node) {
+  $t = db_fetch_object(db_query('SELECT * FROM {PC_Lookup} WHERE nid = %d', $node->nid));
+
+  return $t;
+}
+
+//This function will take the nid of a lookup field
+//and return it's DisplayText
+function pclookup_fet_lookup_displaytext( $nid ) {
+  $result = db_query("SELECT DisplayText FROM {PC_Lookup} WHERE nid = %d", $nid);
+  $item = db_fetch_object($result);
+  return $item->DisplayText;
+}
+
+//The main purpose of this function is to return an array
+//holding the lookup elements based on a passed in LookupType
+//so that it can be used as the array for the #options property
+//of a select control on a form.
+
+//This function will take the input string $strLookupType and
+//query the pc_Lookup table for all records of this
+//type and return them as an array. The returned array will have
+//the nid of the lookup record as it's index and the DisplayText
+//as the value of the array element.  This array will be
+//sorted on DisplayText.
+
+function pclookup_build_lookup_array($strlookuptype) {
+  $options = array();
+  $sql = sprintf( "SELECT l.nid, DisplayText
+            FROM {PC_Lookup} l
+            LEFT JOIN {node} n ON l.nid = n.nid
+            LEFT JOIN {PC_MainWeight} w ON w.nid = l.nid
+            WHERE status = 1 AND LookupType = '%s'
+            ORDER BY PCWeight, DisplayText", $strlookuptype );
+  $result = db_query( $sql );
+  if (db_num_rows($result) > 0) {
+    while ($oitem = db_fetch_object($result)) {
+          $options[$oitem->nid] = t($oitem->DisplayText);
+    }
+  }
+  return $options;
+}
+

@@ -1,0 +1,11 @@
+; $Id: artmob_respond.info,v 1.0 2011/04/15 20:55:33 stop14 Exp $
+name = Artmob Respond
+description = Provides tools to allow visitors to add and correct information about site content.
+dependencies = jstools jquery_update artmob_licensing_ticket artmob_usage_request_ticket artmob_discuss tabs
+package = Artmob Respond
+version = VERSION
+
+; Information added by drupal.org packaging script on 2007-01-30
+version = "5.1"
+project = "drupal"
+

@@ -1,0 +1,45 @@
+# Danish translation of Drupal (jscalendar.module)
+# Copyright 2007 Morten Wulff <wulff@ratatosk.net>
+msgid ""
+msgstr ""
+"Project-Id-Version: Danish translation of Drupal (jscalendar.module) $Id: da.po,v 1.1.2.2 2007/12/15 15:43:01 wulff Exp $\n"
+"POT-Creation-Date: 2007-12-08 13:10+0100\n"
+"PO-Revision-Date: 2007-12-08 13:13+0100\n"
+"Last-Translator: Morten Wulff <wulff@ratatosk.net>\n"
+"Language-Team: Danish <l10n@drupaldanmark.dk>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Poedit-Language: Danish\n"
+"X-Poedit-Country: DENMARK\n"
+
+#: jscalendar.module:30
+#: jscalendar.info:0
+msgid "JS Calendar"
+msgstr "JS Kalender"
+
+#: jscalendar.module:31
+msgid "Configurations for the popup calendar"
+msgstr "Indstillinger for popup-kalender"
+
+#: jscalendar.module:77
+msgid "JSCalendar style"
+msgstr "Udseende"
+
+#: jscalendar.module:78
+msgid "Choose the JSCalendar style."
+msgstr "Vælg udseende af JS Kalender."
+
+#: jscalendar.module:0
+msgid "jscalendar"
+msgstr "jscalendar"
+
+#: jscalendar.info:0
+msgid "Enables popup calendars for selecting dates using the jscalendar library."
+msgstr "Vælg datoer med en popup-kalender baseret på jscalendar-biblioteket."
+
+#: jscalendar.info:0
+msgid "Javascript tools"
+msgstr "Javascript værktøjer"
+

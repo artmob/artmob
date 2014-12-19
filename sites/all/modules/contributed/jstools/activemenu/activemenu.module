@@ -1,0 +1,85 @@
+<?php
+// $Id: activemenu.module,v 1.8.2.13 2008/04/14 16:10:31 nedjo Exp $
+
+/**
+ * @file
+ * Add AJAX-based tree menu to navigation menu.
+ */
+
+/**
+ * Implementation of hook_menu().
+ */
+function activemenu_menu($may_cache) {
+  $items = array();
+  if ($may_cache) {
+    // Need to load includes here because we need access to menu item definitions.
+    // The call below (after the else) is too late.
+    jstools_modules_includes('activemenu');
+    $items[] = array(
+      'path' => 'activemenu/menu',
+      'title' => t('activemenu'),
+      'access' => user_access('access content'),
+      'type' => MENU_CALLBACK,
+      'callback' => 'activemenu_js'
+    );
+  }
+  else {
+    jstools_modules_includes('activemenu');
+    activemenu_load();
+  }
+  $items = array_merge($items, module_invoke_all('activemenu_menu', $may_cache));
+  return $items;
+}
+
+/**
+ * Load needed files.
+ */
+function activemenu_load() {
+  static $loaded = FALSE;
+  if (!$loaded) {
+    $path = drupal_get_path('module', 'activemenu');
+    jstools_add_js($path .'/activemenu.js');
+    $activemenu = module_invoke_all('activemenu');
+    if (count($activemenu)) {
+      drupal_add_js(array('activemenu' => $activemenu), 'setting');
+    }
+    $loaded = TRUE;
+  }
+}
+
+/**
+ * Menu callback. Output a themed menu tree for a requested menu item.
+ */
+function activemenu_js() {
+  if ($path = activemenu_get_request_path()) {
+    $menu = menu_get_menu();
+    $pid = $menu['path index'][$path];
+    print drupal_to_js(array('status' => TRUE, 'content' => theme('menu_tree', $pid)));
+  }
+  exit();
+}
+
+/**
+ * Implementation of hook_footer().
+ *
+ * Add a theme-specific css file if needed. Pass Javascript data to the browser.
+ */
+function activemenu_footer() {
+  global $theme;
+
+  $file = drupal_get_path('module', 'activemenu') .'/theme/'. $theme .'.css';
+  if (file_exists($file)) {
+    drupal_add_css($file);
+  }
+  else {
+    drupal_add_css(drupal_get_path('module', 'activemenu') .'/activemenu.css', 'theme');
+  }
+
+}
+
+/**
+ * Read the incoming request and return the correct path.
+ */
+function activemenu_get_request_path() {
+  return isset($_POST['path']) ? drupal_get_normal_path($_POST['path']) : FALSE;
+}

@@ -1,0 +1,1667 @@
+<?php
+// $Id: relativity.module,v 1.41.2.11 2008/01/12 02:28:10 darius Exp $
+
+/**
+ * @file
+ * This module allows you to attach nodes to other nodes.
+ *
+ * To store this extra information, we need an auxiliary database table.
+ */
+
+if (module_exists('views')) {
+  include_once('relativity_views.inc');
+}
+
+/**
+ * Generates an array of named nodes keyed by node type.
+ * With no args, returns relativity node types
+ */
+function relativity_node_list($use_blank='', $show_all=0) {
+  $node_list = array();
+
+  if ($show_all) {
+    $node_list = node_get_types('names');
+  } 
+  else {
+    $show_nodes = variable_get('relativity_allow_types', array());
+    foreach($show_nodes as $key=>$type) {
+      if ($type != 'default') { 
+        $node_list[$type] = node_get_types('name',$type);
+      }
+    }
+  }
+
+  if ($use_blank) {
+    $node_list['default'] = t($use_blank);
+  }
+
+  return $node_list;
+}
+
+/**
+ * Lists nodes that could be attached to a given parent type.
+ *
+ * TODO:
+ *   Alter this code so that node_access("view",$child) logic is impelemented in the SQL statement.
+ *   Use pager_query to process the results.  Maybe even have a sortable table
+ *   with various filters for restricting what is seen.  Someday, maybe :)
+ *   javanaut
+ */
+function relativity_list_possible_children($type='', $parent_nid='') {
+  if (!$type && !$parent_nid) {
+    $type = arg(2);
+    $parent_nid = is_numeric(arg(4)) ? arg(4) : $_GET['parent_node'] + 0;
+  }
+  
+  $links = array();
+  $parent = node_load($parent_nid);
+  $relativity_query = variable_get('relativity_child_query_'.$parent->type.'_'.$type, NULL);
+  $common_children_reqd = variable_get('relativity_common_child_'.$parent->type.'_'.$type, array());
+  if ($relativity_query && $query = node_load($relativity_query)) {
+    //drupal_set_message("executing query ".print_r($query,1));
+    foreach(relativity_execute_query($query, NULL, $parent_nid) as $chnid => $child) {
+      if ($child->type == $type) {
+        $links[] = theme('relativity_link', $child->title, "addparent/$child->nid/parent/$parent_nid", $parent_nid, ' '.theme_relativity_trace($child->relativity_trace));
+      }
+    }
+  }
+  elseif (count($common_children_reqd)) {
+    $otherparents = relativity_list_grand_relatives($parent, 'child', 'parent', $common_children_reqd, array($type));
+    
+    foreach($otherparents as $childparent) {
+      if (node_access("view",$childparent)) {
+        $links[] = theme('relativity_link', $childparent->title, "addparent/$childparent->nid/parent/$parent_nid", $parent_nid, 'common child required');
+      }
+    }
+  }
+  else {
+    // So, look up all valid nids attached to this parent_node already..
+    $result = db_query('SELECT n.nid FROM {node} n LEFT OUTER JOIN {relativity} r ON n.nid=r.nid WHERE n.type = \'%s\' AND r.parent_nid=%d', $type, $parent_nid);
+    $excluded_nids = array($parent_nid);
+    // The number of nids returned by this array should be reasonably small. 
+    // It's the number of nodes attached to a given node already.
+    while($existing_nid = db_fetch_object($result)) {
+      $excluded_nids[] = $existing_nid->nid;
+    }
+    
+    $use_taxonomy = variable_get('relativity_use_taxonomy', 0);
+    if ($use_taxonomy) {
+      $result = db_query('SELECT DISTINCT n.nid, t.tid, v.vid FROM {node} n INNER JOIN {term_node} t ON n.nid = t.nid INNER JOIN {term_data} v ON t.tid = v.tid WHERE n.type = \'%s\' AND n.status = 1 ORDER BY v.vid, t.tid', $type);
+    } else {
+      $result = db_query('SELECT n.nid FROM {node} n WHERE n.type = \'%s\' AND n.status = 1 ORDER BY n.title', $type);
+    }
+  }
+  
+  while($child = db_fetch_object($result)) {
+    if (in_array($child->nid, $excluded_nids)) { continue; }
+    $child_node = node_load($child->nid);
+      if (node_access('view', $child_node)) {
+        if ($use_taxonomy) {
+          $parent_tree = array_reverse(taxonomy_get_parents_all($child->tid));
+          // Building the array key
+          for ($i=0; $i<count($parent_tree); $i++) {
+            if($i==0) {
+              $key = $parent_tree[$i]->vid.';'.$parent_tree[$i]->tid.';';
+            } else {
+              $term = taxonomy_get_term($parent_tree[$i]->tid);
+              $key .= $parent_tree[$i]->tid.';';
+            }
+          }
+          $links[$key][] = array('title' => $child_node->title, 'child_node' => $child_node->nid, 'parent_node' => $parent_nid);
+        } else {
+          $links[] = theme('relativity_link', $child_node->title, "addparent/$child_node->nid/parent/$parent_nid", $parent_nid);
+        }
+      }
+  } 
+  
+  if (count($links)) {
+    if ($use_taxonomy) {
+      print(theme('page', drupal_get_form('relativity_taxonomy_form', $links) ));
+    } else {
+      print(theme('page', theme('relativity_bullets', $links)));
+    }
+  } else {
+    drupal_set_message(t('There are no available !s items to attach', array('!s' => node_get_types('name',$type))));
+    drupal_goto("node/$parent_nid");
+  }
+}
+
+/**
+ * Lists all grandparents or grandchildren of the given node.
+ * Additionally, allow the direction of search to change directions by having different
+ * values for $rel_type1 and $rel_type2.
+ * @param $node the node to start searching from
+ * @param $rel_type1 Which direction to look ('parent' or 'child')
+ * @param $rel_type2 Which direction to look beyond children/parents that were found (grand)('parent' or 'child')
+ * @param $conduit_types array of connecting node types to restrict the search to
+ * @param $types array of grandparent/grandchild node types to restrict the results to
+ * @return array of grandparent/grandchild nodes that were found
+ */
+function relativity_list_grand_relatives($node, $rel_type1='child', $rel_type2='child', $conduit_types = NULL, $types = NULL, $exclude_circular_paths=TRUE) {
+  //$nodes = array();
+  
+  // List all children/parents.  Restrict list to $conduit_types if specified
+  $conduit_types_sql = "";
+  if (is_array($conduit_types) && count($conduit_types)) {
+    $conduit_types_sql = " AND n.type IN ('".implode("','",$conduit_types)."') ";
+  }
+  
+  if ($rel_type1 == 'parent') {
+    $result = db_query("SELECT DISTINCT n.nid as nid FROM {node} n INNER JOIN {relativity} r ON n.nid=r.parent_nid WHERE r.nid=%d $conduit_types_sql", $node->nid);
+  }
+  else {
+    $result = db_query("SELECT DISTINCT n.nid as nid FROM {node} n INNER JOIN {relativity} r ON n.nid=r.nid WHERE r.parent_nid=%d $conduit_types_sql", $node->nid);
+  }
+
+  while($obj = db_fetch_object($result)) {
+    $relatives[$obj->nid] = $obj->nid;
+  }
+
+  if (is_array($relatives) && count($relatives)) {
+    // list all children/parents of the $relatives found.  Restrict list to $conduit_types if specified
+
+    // identify parents and children for exclusion
+    if ($exclude_circular_paths) {
+      $all_relatives[$node->nid] = $node->nid; // exclude self
+      
+      // parents
+      $result = db_query("SELECT DISTINCT n.nid as nid FROM {node} n INNER JOIN {relativity} r ON n.nid=r.parent_nid WHERE r.nid = %d", $node->nid);
+      while($obj = db_fetch_object($result)) {
+        $all_relatives[$obj->nid] = $obj->nid;
+      }
+      
+      // children
+      $result = db_query("SELECT DISTINCT n.nid as nid FROM {node} n INNER JOIN {relativity} r ON n.nid=r.nid WHERE r.parent_nid = %d", $node->nid);
+      while($obj = db_fetch_object($result)) {
+        $all_relatives[$obj->nid] = $obj->nid;
+      }
+    }
+    $all_relatives = is_array($all_relatives) ? $all_relatives : array();
+    
+    $types_sql = "";
+    if (is_array($types) && count($types)) {
+      $types_sql = " AND n.type IN ('".implode("','",$types)."') ";
+    }
+    
+    if ($rel_type2 == 'parent') {
+      $result = db_query("SELECT DISTINCT n.nid as nid FROM {node} n INNER JOIN {relativity} r ON n.nid=r.parent_nid WHERE r.nid IN (".implode(",",$relatives).") $types_sql");
+    }
+    else {
+      $result = db_query("SELECT DISTINCT n.nid as nid FROM {node} n INNER JOIN {relativity} r ON n.nid=r.nid WHERE r.parent_nid IN (".implode(",",$relatives).") $types_sql");
+    }
+  
+    while($obj = db_fetch_object($result)) {
+      if (!($exclude_circular_paths && isset($all_relatives[$obj->nid]))) {
+        $grand_relatives[$obj->nid] = node_load($obj->nid);
+      }
+    }
+  }
+  
+  return is_array($grand_relatives) ? $grand_relatives : array();
+}
+
+/**
+ * Delete the parent/node relationship
+ */
+function relativity_unparent_node() {
+  $output = "";
+  $parent_nid = arg(2);
+  $child_nid  = arg(3);
+  if (is_numeric($parent_nid) && is_numeric($child_nid)) {
+    $parent = node_load($parent_nid);
+    $child  = node_load($child_nid);
+    if (relativity_may_unchild($parent, $child)) {
+      $result = db_query('DELETE FROM {relativity} WHERE nid = %d AND parent_nid = %d', $child_nid, $parent_nid);
+      drupal_set_message(t('Node relationship removed.'));
+    }
+    else {
+      drupal_set_message(t('Node relationship cannot currently be removed.'));
+    }
+  }
+  else {
+    drupal_set_message(t('Either that node does not exist or you don\'t have proper privileges to update it'));
+  }
+  drupal_goto('node/'.$parent_nid);
+}
+
+/**
+ * Attach a node to its parent
+ */
+function relativity_addparent($child_nid="", $parent_nid="") {
+  if (!$child_nid && !$parent_nid) {
+    $child_nid = arg(2);
+    $parent_nid = arg(4);
+  }
+  $output = "";
+  
+  db_query('INSERT INTO {relativity} (nid, parent_nid) VALUES (%d, %d)', $child_nid, $parent_nid);
+  drupal_set_message(t('Node relationship created.'));
+  drupal_goto('node/'.$parent_nid);
+}
+
+/**
+ * Attach multiple nodes to its parent
+ */
+function relativity_addparent_multiple() {
+  $edit = $_POST['edit'];
+  $parent_nid = $_POST['parent_nid'];
+  if ($edit['child_nids']) {
+    $child_nids = array_keys($edit['child_nids']);
+    for ($i=0; $i<count($child_nids); $i++) {
+      db_query('INSERT INTO {relativity} (nid, parent_nid) VALUES (%d, %d)', $child_nids[$i], $parent_nid);
+    }
+    drupal_set_message(t('Node relationship created.'));
+    drupal_goto('node/'.$parent_nid);
+  } else {
+    drupal_set_message(t('You did not select a node!'));
+    drupal_goto('node/'.$parent_nid);
+  }
+}
+
+function relativity_menu($may_cache) {
+  global $_menu;// = menu_get_menu();
+  $items = array();
+
+  if ($may_cache && variable_get('relativity_enforce_parent_rules', FALSE)) {
+    // * not working how I wanted it to
+    // * This needs node_add in node.module to check menu before displaying links
+    
+    // iterate through all node types and take over their node/add handlers
+    foreach(relativity_node_list() as $type){
+      if (relativity_requires_parent($type)) {
+        //drupal_set_message("setting access for type $type");
+        $items[] = array('path' => 'node/add/'. $type, 'title' => t('content type requires parent'),
+          'callback' => 'node_add',
+          'callback arguments' => array($type),
+          'access' => 0,//user_access('administer content'),
+          'type' => MENU_CALLBACK,
+          'priority' => 1,
+          'weight' => 1
+          );
+      }
+    }
+  }
+
+  if (!$may_cache) {
+    if (arg(0) == 'node' && arg(1) == 'add' && array_key_exists(arg(2),relativity_node_list()) && arg(3) == 'parent' && is_numeric(arg(4))) {
+      // this is my crafty way of creating new nodes as children of parents, and
+      // not displaying any links to create them otherwise.
+      $_GET['parent_node'] = arg(4);
+      $items[] = array('path' => 'node/add/'. arg(2).'/parent/'.arg(4), 'title' => t('create content'),
+        'callback' => 'node_add',
+        'callback arguments' => array(arg(2)),
+        'access' => node_access('create', arg(2)),
+        'type' => MENU_CALLBACK,
+        'weight' => 1
+        );
+    }
+    elseif (arg(0) == 'relativity' && arg(1) == 'listnodes' && array_key_exists(arg(2),relativity_node_list()) && arg(3) == 'parent' && is_numeric(arg(4))) {
+
+      $items[] = array('path' => 'relativity/listnodes/'. arg(2).'/parent/'.arg(4), 'title' => t('list of !type nodes to attach', array('!type'=>node_get_types('name',arg(2)))),
+        'callback' => 'relativity_list_possible_children',
+        'access' => node_access('update', node_load(arg(4))) && user_access("access content"),
+        'type' => MENU_CALLBACK
+        );
+    }
+    elseif (arg(0) == 'relativity' && arg(1) == 'addparent' && is_numeric(arg(2)) && arg(3) == "parent" && is_numeric(arg(4))) {
+      $items[] = array('path' => 'relativity/addparent/'. arg(2) .'/parent/'. arg(4), 'title' => t('attach node to parent'),
+        'callback' => 'relativity_addparent',
+        'access' => node_access("view",  node_load(arg(2))),
+        'type' => MENU_CALLBACK
+        );
+    }
+    elseif (arg(0) == 'relativity' && arg(1) == 'addparent' && arg(2) == 'multiple') {
+      $items[] = array('path' => 'relativity/addparent/multiple', 'title' => t('attach node to parent'),
+        'callback' => 'relativity_addparent_multiple',
+        'access' => node_access('view'),
+        'type' => MENU_CALLBACK
+        );
+    }
+    elseif (arg(0) == 'relativity' && arg(1) == 'unparent' && is_numeric(arg(2)) && is_numeric(arg(3))) {
+      $items[] = array('path' => 'relativity/unparent/'.arg(2).'/'.arg(3), 'title' => t('unparent node'),
+        'callback' => 'relativity_unparent_node',
+        'access' => node_access("update",  node_load(arg(2))),
+        'type' => MENU_CALLBACK
+        );
+    }
+  }
+  else {
+    $items[] = array(
+      'path' => 'admin/settings/relativity',
+      'title' => t('Node relativity'),
+      'description' => t('Node relativity settings.'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('relativity_regular_settings'),
+      'access' => user_access('administer site configuration'),
+      'type' => MENU_NORMAL_ITEM, // optional  
+    );
+
+    $items[] = array('path' => 'admin/settings/relativity/regular',
+      'title' => t('Regular settings'),
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+      'weight' => -10
+    );
+
+    $items[] = array(
+      'path' => 'admin/settings/relativity/display',
+      'title' => t('Display settings'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('relativity_display_settings'),
+      'access' => user_access('administer site configuration'),
+      'type' => MENU_LOCAL_TASK,
+    );
+
+    $items[] = array(
+      'path' => 'admin/settings/relativity/advanced',
+      'title' => t('Advanced settings'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('relativity_advanced_settings'),
+      'access' => user_access('administer site configuration'),
+      'type' => MENU_LOCAL_TASK,
+    );
+  }
+  return $items;
+}
+
+function relativity_regular_settings() {
+  $all_types = relativity_node_list('', TRUE);
+  $relativity_types = relativity_node_list('', FALSE);
+
+  $group['description'] = array(
+        '#type' => 'item',
+        '#title' => '',
+        '#value' => t('Below are the general settings for node relationships for each node type.  The !advanced and !display pages use the settings on this page, so be sure to save these settings before proceeding to either of them.', array('!display'=>l('Display settings', 'admin/settings/relativity/display'), '!advanced'=>l('Advanced settings', 'admin/settings/relativity/advanced'))),
+      );
+
+  $group['global_options'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Global Options'),
+  );
+
+  $group['global_options']['relativity_allow_types'] = array(
+    '#type' => 'select',
+    '#title' => t('Node types that can be involved in relationships'),
+    '#default_value' => variable_get('relativity_allow_types', 'default'),
+    '#options' => relativity_node_list('',TRUE),
+    '#description' => t('What types of nodes should Node Relativity use?  Be sure to include any node type involved (both parent and children types). You can use Ctrl+Click to unselect an option. After saving this, configuration options will appear for all of the node types that you specified. After selecting appropriate settings for each node type, please save again.'),
+    '#size' => count(relativity_node_list('',TRUE)),
+    '#multiple' => TRUE,
+  );
+
+
+  // set to default values if type not selected 	
+  foreach ($all_types as $type=>$name) {
+    if (!in_array($type, array_keys($relativity_types))) { // type is not in relativity_types
+      variable_set('relativity_parent_ord_'.$type, 'any');
+      variable_set('relativity_type_'.$type, array());
+    }
+  }
+
+  // no node types to manage
+  if (count($relativity_types) == 0) {
+    return system_settings_form($group); 
+  }        
+
+  $group['global_options']['relativity_ancestors_label'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Label for "Ancestor nodes"'),
+    '#default_value' => variable_get('relativity_ancestors_label', t('Ancestor nodes')),
+    '#size' => 60,
+    '#maxlength' => 250,
+  );
+
+  $group['global_options']['relativity_parents_label'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Label for "Parent nodes"'),
+    '#default_value' => variable_get('relativity_parents_label', t('Parent nodes')),
+    '#size' => 60,
+    '#maxlength' => 250,
+  );
+
+  $group['global_options']['relativity_children_label'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Label for "Children nodes"'),
+    '#default_value' => variable_get('relativity_children_label', t('Children nodes')),
+    '#size' => 60,
+    '#maxlength' => 250,
+  );
+
+  $group['global_options']['relativity_actions_label'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Label for "Link operations"'),
+    '#default_value' => variable_get('relativity_actions_label', t('Link operations')),
+    '#size' => 60,
+    '#maxlength' => 250,
+  );
+
+
+  $collapsed = (count($relativity_types) == 1) ? FALSE : TRUE;	
+  foreach ($relativity_types as $type=>$name) {
+    $group['node_'.$type.'_options'] = array(
+      '#type' => 'fieldset',
+      '#collapsible' => TRUE,
+      '#collapsed' => $collapsed,
+      '#title' => t('Options for !name (!type) nodes', array('!name'=>$name, '!type' =>$type)),
+    );
+
+    $group['node_'.$type.'_options']['relativity_parent_ord_'.$type] = array(
+      '#type' => 'select',
+      '#title' => t('Parental Ordinality'),
+      '#default_value' => variable_get('relativity_parent_ord_'.$type, 'any'),
+      '#options' => array('any'=>t('any'), 'one'=>t('one'), 'none'=>t('none'), 'one or more'=>t('one or more')),
+      '#description' => t('How many parents can this node type have?'),
+    );
+
+    $group['node_'.$type.'_options']['relativity_type_'.$type] = array(
+      '#type' => 'select',
+      '#title' => t('Allowable Child Node types'),
+      '#default_value' => variable_get('relativity_type_'.$type, array()),
+      '#options' => relativity_node_list('',FALSE),
+      '#description' => t('What types of nodes are allowed to be attached to this type?'),
+      '#size' => count(relativity_node_list('',FALSE)),
+      '#multiple' => TRUE,
+    );
+  }
+
+  return system_settings_form($group);
+}
+
+function relativity_advanced_settings() {
+  $allow_types = relativity_node_list();
+
+  $group['global_options'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Global Options'),
+  );
+
+  $group['global_options']['relativity_enforce_parent_rules'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enforce Parental Rules'),
+    '#return_value' => 1,
+    '#default_value' => variable_get('relativity_enforce_parent_rules', 0),
+    '#description' => t('If checked, nodes cannot be created without a parent if they require a parent to exist.'),
+  );
+
+  // Node Sorting Options
+  $group['sorting_options'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Node Sorting Options'),
+  );
+
+  $group['global_options']['relativity_use_taxonomy'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use Taxonomy to attach nodes'),
+    '#return_value' => 1,
+    '#default_value' => variable_get('relativity_use_taxonomy', 0),
+    '#description' => t('If checked, nodes cannot be attached if they don\'t belong to a taxonomy term. When listing nodes to attach, possible children will be displayed in a taxonomy	tree.'),
+  );
+
+  // let admins specify sort order for node types
+  $ntypes = count($allow_types);	
+  foreach($allow_types as $type => $name) {
+    $node_order[$type] = variable_get('relativity_node_order_'.$type, -1);
+    if (($node_order[$type] < 1) || ($node_order[$type] > $ntypes)) {
+      $node_order[$type] = 1; // default to 1
+    }
+  }
+
+  // we need a keyed array where numbers are sort order
+  $sort_options = range(1, $ntypes);
+  foreach($sort_options as $opt) {
+    $options[$opt] = $opt;
+  }
+
+  // display list of node types sorted by ascending sort order
+  for($i=1; $i<=$ntypes; $i++) {
+    foreach($allow_types as $type => $name) {
+      if ($node_order[$type] == $i) {
+        $group['sorting_options']['relativity_node_order_'.$type] = array(
+          '#type' => 'select',
+          '#title' => t('Sort Order for !name Nodes', array('!name'=>$name)),
+          '#default_value' => variable_get('relativity_node_order_'.$type, ""),
+          '#options' => $options,
+        );
+      }
+    }
+  }
+
+  $collapsed = (count(relativity_node_list()) == 1) ? FALSE : TRUE;	      
+  foreach(relativity_node_list() as $type=>$name) {
+    $group['node_'.$type.'_options'] = array(
+      '#type' => 'fieldset',
+      '#collapsible' => TRUE,
+      '#collapsed' => $collapsed,
+      '#title' => t('!label Options for !name (!type) nodes', array('!name'=>$name, '!type' =>$type, '!label'=>$label[$tab])),
+    );
+
+    foreach (relativity_node_list() as $chtype=>$chname) {
+      if (in_array($chtype, variable_get('relativity_type_'.$type, array()))) {
+        $group['node_'.$type.'_options']['relativity_child_ord_'.$type.'_'.$chtype] = array(
+          '#type' => 'select',
+          '#title' => t('!chname Child Ordinality for !pname Parents', array('!chname'=>$chname, '!pname'=>$name)),
+          '#default_value' => variable_get('relativity_child_ord_'.$type.'_'.$chtype, 'any'),
+          '#options' => array('any'=>t('any'), '1'=>t('1'), '2'=>t('2'), '3'=>t('3'), '4'=>t('4'), '5'=>t('5'), '6'=>t('6'), '7'=>t('7'), '8'=>t('8'), '9'=>t('9'), '10'=>t('10')),
+        );
+
+
+        // "Require Common Child of specified type" feature
+        // find the intersection of 'relativity_type_'.$type and 'relativity_type_'.$chtype (common allowable child types for parent and child)
+        $common_child_types = array_intersect(variable_get('relativity_type_'.$type, array()), variable_get('relativity_type_'.$chtype, array()));
+        if (count($common_child_types)) {
+          foreach($common_child_types as $cchtype) {
+            $common_types[$cchtype] = node_get_types('name',$cchtype);
+          }
+          $group['node_'.$type.'_options']['relativity_common_child_'.$type.'_'.$chtype] = array(
+          '#type' => 'select',
+          '#title' => t('Require Common Child Node Types for !chname Children', array('!chname'=>$chname)),
+          '#default_value' => variable_get('relativity_common_child_'.$type.'_'.$chtype, array()),
+          '#options' => $common_types,
+          '#description' => t('Require that any child of this type already have a child in common of the specified type.  This allows particular circular relationships to be created.'),
+          '#extra' => 0,
+          '#multiple' => TRUE,
+          );
+        }
+
+        // list out possible relativity_queries that could be used to define this relationship type
+        $possible_queries = NULL;
+        // NOTE: This query depends on PHP's formatting of serialized arrays.  If the implementation changes, this will need to be updated.  Yes, it's a cheap hack ;)
+        $sql = "SELECT n.nid, n.title FROM {node} n INNER JOIN {relativity_query} r ON r.nid=n.nid WHERE n.type='relativity' AND r.search_types LIKE '%\"$chtype\"%'";
+        $result = db_query($sql);
+        while($obj = db_fetch_object($result)) {
+          $possible_queries[$obj->nid] = $obj->title;
+        }
+        if (is_array($possible_queries) && count($possible_queries)) {
+          $possible_queries[0] = t('none');
+          //drupal_set_message($sql." found possible queries: ".print_r($possible_queries,1));
+          $group['node_'.$type.'_options']['relativity_child_query_'.$type.'_'.$chtype] = array(
+            '#type' => 'select',
+            '#title' => t('Use Relativity Query For Listing !chname Children', array('!chname'=>$chname)),
+            '#default_value' => variable_get('relativity_child_query_'.$type.'_'.$chtype, ''),
+            '#options' => $possible_queries,
+            '#description' => t('Use the specified relativity query to identify possible children.'),
+          );
+        }
+      }
+    }
+  }
+  return system_settings_form($group);
+}
+
+function relativity_display_settings() {
+
+  $collapsed = (count(relativity_node_list()) == 1) ? FALSE : TRUE;	
+  foreach(relativity_node_list() as $type=>$name) {
+    $group['node_'.$type.'_options'] = array(
+      '#type' => 'fieldset',
+      '#collapsible' => TRUE,
+      '#collapsed' => $collapsed,
+      '#description' => 'Here you can enter weights (positive or negative, integer or decimal) that determine where in the node body relativity links are displayed. Usually, the body has weight 0. For example, if you want Children Node links to appear at the top, enter -10.',
+      '#title' => t('Display options for !name (!type) nodes', array('!name'=>$name, '!type' =>$type)),
+    );
+
+    $group['node_'.$type.'_options']['relativity_'.$type.'_ancestor_weight'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Ancestor nodes weight'),
+      '#description' => t('Enter 0 for no display'), 	
+      '#size' => 4,
+      '#maxlength' => 4,	
+      '#default_value' => variable_get('relativity_'.$type.'_ancestor_weight', 0),
+    );
+
+    $group['node_'.$type.'_options']['relativity_'.$type.'_parents_weight'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Parent nodes weight'),
+      '#description' => t('Enter 0 for no display'), 	
+      '#size' => 4,
+      '#maxlength' => 4,	
+      '#default_value' => variable_get('relativity_'.$type.'_parents_weight', 10),
+    );
+
+    $group['node_'.$type.'_options']['relativity_'.$type.'_children_weight'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Children nodes weight'),
+      '#description' => t('Enter 0 for no display'), 	
+      '#size' => 4,
+      '#maxlength' => 4,	
+      '#default_value' => variable_get('relativity_'.$type.'_children_weight', 11),
+    );
+
+    $group['node_'.$type.'_options']['relativity_'.$type.'_operations_weight'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Link operations weight'),
+      '#description' => t('Enter 0 for no display'), 	
+      '#size' => 4,
+      '#maxlength' => 4,	
+      '#default_value' => variable_get('relativity_'.$type.'_operations_weight', 12),
+    );
+
+
+    $render_opts = array(
+      'title' => t('title only'),
+      'teaser' => t('node teaser'),
+      'body' => t('node body'), 
+      'hide' => t('hide this child type')
+    );
+
+    // allow user to choose a view to render a specifc
+    // child type
+    if (module_exists('views')) {
+      $views = array();
+      $result = db_query("SELECT name FROM {view_view} ORDER BY name");
+      while ($view = db_fetch_array($result)) {
+        $views[t('Existing Views')]['view:'.$view['name']] = $view['name'];
+      }
+      views_load_cache();
+      $default_views = _views_get_default_views();
+      foreach ($default_views as $view) {
+        $views[t('Default Views')]['view:'.$view->name] = $view->name;
+      }
+      $render_opts = array_merge($render_opts, $views);
+    }
+
+    foreach (relativity_node_list() as $chtype=>$chname) {
+      if (in_array($chtype, variable_get('relativity_type_'.$type, array()))) {
+        $group['node_'.$type.'_options']['relativity_render_'.$type.'_'.$chtype] = array(
+          '#type' => 'select',
+          '#title' => t('Rendering option for children nodes of type !chname', array('!chname'=>$chname)),
+          '#default_value' => variable_get('relativity_render_'.$type.'_'.$chtype, 'title'),
+          '#options' => $render_opts,
+        );
+      }
+    }
+  }
+  return system_settings_form($group);
+}
+
+/**
+ * Implementation of hook_block().
+ *
+ * Generates navigation block to quickly jump to any of this node's ancestors.
+ * See http://api.drupal.org/api/4.7/function/block_example_block
+ */
+function relativity_block($op = 'list', $delta = 0, $edit = array()) {
+  // The $op parameter determines what piece of information is being requested.
+  switch ($op) { 
+    case 'list':
+      // If $op is "list", we just need to return a list of block descriptions.
+      // This is used to provide a list of possible blocks to the administrator,
+      // end users will not see these descriptions. 
+      $blocks[0]['info'] = t('Node relativity: ancestors');
+      $blocks[1]['info'] = t('Node relativity: children');
+      $blocks[2]['info'] = t('Node relativity: parent');
+      $blocks[3]['info'] = t('Node relativity: link operations');
+      return $blocks;
+
+    case 'configure':
+      // If $op is "configure", we need to provide the administrator with a
+      // configuration form. The $delta parameter tells us which block is being
+      // configured. 
+      $form = array();
+      switch($delta) {
+        case 0: // Ancestors block
+          $form['relativity_nav_types'] = array(
+            '#type' => 'select',
+            '#title' => t('Allowable Relativity Block Node types'),
+            '#default_value' => variable_get('relativity_nav_types', relativity_node_list()),
+            '#options' => relativity_node_list('none'),
+            '#description' => t('What node types are allowed to be used in this block?'),
+            '#size' => 5,
+            '#multiple' => TRUE,
+          );
+          break;
+      }
+
+      return $form;
+
+    case 'save':
+      // If $op is "save", we need to save settings from the configuration form.
+      // Since the first block is the only one that allows configuration, we
+      // need to check $delta to make sure we only save it.
+      switch($delta) {
+        case 0;
+          variable_set('relativity_nav_types', $edit['relativity_nav_types']);
+          break;
+      }
+      return; 
+    
+    case 'view': default: 
+      // If $op is "view", then we need to generate the block for display
+      // purposes. The $delta parameter tells us which block is being requested.
+
+      // see if we're viewing a node
+      if (arg(0) == 'node' && is_numeric(arg(1))) {
+        // see if it's a valid node
+        $node = node_load(arg(1));
+        if (is_object($node) && node_access('view', $node)) {
+          switch ($delta) {
+            case 0:     
+              $ancestors = relativity_load_ancestors($node,1,TRUE);
+              if (is_array($ancestors) && count($ancestors) > 0) {
+                $block = array('subject' => variable_get('relativity_ancestors_label', t('Related Ancestors')),
+                               'content' => theme('relativity_block_ancestors', $node, $ancestors),
+                               );
+              }
+              break;
+            case 1:
+              $content = theme('relativity_block_children', $node);
+              if ($content) {
+                $block = array('subject' => variable_get('relativity_children_label', t('Related Items')),
+                               'content' => $content,
+                               );
+              }
+              break;
+            case 2:
+              $content = theme('relativity_block_parents', $node);
+              if ($content) {
+                $block = array('subject' => variable_get('relativity_parents_label', t('Related Parents')),
+                               'content' => $content,
+                               );
+              }
+              break;
+            case 3:
+              $content = theme('relativity_block_link_operations', $node);
+              if ($content) {
+                $block = array('subject' => variable_get('relativity_actions_label', t('Link operations')),
+                               'content' => $content,
+                               );
+              }
+              break;
+          }
+        }
+      }  
+      return $block;
+  }
+}
+
+/**
+ * Generate an array of ancestors for the given node.
+ * This will keep looking for more ancestors until a circular path was found,
+ * if a node has multiple or no parents at all.
+ * If $load_multi_parent is true, the first multi-parent result found will be placed
+ * in the output array as an array of nodes.  Otherwise, all array elements will be nodes.
+ */
+function relativity_load_ancestors($node, $load_multi_parent=1, $block=FALSE) {
+  $search_max = 5; // make this a settings variable someday
+  if (is_numeric($node->nid)) {
+    $ancestors = array();
+    $nids = array();
+    $search_nid = $node->nid;
+    $cnt = 0;
+    $allowed_types = variable_get('relativity_allow_types', array());
+    if ($block == TRUE) {
+      $allowed_types = variable_get('relativity_nav_types', $allowed_types);
+    }
+	
+    do {
+      $keep_going = 0;
+      $result = db_query("SELECT parent_nid from {relativity} where nid=%d", $search_nid);
+      $parent_count = db_num_rows($result);
+      if ($parent_count == 1 && $obj = db_fetch_object($result)) {
+        // make sure we're not pursuing a circular path and that we stop at $search_max parents
+        if (!in_array($obj->parent_nid, $nids) && $cnt++ < $search_max) {
+          //drupal_set_message("unshifting node ".$obj->parent_nid." onto the ancestors array");
+          $parent_node = node_load($obj->parent_nid);
+          if (node_access('view', $parent_node) && in_array($parent_node->type, $allowed_types)) {
+            array_unshift($ancestors, $parent_node);
+            $nids[] = $obj->parent_nid;
+            $search_nid = $obj->parent_nid;
+            $keep_going = 1;
+          }
+        }
+      }
+      elseif($parent_count > 1 && $load_multi_parent && $cnt++ < $search_max) {
+        //drupal_set_message("found parent_count == $parent_count, about to add array to ancestors array");
+        // perhaps upon encountering multiple parents, it would suffice to print them
+        // all out at the same level and not follow any of them up, but still allow
+        // the user to navigate up whatever hierarchy they want to.
+        $siblings = array();
+        while($obj = db_fetch_object($result)) {
+          // make an array of nodes to display at this level
+          $parent_node = node_load($obj->parent_nid);
+          if (!in_array($obj->parent_nid, $nids) && node_access('view', $parent_node) && in_array($parent_node->type, $allowed_types)) {
+            array_unshift($siblings, $parent_node);
+            $nids[] = $obj->parent_nid;
+            $search_nid = $obj->parent_nid; // only used when single result is rendered.
+          }
+        }
+        if (count($siblings) > 0) {
+          array_unshift($ancestors, $siblings);
+        }
+        if (count($siblings) == 1) {
+          $keep_going = 1;
+        }
+      }
+    } while($keep_going);
+    return $ancestors;
+  }
+}
+
+/**
+ * Determines if the specified parent node may add a child of type $type.
+ * @return  true if possible, false otherwise.
+ */
+function relativity_may_add_child($parent, $type) {
+  $common_children_reqd = variable_get('relativity_common_child_'.$parent->type.'_'.$type, array());
+  if (count($common_children_reqd)) {
+    // NOTE: all of this needs node_access logic applied at the SQL level.  Currently, if unreadable relationships fill the need, they allow this to pass through
+    
+    // lookup all existing children and see if any of them are on the common_children_reqd list
+    $result = db_query("SELECT n.nid as nid FROM {node} n INNER JOIN {relativity} r ON n.nid=r.nid WHERE r.parent_nid = %d AND n.type IN ('".implode("','", $common_children_reqd)."')", $parent->nid);
+    while($child = db_fetch_object($result)) {
+      $children[] = $child->nid;
+    }
+    // no common children defined for the parent, reject the request
+    if (!$children || !is_array($children) || !count($children)) {
+      return false;
+    }
+    
+    // now, see if any of the children that were found have a parent of type $type
+    $children = implode(',', $children);
+    $result = db_query("SELECT count(n.nid) as cnt FROM {node} n INNER JOIN {relativity} r ON n.nid=r.parent_nid WHERE r.nid IN ($children) AND n.type='%s'", $type);
+    $count = db_result($result);
+    if (!$count) {
+      return false;
+    }
+  }
+
+  $ord = variable_get('relativity_child_ord_'.$parent->type.'_'.$type, 'any');
+  if ($ord == 'any') {
+    return true;
+  }
+  else {
+    // look up how many children this parent currently has of the specified type
+    $res = db_fetch_object(db_query("SELECT count(n.nid) as cnt FROM {node} n INNER JOIN {relativity} r ON n.nid=r.nid WHERE r.parent_nid = %d AND n.type='%s'", $parent->nid, $type));
+    if ($res->cnt >= $ord) {
+      return false;
+    }
+    else {
+      return true;
+    }
+  }
+}
+
+/**
+ * Convenience function for determining if a node requires a parent to exist.
+ */
+function relativity_requires_parent($node) {
+  if (is_object($node)) {
+    $type = $node->type;
+  }
+  else {
+    $type = $node;
+  }
+  if (variable_get("relativity_parent_ord_$type", '') == 'one' ||
+     variable_get("relativity_parent_ord_$type", '') == 'one or more') {
+     return true;
+  }
+
+  return false;
+}
+
+/**
+ * Convenience function for determining if a node may have more than one parent.
+ */
+function relativity_multi_parent($node) {
+  if (is_object($node)) {
+    $type = $node->type;
+  }
+  else {
+    $type = $node;
+  }
+  if (variable_get("relativity_parent_ord_$type", '') == 'any' ||
+     variable_get("relativity_parent_ord_$type", '') == 'one or more') {
+     return true;
+  }
+  return false;
+}
+
+/**
+ * If this node is required to connect a series of nodes together, return FALSE
+ */
+function relativity_may_unchild($parent, $child) {
+  
+  if (!node_access('update', $parent)) {
+    return FALSE;
+  }
+  
+  // check all possible child types for this parent
+  foreach (node_get_types('names') as $type=>$name) {
+    $conduit_types = variable_get('relativity_common_child_'.$parent->type.'_'.$type, array());
+    if (in_array($child->type, $conduit_types)) {
+      // make sure no child nodes of type $type exist with $child as a child, as they would require $child here to exist.
+      $result = db_query("SELECT DISTINCT n.nid as nid FROM {node} n INNER JOIN {relativity} r ON n.nid=r.nid WHERE n.type = '%s' AND r.parent_nid = %d", $type, $parent->nid);
+      if (db_num_rows($result) > 0) {
+        return FALSE;
+      }
+    }
+  }
+  return TRUE;
+}
+
+/**
+ * See if current user may create a *new* child of type $child_type to a parent of type $parent_type
+ */
+function relativity_may_attach_new_child_type($parent_type, $child_type) {
+  if (node_access('create', $child_type)) {
+    // make sure relationship is still valid
+    if (in_array($child_type, variable_get('relativity_type_'.$parent_type, array()))) {
+      // make sure relatinship doesn't require a common child
+      if (!variable_get('relativity_common_child_'.$parent_type.'_'.$child_type, FALSE)) {
+        return TRUE;
+      }
+    }
+    else {
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
+/**
+ * Deletes all rows involving the specified node from the database table
+ */
+function relativity_delete_relationships($node) {
+  // look to see if this is a required common child that is currently holding relationships together
+  foreach (node_get_types('names') as $ptype=>$pname) {
+    foreach (node_get_types('names') as $chtype=>$chname) {
+      // make sure that the parent/child relationship is still valid
+      if (in_array($chtype, variable_get('relativity_type_'.$ptype, array()))) {
+        
+        $conduit_types = variable_get('relativity_common_child_'.$ptype.'_'.$chtype, array());
+        if (in_array($node->type, $conduit_types)) {
+          //drupal_set_message("deleting conduit node of type $node->type.  See if there are any dependent $chtype relatives that are children of $ptype nodes");
+          // find all children of type $chtype of this node's parents of type $ptype
+          $dependent_children = relativity_list_grand_relatives($node, 'parent', 'child', array($ptype), array($chtype), FALSE);
+          if (is_array($dependent_children) && count($dependent_children)) {
+            $dependent_children[$node->nid] = $node->nid; // include self in children filter
+            
+            // find their parents of type $ptype
+            $result = db_query("SELECT DISTINCT n.nid as nid FROM {node} n INNER JOIN {relativity} r ON n.nid=r.parent_nid WHERE n.type = '%s' AND r.nid IN (".implode(',', array_keys($dependent_children)).")", $ptype);
+            while($obj = db_fetch_object($result)) {
+              // if this potentially dependent parent also has $node as a child, delete it
+              if (db_result(db_query("SELECT count(r.nid) as cnt FROM {relativity} r WHERE r.parent_nid=%d AND r.nid=%d", $obj->nid, $node->nid))) {
+                $dependent_parents[] = $obj->nid;
+              }
+            }
+            if (is_array($dependent_parents) && count($dependent_parents)) {
+              drupal_set_message(t('Removing dependent children (%children) from dependent parents (%parents)', array('%children'=>implode(',', array_keys($dependent_children)), '%parents'=>implode(',', $dependent_parents))));
+              // delete any relationships that require these $dependent_parents to have these $dependent_children
+              db_query("DELETE FROM {relativity} WHERE parent_nid IN (".implode(',', $dependent_parents).") AND nid IN (".implode(',', array_keys($dependent_children)).")");
+            }
+          }
+        }
+      }
+    }
+  }
+  // clear out all relationships directly involving this node
+  db_query('DELETE FROM {relativity} WHERE nid = %d OR parent_nid = %d', $node->nid, $node->nid);
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ *
+ * This hook allows us to act on all major node operations, 
+ * so we can manage our additional data appropriately.
+ */
+function relativity_nodeapi(&$node, $op, $teaser, $page) {
+  if ($_GET['parent_node']) {
+    $node->parent_node = $_GET['parent_node'] + 0;
+  }
+  elseif($_POST['parent_node']) {
+    $node->parent_node = $_POST['parent_node'] + 0;
+  }
+
+  switch ($op) {
+
+    case 'validate':
+      if ($node->nid && ($_GET['parent_node'] || $_POST['parent_node'])) {
+        $parents = explode(',', $node->parent_node);
+        foreach($parents as $parent_nid) {
+          $parent = node_load($parent_nid);
+          if (!$parent || !in_array($node->type, variable_get('relativity_type_'. $parent->type, array()))) {
+            form_set_error('relativity_type'.$node->type, t('You\'re not allowed to create this type of attachment.'));
+          }
+        }
+      }
+      break;
+
+    case 'insert':
+      if ($node->nid && $node->parent_node) {
+        if (is_array($node->parent_node)) {
+          foreach($node->parent_node as $parent_node) {
+            db_query('INSERT INTO {relativity} (nid, parent_nid) VALUES (%d, %d)', $node->nid, $parent_node);
+          }
+        }
+        else {
+          db_query('INSERT INTO {relativity} (nid, parent_nid) VALUES (%d, %d)', $node->nid, $node->parent_node);
+        }
+      }
+      break;
+
+    // remove all relationships involving this node from the database table
+    case 'delete':
+      relativity_delete_relationships($node);
+      break;
+
+    // if there is a parent to this node, create a node property named "parent_node"
+    // which contains the nid of its parent.  If there are more than one parent,
+    // this will be an array of such nids.
+    case 'load':
+      $result = db_query('SELECT parent_nid FROM {relativity} WHERE nid = %d', $node->nid);
+      if (db_num_rows($result) > 1) {
+        $parent_node = array();
+        while($object = db_fetch_object($result)) {
+          $parent_node[] = $object->parent_nid;
+        }
+      } 
+      elseif (db_num_rows($result) == 1) {
+        $object = db_fetch_object($result);
+        $parent_node = $object->parent_nid;
+      }
+
+      if ($parent_node) {
+        return array('parent_node' => $parent_node);
+      } else {
+        return array();
+      }
+      break;
+
+    case 'view':
+      if ($w = variable_get('relativity_'.$node->type.'_ancestor_weight', 0)) {
+        $ancestors = relativity_load_ancestors($node);
+        if (is_array($ancestors) && count($ancestors) > 0) {
+          $node->content['relativity_ancestors'] = array(
+            '#value' => theme('relativity_show_ancestors', $node, $ancestors),
+            '#weight' => $w,
+          );
+        }
+      }
+
+      if ($w = variable_get('relativity_'.$node->type.'_parents_weight', 10)) {
+        $node->content['relativity_parents'] = array(
+          '#value' => theme('relativity_show_parents', $node),
+          '#weight' => $w,
+        );
+      }
+
+      if ($w = variable_get('relativity_'.$node->type.'_children_weight', 11)) {
+        $node->content['relativity_children'] = array(
+          '#value' => theme('relativity_show_children', $node),
+          '#weight' => $w,
+        );
+      }
+
+      // output links to attach allowed children types and remove existing children
+      if ($w = variable_get('relativity_'.$node->type.'_operations_weight', 12)) {
+        $node->content['relativity_operations'] = array(
+          '#value' => theme('relativity_show_link_operations', $node),
+          '#weight' => $w,
+        );
+      }
+      break;
+  }  
+}
+
+
+/**
+ * Returns an array of sorted children types, unindexed
+ */
+function relativity_childrentypes($parent) {
+  $parent_nid = $parent->nid;
+
+  $childrentypes = variable_get('relativity_type_'. $parent->type, FALSE);
+  // remove "default" type
+  if (is_array($childrentypes)) {
+    $keys = array_keys($childrentypes, 'default');
+    if (count($keys))
+      unset($childrentypes[$keys[0]]);
+  }
+  if (!is_array($childrentypes) || count($childrentypes) == 0 || !$parent_nid) {
+    return array();
+  }
+  return relativity_sort_types($childrentypes);
+}
+
+
+
+
+/**
+ * Sorts an array of node types based on admin specification
+ * @param an array of node type names to sort or empty to use precomputed $sorted_node_list
+ * @return an array of sorted node type names, unindexed
+ */
+function relativity_sort_types($types=NULL) {
+  static $sorted_node_list;
+
+  if (!is_array($sorted_node_list)) {
+    foreach(range(1, count(node_get_types('names'))) as $idx) {
+      foreach(node_get_types('names') as $type=>$name) {
+        if (variable_get('relativity_node_order_'.$type, 1) == $idx) {
+          $sorted_node_list[] = $type;
+        }
+      }
+    }
+  }
+
+  if (!$types) {
+    // cut it short and return the presorted static node list
+    return $sorted_node_list;
+  }
+  
+  // discard garbage
+  if (!is_array($types)) {
+    return array();
+  }
+  
+  // nothing to sort if there's less than 2 elements
+  if (count($types) < 2) {
+    return $types;
+  }
+
+  foreach($sorted_node_list as $type) {
+    if (in_array($type, $types)) {
+      $sorted_types[] = $type;
+    }
+  }
+  
+  return is_array($sorted_types) ? $sorted_types : array();
+}
+
+function relativity_taxonomy_form($items) {
+  ksort($items);
+  $keys = array();
+  $form['#action'] = url('relativity/addparent/multiple/');
+  $form['parent_nid'] = array('#type' => 'hidden', '#value' => arg(4));
+  // Fieldset Container
+  $form['child_nids'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Children nodes by category'),
+    '#weight' => 0,
+    '#collapsible' => FALSE,
+    '#collapsed' => FALSE,
+    '#tree' => TRUE,
+  );
+  foreach ($items as $key => $value) {
+    $k = explode(';', $key);
+    $nkey = '';
+    for ($i=0; $i<count($k); $i++) {
+      // First element is always a  dictionary
+      if ($i == 0) {
+        $voc = taxonomy_get_vocabulary($k[0]);
+        $name = $voc->name;
+      // It's a term
+      } else {
+        $term = taxonomy_get_term($k[$i]);
+        $name = $term->name;
+      }
+      // nkey will help us to build multilevel collapsible fieldsets
+      if ($k[$i]) {
+        $nkey .= '['.$k[$i].']';
+      }
+      if (!in_array($nkey, $keys)) {
+        eval('$form[\'child_nids\']'.$nkey.' = array(
+               \'#type\' => \'fieldset\',
+               \'#title\' => t(stripslashes(\''.addslashes($name).'\')),
+               \'#weight\' => 1,
+               \'#collapsible\' => TRUE,
+               \'#collapsed\' => TRUE,
+               \'#tree\' => TRUE,
+             );');
+        $keys[] = $nkey;
+      }
+    }
+    // eval will help us to build dynamic multilevel fieldsets...Any suggestion for a better way? :)
+    for ($j=0; $j<count($value); $j++) {
+      eval('$form[\'child_nids\']'.$nkey.'[\''.$value[$j]['child_node'].'\'] = array(
+             \'#name\' => \'edit[child_nids]['.$value[$j]['child_node'].']\',
+             \'#type\' => \'checkbox\',
+             \'#title\' => t(stripslashes(\''.addslashes($value[$j]['title']).'\')),
+             \'#default_value\' => 0,
+            );');
+    }
+  }
+  // Submit button
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Add Children Nodes'),
+    '#weight' => 2,
+  );
+  return $form;
+}
+
+/**
+ * Render a child using a view
+ *
+ **/
+function relativity_child_as_view($parent, $childtype, $viewname) {
+  views_load_cache();
+  $view = views_get_view($viewname);
+
+/*
+  // the $view will maintain its field contents, so I wanna make sure
+  // I will add the extra field only once..
+  static $fields_count;
+  $fields_count = count($view->field);
+  $view->field[$fields_count] = array(
+    'vid' => count($view->field),
+    'tablename' => 'node',
+    'field' => 'nid',
+    'label' => '',
+    'handler' => 'relativity_handle_view_links',
+    'sortable' => 0,
+    'defaultsort' => 0,
+    'fullname' => 'node.nid',
+    'queryname' => 'node_nid',
+  );
+*/
+  // send the parent ID as the view's first argument:
+  $view_args = array($parent->nid);
+  // add the parent node type as third parameter:
+  $view_args[] = $parent->type;
+  // as per JohnG's idea, send the child node type as the third argument:
+  $view_args[] = $childtype;
+
+  // get the view output, i.e. build the view
+  //return views_build_view('embed', $view, $view_args, $view->use_pager, $view->nodes_per_block);
+  return views_build_view('embed', $view, $view_args, 0, 0);
+} 
+
+/**
+ * Handle the extra column added to 
+ * the rendered view in relativity_child_as_view()
+ *
+ **/
+function relativity_handle_view_links(&$field, &$view, $nid, &$node){
+  $parent = db_fetch_object(db_query("SELECT parent_nid from {relativity} where nid=%d", $nid));
+  if (relativity_may_unchild(node_load($parent->parent_nid), $node)) {
+    return l(t('Remove'), 'relativity/unparent/'.$parent->parent_nid.'/'.$nid);
+  }
+}
+
+/**
+ * Implementing hook_token_values to present basic tokens
+ * for relativity module
+ */
+function relativity_token_values($type, $object = NULL) {
+  if ($type == 'node') {
+    // load the node just to avoid problems with module weights
+    $node = node_load($object->nid);
+
+    $tokens = array();
+    // check if the node has parents
+    if (isset($node->parent_node)) {
+      // get the first parent if the node has many parents
+      if (is_array($node->parent_node)) {
+        $parent = node_load(array_shift($node->parent_node));
+      }
+      else {
+        $parent = node_load($node->parent_node);
+      }
+
+      $values['parent-nid']            = $parent->nid;
+      $values['parent-title']          = check_plain($parent->title);
+      $values['parent-type']           = $parent->type;
+      $values['parent-type-name']      = node_get_types('name', $parent->type);
+      $values['parent-author-uid']     = $parent->uid;
+      $values['parent-author-name']    = check_plain($parent->name);
+      $values['parent-yyyy']           = date('y', $parent->created);
+      $values['parent-yy']             = date('y', $parent->created);
+      $values['parent-month']          = date('f', $parent->created);
+      $values['parent-mon']            = date('m', $parent->created);
+      $values['parent-mm']             = date('m', $parent->created);
+      $values['parent-m']              = date('n', $parent->created);
+      $values['parent-ww']             = date('w', $parent->created);
+      $values['parent-date']           = date('n', $parent->created);
+      $values['parent-day']            = date('l', $parent->created);
+      $values['parent-ddd']            = date('d', $parent->created);
+      $values['parent-dd']             = date('d', $parent->created);
+      $values['parent-d']              = date('j', $parent->created);
+      $values['parent-mod-yyyy']       = date('y', $parent->changed);
+      $values['parent-mod-yy']         = date('y', $parent->changed);
+      $values['parent-mod-month']      = date('f', $parent->changed);
+      $values['parent-mod-mon']        = date('m', $parent->changed);
+      $values['parent-mod-mm']         = date('m', $parent->changed);
+      $values['parent-mod-m']          = date('n', $parent->changed);
+      $values['parent-mod-ww']         = date('w', $parent->changed);
+      $values['parent-mod-date']       = date('n', $parent->changed);
+      $values['parent-mod-day']        = date('l', $parent->changed);
+      $values['parent-mod-ddd']        = date('d', $parent->changed);
+      $values['parent-mod-dd']         = date('d', $parent->changed);
+      $values['parent-mod-d']          = date('j', $parent->changed);
+
+      // Now get the menu related information.
+      global $_menu;
+      $trail = array();
+      $placeholders = array();
+      $mid = token_menu_get_mid('node/'.$parent->nid);
+      
+      while ($mid && $_menu['visible'][$mid]) {
+        array_unshift($trail, $_menu['visible'][$mid]['title']);
+        $mid = $_menu['visible'][$mid]['pid'];
+      }
+
+      if (isset($trail)) {
+        $values['parent-menupath']     = check_plain(implode('/', $trail));
+        $values['parent-menu']         = check_plain(array_shift($trail));
+      }
+      else {
+        $values['parent-menu']         = '';
+        $values['parent-menupath']     = '';
+      }
+    } 
+    else {
+      $values['parent-nid']            = ''; 
+      $values['parent-title']          = ''; 
+      $values['parent-type']           = ''; 
+      $values['parent-type-name']      = ''; 
+      $values['parent-author-uid']     = ''; 
+      $values['parent-author-name']    = ''; 
+      $values['parent-yyyy']           = ''; 
+      $values['parent-yy']             = ''; 
+      $values['parent-month']          = ''; 
+      $values['parent-mon']            = ''; 
+      $values['parent-mm']             = ''; 
+      $values['parent-m']              = ''; 
+      $values['parent-ww']             = ''; 
+      $values['parent-date']           = ''; 
+      $values['parent-day']            = ''; 
+      $values['parent-ddd']            = ''; 
+      $values['parent-dd']             = ''; 
+      $values['parent-d']              = ''; 
+      $values['parent-mod-yyyy']       = ''; 
+      $values['parent-mod-yy']         = ''; 
+      $values['parent-mod-month']      = ''; 
+      $values['parent-mod-mon']        = ''; 
+      $values['parent-mod-mm']         = ''; 
+      $values['parent-mod-m']          = ''; 
+      $values['parent-mod-ww']         = ''; 
+      $values['parent-mod-date']       = ''; 
+      $values['parent-mod-day']        = ''; 
+      $values['parent-mod-ddd']        = ''; 
+      $values['parent-mod-dd']         = ''; 
+      $values['parent-mod-d']          = ''; 
+      $values['parent-menu']         = '';
+      $values['parent-menupath']     = '';
+    }
+    return $values;
+  }
+}
+
+/**
+ * Implementing hook_token_list()
+ */
+function relativity_token_list($type) {
+  if ($type == 'node' || $type == 'all') {
+    $tokens['relativity']['parent-nid']            = t('Parent node ID');
+    $tokens['relativity']['parent-title']          = t('Parent node title');
+    $tokens['relativity']['parent-type']           = t('Parent node type');
+    $tokens['relativity']['parent-type-name']      = t('Parent node type (user-friendly version)');
+    $tokens['relativity']['parent-author-uid']     = t("Parent node author's user id");
+    $tokens['relativity']['parent-author-name']    = t("Parent node author's user name");
+    $tokens['relativity']['parent-term']           = t("Parent name of top taxonomy term");
+    $tokens['relativity']['parent-term-id']        = t("Parent ID of top taxonomy term");
+    $tokens['relativity']['parent-vocab']          = t("Parent name of top term's vocabulary");
+    $tokens['relativity']['parent-vocab-id']       = t("Parent ID of top term's vocabulary");
+    $tokens['relativity']['parent-yyyy']           = t("Parent node creation year (four digit)");
+    $tokens['relativity']['parent-yy']             = t("Parent node creation year (two digit)");
+    $tokens['relativity']['parent-month']          = t("Parent node creation month (full word)");
+    $tokens['relativity']['parent-mon']            = t("Parent node creation month (abbreviated)");
+    $tokens['relativity']['parent-mm']             = t("Parent node creation month (two digit, zero padded)");
+    $tokens['relativity']['parent-m']              = t("Parent node creation month (one or two digit)");
+    $tokens['relativity']['parent-ww']             = t("Parent node creation week (two digit)");
+    $tokens['relativity']['parent-date']           = t("Parent node creation date (day of month)");
+    $tokens['relativity']['parent-day']            = t("Parent node creation day (full word)");
+    $tokens['relativity']['parent-ddd']            = t("Parent node creation day (abbreviation)");
+    $tokens['relativity']['parent-dd']             = t("Parent node creation day (two digit, zero-padded)");
+    $tokens['relativity']['parent-d']              = t("Parent node creation day (one or two digit)");
+    $tokens['relativity']['parent-mod-????']       = t('All tokens for node creation dates can also be used with with the "mod-" prefix; doing so will use the modification date rather than the creation date.');
+    $tokens['relativity']['parent-menu']           = t("The name of the menu the node belongs to.");
+    $tokens['relativity']['parent-menupath']       = t("The menu path (as reflected in the breadcrumb), not including Home or [menu]. Separated by /.");
+    return $tokens;
+  }
+}
+
+/* 
+ *   Theme functions:
+ * - theme_relativity_show_parents($node, $fieldset=1)
+ * - theme_relativity_show_children($node, $fieldset=1)
+ * - theme_relativity_show_ancestors($node, $ancestors, $fieldset=1)
+ * - theme_relativity_show_link_operations($childrentypes, $parent)
+ *
+ * - theme_relativity_block_parents($node)
+ * - theme_relativity_block_children($node)
+ * - theme_relativity_block_ancestors($node, $ancestors)
+ * - theme_relativity_block_link_operations($node)
+ * 
+ * - theme_relativity_ancestor($ancestor, $indent=0)
+ * - theme_relativity_link($title, $target, $parent_nid=0, $extra='')	
+ * - theme_relativity_bullets($items)
+ */
+
+function theme_relativity_show_parents($node, $fieldset=1) {
+  $output = '';
+
+  // load all nodes associated with this one as the parent nid and show links to all of them.
+  $result = db_query('SELECT parent_nid as pid FROM {relativity} WHERE nid = %d', $node->nid);
+  while($parent = db_fetch_object($result)) {
+    $parent_nodes[] = node_load($parent->pid);
+  }
+  
+  // sort output by node type
+  if (is_array($parent_nodes)) {
+    foreach (relativity_sort_types() as $type) {
+      foreach ($parent_nodes as $parent_node) {
+        if ($parent_node->type == $type) {
+          $output .= '<div class="relativity_parent">';
+          $output .= node_get_types('name', $parent_node->type) . ': ';
+          $output .= l($parent_node->title, 'node/'.$parent_node->nid, array('class' => 'relativity_view_' . $type));
+          $output .= "</div>\n";
+        }
+      }
+    }
+  }
+  if ($output && $fieldset) {
+    $output = theme('fieldset', array('#title' => variable_get('relativity_parents_label', t('Parent nodes')), 
+                                      '#children' => $output));
+  }
+  return $output;
+}
+
+function theme_relativity_show_children($parent, $fieldset=1) {
+  $output = '';
+	
+  // load all nodes associated with this one as the parent nid and show links to all of them.
+  $result = db_query('SELECT nid FROM {relativity} WHERE parent_nid = %d', $parent->nid);
+  while($child = db_fetch_object($result)) {
+    $child_nodes[] = node_load($child->nid);
+  }
+  if (!is_array($child_nodes)) return '';
+
+  $childrentypes = relativity_childrentypes($parent); // sorted list of types
+
+  foreach($childrentypes as $childtype) {
+    $child_display_option = variable_get('relativity_render_'. $parent->type .'_'. $childtype, 'title');
+    if (strpos($child_display_option, 'view:') !== FALSE) {
+      $viewname = str_replace('view:', '', $child_display_option);
+      $children_box = relativity_child_as_view($parent, $childtype, $viewname);
+    } else {
+      $children_box = "\n";
+      foreach($child_nodes as $child_node) {
+        if ($child_node->type != $childtype) continue;
+        switch ($child_display_option) {
+          case 'title':
+            $children_box .= node_get_types('name', $childtype) . ': ';
+            $children_box .= l(t($child_node->title), 'node/'.$child_node->nid, array('class' => 'relativity_view_' . $childtype)) . "<br />\n";
+            break;
+          case 'teaser':
+            $children_box .= theme('fieldset', array('#title' => node_get_types('name', $childtype), 
+                                                     '#children' => node_view($child_node, TRUE)));
+            break;
+          case 'body':
+            $children_box .= theme('fieldset', array('#title' => node_get_types('name', $childtype), 
+                                                     '#children' => node_view($child_node, FALSE)));
+            break;
+        }
+      }
+    }  
+    //drupal_set_message($childtype . $children_box);
+    $output .= ($children_box ? "\n" . '<div class="relativity_child">' . $children_box . "</div>\n" : '');
+  }
+
+  if ($output && $fieldset) {
+    $output = "\n" . theme('fieldset', array('#title' => variable_get('relativity_children_label', t('Children nodes')), 
+                                      '#children' => $output));
+  }
+  return $output;
+}
+
+
+
+function theme_relativity_show_ancestors($node, $ancestors, $fieldset=1) {
+  $output = '';
+  $indent = 0;
+
+  foreach($ancestors as $ancestor) {
+    if (is_array($ancestor)) {
+      foreach($ancestor as $sibling) {
+        $output .= theme('relativity_ancestor', $sibling, $indent);
+      }
+      $indent++;
+    }
+    else {
+      $output .= theme('relativity_ancestor', $ancestor, $indent++);
+    }
+  }
+
+  if ($output && $fieldset) {
+    $output = theme('fieldset', array('#title' => variable_get('relativity_ancestors_label', t('Ancestor nodes')),
+                                      '#children' => $output));
+  }
+  return $output;
+}
+
+
+
+
+/**
+ * Shows the "Link operations" box for attaching and removing children nodes
+ */
+function theme_relativity_show_link_operations($parent, $fieldset=1) {
+  $parent_nid = $parent->nid;
+
+  $output = relativity_get_operation_links($parent);
+  // show child removal links
+  $result = db_query('SELECT nid FROM {relativity} WHERE parent_nid = %d', $parent_nid);
+  $output = ($output ? $output . '<br />' : '');
+  while($child = db_fetch_object($result)) {
+    $child_node = node_load($child->nid);
+    // make sure that no dependencies exist that would require this node to be attached
+    if (relativity_may_unchild($parent, $child_node)) {
+      $removables[] = $child_node;
+    }
+  }
+  if (is_array($removables)) {
+    // sort output by node type
+    foreach(relativity_sort_types() as $type) {
+      foreach($removables as $child_node) {
+        if ($child_node->type == $type) {
+          $output .= '<div class="relativity_removable">';
+          $output .= l(t('Remove ' . node_get_types('name', $child_node->type)), "relativity/unparent/$parent_nid/$child_node->nid", array('class' => 'relativity_remove_' . $type));
+          $output .= ' : ';     // separator
+          $output .= t($child_node->title) ;    // note not a link: helps prevent accidental removal
+          $output .= "</div>\n";
+        }
+      }
+    }
+  }
+
+  if ($output && $fieldset) {
+    $output = theme('fieldset', array('#title' => variable_get('relativity_actions_label', t('Link operations')), 
+                                    //'#collapsible' => TRUE,
+                                      '#children' => $output));
+  }
+  return $output;
+}
+
+/** 
+  * Return a link of allowed operations on a parent.
+  * 
+  * @param $parent A parent node object.
+  * 
+  * @return HTML representation of operations allowed on the parent.
+ */
+function relativity_get_operation_links($parent) {
+  $parent_nid = $parent->nid;
+
+  $childrentypes = relativity_childrentypes($parent);
+  if (count($childrentypes) == 0) {
+    return '';
+  }
+
+  foreach ($childrentypes as $type) {
+    if (relativity_may_add_child($parent, $type)) {
+      $type_name = node_get_types('name', $type);
+      $may_create = relativity_may_attach_new_child_type($parent->type, $type);
+
+      // only offer to let user create new child if user has 'create' access 
+      // and common child relationship isn't required
+      if ($may_create && node_access('update', $parent)) {
+        $items[] = l(t('Create new !type', array('!type'=>$type_name)), "node/add/$type/parent/$parent_nid", array('class' => 'relativity_create_' . $type));
+      }
+
+      // only show link to attach existing node when the potential child doesn't require a parent.
+      if ((!relativity_requires_parent($type) || relativity_multi_parent($type)) && node_access('update', $parent)) {
+        $items[] = l(t('Attach existing !type', array('!type'=>$type_name)), "relativity/listnodes/$type/parent/$parent_nid", array('class' => 'relativity_attach_' . $type));
+      }
+    }
+  }
+
+  if ($items) {
+    return '<div class="relativity_add_child">'. theme('item_list', $items) .'</div>';
+  }
+}
+
+
+/************************ Block themes ***********************/
+
+function theme_relativity_block_parents($node) {
+  return theme('relativity_show_parents', $node, 0);
+}
+
+function theme_relativity_block_children($node) {
+  return theme('relativity_show_children', $node, 0);
+}
+
+function theme_relativity_block_ancestors($node, $ancestors) {
+  return theme('relativity_show_ancestors', $node, $ancestors, 0);
+}
+
+function theme_relativity_block_link_operations($parent) {
+  return theme('relativity_show_link_operations', $parent, 0);
+}
+
+/************************ Helper themes *********************/
+
+function theme_relativity_ancestor($ancestor, $indent=0) {
+  if (!$ancestor->type||!$ancestor->title||!$ancestor->nid) {
+    return '';
+  }
+  $output .= '<div style="padding-left: ' . ($indent*10) . 'px;" class="relativity_ancestor">';
+  $output .= node_get_types('name',$ancestor->type) . ': ' . l(t($ancestor->title), 'node/'.$ancestor->nid, array('class' => 'relativity_view_' . $type));
+  $output .= '</div>';
+  return $output;
+}
+
+/**
+ * A link to a node
+ */
+function theme_relativity_link($title, $target, $parent_nid=0, $extra='') {
+  $output = '<div span="relativity_link">';
+  $output .= l($title, "relativity/$target") . "$extra";
+  $output .= "</div>\n";
+  return $output;
+}
+
+function theme_relativity_bullets($items) {
+  return "<ul><li>".implode("</li>\n<li>", $items)."</li></ul>";
+}

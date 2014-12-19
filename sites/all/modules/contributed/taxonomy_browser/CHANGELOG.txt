@@ -1,0 +1,16 @@
+Taxonomy_browser module
+
+April 20, 2005
+* update for change in vocabulary_node_types table ... clean up some UI and now actually filter results by node type if the node_type_filter module is present. Added by Moshe Weitzman
+
+Oct 31, 2004
+  * Added the ability to only display taxonomies for a certain node type in the form. Added by Matt Westgate.
+
+Oct 07, 2004
+  * Code rewrite by Matt Westgate <drupal at asitis dot org>
+  * Search results redirect to the taxonomy/term page so they can be bookmarked.
+  * Modified the user interface to make better use of whitespace.
+  * Only show the taxonomy/term page if there are results.
+
+Oct 9, 2003
+  * Initial release by Moshe Weitzman <weitzmna@tejasa.com>

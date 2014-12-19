@@ -1,0 +1,592 @@
+/*-----------------------------------------------------------
+	Artmob Custom Styles v1.0					July, 2009.
+	.........................................................
+	2 Artmob Network. 
+	.........................................................
+	This CSS file represents the main design overrides of the 
+	artmob site. It takes the general structural components
+	of artmob and adds a layer of custom desing to it. 
+	Sections of the site are accounted for here in some way.
+	
+	It largely covers the following:
+	- Color usage: backgrounds, foreground colors, fonts
+	- Supporting color details such as tiling gradients 
+	  or rounded corners
+	- Font Sizes
+	- Some structural overrides we are using for our sample.
+	
+	At the very bottom (Search for "Site Content") are 
+	sample-specific design overrides that may not be 
+	necessary for your design. We recommend setting that 
+	code aside and re-introducing it to you sit as necessary.
+	
+	You may work with an Add/Replace approach when swapping
+	out colors but we receommend working with this style sheet
+	section by section. Doing so will give you much better
+	control over the outcome and allow you to fine tune each 
+	section.
+	
+-----------------------------------------------------------*/
+
+
+/*
+-------------------------------------------------------------
+||	General Structure
+-------------------------------------------------------------
+*/
+#outer-container{
+	background-color:#858585;
+	background-repeat:repeat-x;
+	background-image:url('../images/general/background_gradient.jpg');
+}
+#header{
+	height:130px;
+	background-color:#858585;
+	background-repeat:repeat-x;
+	background-image:url('../images/masthead/bkgd.jpg');	
+	text-align:right;
+}
+#active-area{
+	margin-bottom:2px;
+	border-width:0x 0px 0px 0px;
+}
+#left-column{
+	background-color:#F5F5F5;
+}
+#right-column {
+	background-color:#F5F5F5;
+}
+#main {
+	background-color:#FFFFFF;
+}
+#footer {
+	background-color:#000000;
+	font-size:10px;
+	color:#F0F0F0;
+}
+
+
+/*
+-------------------------------------------------------------
+||	Basic tags, rules, and design overrides
+-------------------------------------------------------------
+*/
+p{
+	color:#2E2E2E;
+}
+a, a:link, a:visited {
+	color:#265F97;
+	text-decoration:none;
+}
+a:hover, a:active, a.active, li a.active{
+/*	Note:li a.active is a system override.	*/ 
+	color:#3D85CB;
+	text-decoration:underline;
+}
+h1{
+	font-size:24px;
+	color:#638CAB;
+}
+h2{
+	font-size:20px;
+	color:#4B7083;
+}
+h3{
+	font-size:16px;
+	color:#3E4244;
+}
+h4{
+	font-size:14px;
+	color:#3E4244;
+}
+h5{
+	font-size:13px;
+	color:#3E4244;
+}
+h6{
+	font-size:12px;
+	color:#3E4244;
+}
+
+
+/*
+-------------------------------------------------------------
+||	Layout: Columns
+-------------------------------------------------------------
+*/
+/*   L/R Columns  -----------------------------------------*/
+#left-column .block{
+	border-width:0px 0px 3px 0px;
+	border-color:#9E9E9E;
+	border-style:double;
+}
+#right-column .block{
+	border-width:0px 0px 2px 0px;
+	border-color:#B9C5CA;
+	border-style:solid;
+	font-size:11px;
+}
+#left-column .expanded .menu{
+	padding-left:5px;
+}
+.block-user .innerblock{
+	background-color:#E5E5E5;
+	padding:10px 5px;
+}
+#left-column h2, #right-column h1,
+#left-column h2, #right-column h2,
+#left-column h2, #right-column h3,
+#left-column h2, #right-column h4,
+#left-column h2, #right-column h5{
+	margin:5px 0;
+	text-transform:uppercase;
+	font-size:11px;
+}
+#left-column h2, #right-column h2{
+	color:#000000;
+}
+/*   Left Column  -----------------------------------------*/
+#left-column .innerblock h2{
+	display:none;
+}
+
+#left-column li a, 
+#left-column li a:link, 
+#left-column li a:visited {
+	font-size:12px;
+	color:#000000;
+}
+#left-column li a:hover, 
+#left-column li a:active, 
+#left-column li a.active{
+	color:#3D85CB;
+}
+
+
+/*
+-------------------------------------------------------------
+||	Layout: Body
+-------------------------------------------------------------
+*/
+/*   Header		-------------------------------------------*/
+.login-shell a{
+	font-weight:bold;
+}
+.login-shell div{
+	margin-right:8px;
+}
+#top-border{
+	background-repeat:no-repeat;
+	background-image:url('../images/general/background_topborder.png');
+}
+/*   Breadcrumbs  ------------------------------------------*/
+#breadcrumbs{
+	border-width:3px 0 0 0;
+	border-style:solid;
+	border-color:#B9C5CA;
+	font-size:11px;
+}
+#breadcrumbs a:link, #breadcrumbs a:visited{
+	color:#000000;
+}
+#breadcrumbs a:hover{
+	color:#3D85CB;
+}
+
+
+/*
+-------------------------------------------------------------
+||	Tabs, Buttons, & Menu Systems
+-------------------------------------------------------------
+*/
+/*   Primary Links  ---------------------------------------*/
+#menu-area{
+	background-color:#B4B4B4;
+}
+#menu-area .links{
+	padding-bottom:4px;
+}
+#menu-area .links a{
+	background-color:#B4B4B4;
+}
+#menu-area .links a:link, #menu-area .links a:visited{
+	font-size:14px;
+	font-weight:bold;
+	color:#FFFFFF;
+}
+#menu-area .links a:hover, #menu-area .links a:active,
+#menu-area .links a.active, #menu-area .links li a.active{
+	background-color:#737373;
+	color:#FFFFFF;
+}
+
+/*   Tab Button Behaviour  --------------------------------*/
+#menu-local-tasks.tabs {
+	background-color: #333;
+	background-image:  url('../images/tab-bg.png');
+	padding:0;
+	width:540px;
+	border-width:0;
+	margin-bottom:10px;
+	display: block;
+	overflow: hidden;
+	}
+
+	#menu-local-tasks.tabs li {
+		display:inline-block;
+		float:left;
+		background: transparent url(../images/tab-bevel.png) no-repeat right 9px ;
+		margin:0 0 0 2px;
+		height:32px;
+		border-width:0;
+		}
+		#menu-local-tasks.tabs li:last-child {
+			background-image:none;
+			}	
+		#menu-local-tasks.tabs li a,
+		#menu-local-tasks.tabs li a:active,
+		#menu-local-tasks.tabs li a:visited{
+			display:block;
+			float:left;
+			height:32px;
+			line-height:36px;
+			background-color: transparent;
+			color: white;
+			margin: 0 0 0 10px;
+			padding: 0 14px 0 0;
+			border-width: 0;
+			text-decoration: none;
+			text-transform:uppercase;
+			font-size:.8em;
+			letter-spacing: .1em;
+			font-weight:bold;
+			text-shadow: #000 0px -2px 2px; 
+			}
+			
+		#menu-local-tasks.tabs li a:hover, 		#menu-local-tasks.tabs li:hover{
+			border-width:0;
+			background: transparent url(../images/tab-hover.png) repeat-x center center;
+			}
+		
+	/*   The current active tab  ------------------------------*/
+	#menu-local-tasks.tabs li.active a {
+		border-width: 0; 
+	/*	background: #fff url(../images/tab-active.png) repeat-x top right;*/
+	/*	color: #252525;*/
+		color: #FF8600;
+		text-shadow: none;
+		}
+	#menu-local-tasks.tabs li.active {
+		border-width: 0; 
+		/*background: #fff url(../images/tab-active.png) repeat-x top left;*/
+		margin-bottom:-1px;
+		border-bottom: 1px solid #fff;
+		color: #FF8600;
+
+		/*color: #252525;*/
+		}
+
+
+/*
+-------------------------------------------------------------
+||	Pagination Menus / Results Browsers
+-------------------------------------------------------------
+*/
+/*   Top Tiers: Tools  ------------------------------------*/
+.rb-top-tier-1{
+	border-bottom:1px solid #C8C8C8;
+}
+.rb-sort-buttons a:link,
+.rb-sort-buttons a.inactive{
+	margin-left:0;
+	margin-right:1px;
+	padding:4px 6px;
+	background-color:#707D86;
+	background-repeat:repeat-x;
+	background-image:url(../images/widgets/tab_button_bkgd_up.png);
+	text-decoration:none;
+	color:#FFFFFF;
+}
+.rb-sort-buttons a:active,
+.rb-sort-buttons a.active,
+.rb-sort-buttons a:hover{
+	background-color:#333B3E;
+	background-image:url(../images/widgets/tab_button_bkgd_down.png);
+	border-color:#B9C5CA;
+}
+.results-browser-tools p{
+	font-weight:bold;
+	color:#909AA1;
+}
+/*   Middle Tier: Results Table  --------------------------*/
+.results-browser .rb-middle-tier table{
+	background-color:#ECEDEE;
+	border-color:#C8C8C8;
+}
+.results-browser .rb-middle-tier table th,
+.results-browser .rb-middle-tier table td{
+	border-color:#C8C8C8;
+}
+.results-browser .node-teaser img{
+	border-color:#4A6C8E;
+}
+
+
+/*
+-------------------------------------------------------------
+||	Assets Page
+-------------------------------------------------------------
+*/
+.asset-title-wrapper h1{
+	background-color:#F4F4F4;
+	border-color:#C6C6C6;
+}
+.asset-sidebar{
+	background-repeat:repeat-x;
+	background-position:100% 100%;
+	background-image:url('../images/widgets/bkgd-asset_sidebar.png');
+	color:#000000;
+}
+.asset-sidebar .asset-sidebar-content .hr {
+	height:1px;
+	background-repeat:repeat-x;
+	background-image:url('../images/widgets/hr-01_black.png');
+}
+.asset-sidebar .asset-sidebar-content hr {
+	display:none;
+}
+/*   Similar/Related Info  --------------------------------*/
+.block-similarterms #innerblockID h2{
+	border-color:#B9C5CA;
+}
+
+
+/*
+-------------------------------------------------------------
+||	Attachments
+-------------------------------------------------------------
+*/
+table#attachments{
+	border-left-color:#DADADA;
+	color:#5F6D74;
+}
+table#attachments thead, table#attachments th{
+	background-color:#DADADA;
+	color:#5F6D74;
+}
+table#attachments td{
+  	background-repeat:repeat-x;
+	background-position:0% 100%;
+	background-image:url('../images/widgets/hr-grey.png');
+}
+
+
+/*
+-------------------------------------------------------------
+||	Exhibits
+-------------------------------------------------------------
+*/
+/*   Landing Page -----------------------------------------*/
+/*body.exhibits #main h1{
+	background-color:transparent;
+	background-repeat:no-repeat;
+	*background-image:url('../images/general/exhibit-landing_h1_bkgd.jpg');
+	color:#154C81;
+}*/
+
+.exhibit-table {
+  border-collapse: separate;
+  border-spacing: 7px;
+  background-color: #E4E4E4;
+}
+
+.exhibit-table td {
+	border: 1px solid #487EB3;
+	padding: 5px;
+	background-color: #F4F4F4;
+	overflow: visible;
+
+}
+
+.exhibit-table tr {
+}
+
+
+
+.node-teaser .innernode-exhibit h2 {
+	display: none;
+}
+
+.node-teaser .innernode-exhibit h3 a {
+	color: #000000;
+}
+
+
+.node-teaser .innernode-exhibit h3 a:hover {
+	color: #5cc151;
+}
+
+.node-teaser .innernode-exhibit h3{
+	color: #000000;
+	font-size: 1em;
+	padding: 0px;
+	margin: 0px 0px 4px 0px;
+	text-transform:  uppercase;
+	font-size: 18px;
+	line-height: 20px;
+}
+
+.node-teaser .innernode-exhibit td, .node-teaser .innernode-exhibit p {
+	font-size: 11px;
+	margin: 4px 0px;
+}
+
+.exhibit-read-more a {
+	text-transform: uppercase;
+	font-size: 10px;
+	font-weight: bold;
+	color: #487EB3;
+}
+
+/*   Header  ----------------------------------------------*/
+/*.exhibitHeader{
+	background-color:#275F98;
+	background-repeat:no-repeat;
+	background-image:url('../images/general/exhibit-item_h1_bkgd.jpg');
+}*/
+.exhibitHeader h2{
+/*	color:#FFFFFF;*/
+}
+.exhibitHeader .closeBtn a,
+.exhibitHeader .closeBtn a:visited{
+	color:#000000;
+}
+.exhibitHeader .closeBtn a:hover{
+	color:#DEDEDE;
+}
+/*   Tools  -----------------------------------------------*/
+.exhibitTools{
+	padding:6px 8px 6px 25px;
+	background-color:#487EB3;
+}
+/*   Body  ------------------------------------------------*/
+.exhibitBody{
+	background-color:#487EB3;
+	color:#FFF;
+}
+.exhibitContainer a, .exhibitContainer a:visited, 
+.exhibitContainer a:active, .exhibitContainer a.active{
+	text-decoration:none;
+	text-transform:uppercase;
+	font-weight:bold;
+	color:#FFF;
+}
+.exhibitContainer a:hover{
+	color:#DEDEDE;
+}
+/*   Curator Note  -----------------------------------------*/
+.block-Exhibit .exhibitContent{
+	background-color:#DAE5F0;
+}
+/*
+-------------------------------------------------------------
+||	Citation & Copyright
+-------------------------------------------------------------
+*/
+.citationTable .column1,
+.citationTable .column2{
+	background-color:#EAEFF1;
+}
+
+
+/*
+-------------------------------------------------------------
+||	Comments
+-------------------------------------------------------------
+*/
+#comments .links .links a, #comments .links .links a:visited{
+	margin-left:0;
+	margin-right:1px;
+	padding:4px 6px 4px 6px;
+	background-color:#707D86;
+	background-repeat:repeat-x;
+	background-image:url('../images/widgets/tab_button_bkgd_up.png');
+	color:#FFFFFF;
+}
+#comments .links .links a:hover{
+	background-color:#333B3E;
+	background-image:url('../images/widgets/tab_button_bkgd_down.png');
+	background-repeat:repeat-x;
+	border-width:1px;
+	text-decoration:none;
+}
+/*   The current active tab  ------------------------------*/
+#comments .links .links a.active{
+	padding-bottom:4px;
+	background-color:#333B3E;
+	background-image:url('../images/widgets/tab_button_bkgd_down.png');
+	background-repeat:repeat-x;
+	border-bottom-width:1px;
+	border-style:solid;
+	border-color:#B9C5CA;
+	color:#FFFFFF;
+}
+
+
+/*
+-------------------------------------------------------------
+||	Site Content
+-------------------------------------------------------------
+*
+/*   Home Page Title  -------------------------------------*/
+.alt-title-block{
+	margin-bottom:20px;
+	width:100%;
+	height:80px;
+	background-color:#636464;
+}
+.alt-title-block img{
+	float:left;
+	margin-right:10px;
+	width:175px;
+	height:100%;
+	background-color:#000000;
+}
+.alt-title-block h1{
+	padding-top:30px;
+	font-weight:normal;
+	font-size:20px;
+	color:#FFFFFF;
+}
+/*   Featured Exhibit Block -------------------------------*/
+#right-column #block-block-9,
+#left-column #block-block-9{
+	border-width:0;
+}
+#block-block-9 h2.title{
+	height:30px;
+	background-repeat:no-repeat;
+	background-position:50% 0%;
+	background-image:url('../images/general/exhibit-featured_title.png');
+	margin-bottom:1px;
+}
+#block-block-9 .content{
+	margin:0 5px;
+	padding:10px;
+	background-color:#FFF;
+	border-width:1px;
+	border-style:solid;
+	border-color:#BABABA;
+}
+#block-block-9 .content img{
+	float:left;
+	margin:0 8px 8px 0;
+}
+#block-block-9 .readMore{
+	text-align:right;
+	border-bottom:1px solid #DEDEDE;
+	margin-bottom:10px;
+}
+#block-block-9 .ctrContent{
+	margin-top:10px;
+}

@@ -1,0 +1,216 @@
+<?php
+// $Id: activeedit.module,v 1.4.2.5 2008/04/14 16:10:31 nedjo Exp $
+
+/**
+ * Implementation of hook_perm().
+ */
+function activeedit_perm() {
+  return array('edit via ajax');
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function activeedit_form_alter($form_id, &$form) {
+  if (isset($_REQUEST['activeedit_id']) && isset($_REQUEST['activeedit_type'])) {
+    $key = $_REQUEST['activeedit_id'];
+    $type = $_REQUEST['activeedit_type'];
+    activeedit_node_form_id($form_id, $key);
+    $targets = activeedit_get_targets($type, FALSE, TRUE);
+    if ($targets[$key] && $form_id == key($targets[$key]['#form'])) {
+      // Set initial value of main field based on autocomplete field value.
+      // This needs to come here because the render callback comes after form_builder() is called.
+      if (isset($_REQUEST['activeedit_transfer']) && $targets[$key]['#transfer_element']) {
+        activeedit_set_transfer($form, $targets[$key]['#transfer_element'], $_REQUEST['activeedit_transfer']);
+      }
+      if (isset($_POST) && $_POST['activeedit_submit']) {
+        $form['#submit']['activeedit_render'] = array();
+      }
+      // Putting the #pre_render here will cover both initial form rendering before submit and failed
+      // validation after submit.
+      $form['#pre_render'][] = 'activeedit_render';
+    }
+  }
+}
+
+/**
+ * Implementation of hook_menu().
+ *
+ * Load available includes by module.
+ */
+function activeedit_menu($may_cache) {
+  if (!$may_cache) {
+    jstools_modules_includes('activeedit');
+  }
+}
+
+/**
+ * Implementation of hook_footer().
+ *
+ * Because we're loading theme data, we call this function in hook_footer to
+ * ensure we're not prematurely initializing the theme.
+ */
+function activeedit_footer() {
+  static $loaded = FALSE;
+  if (!$loaded && user_access('edit via ajax')) {
+    $path = drupal_get_path('module', 'activeedit');
+    $activeedit = array();
+    foreach (array_keys(activeedit_types()) as $type) {
+      $activeedit[$type] = activeedit_get_targets($type, TRUE);
+    }
+    drupal_add_js(array('activeedit' => $activeedit), 'setting');
+    drupal_add_js('misc/progress.js');
+    jstools_add_js($path . '/activeedit.js');
+    // Add autocomplete to the footer to ensure it overrides core's version.
+    drupal_add_js($path .'/autocomplete.js', 'module', 'footer');
+    drupal_add_css($path . '/activeedit.css');
+    $loaded = TRUE;
+  }
+}
+
+function activeedit_render($form_id, $form) {
+  $key = $_REQUEST['activeedit_id'];
+  $type = $_REQUEST['activeedit_type'];
+  $submit = isset($_POST) && $_POST['activeedit_submit'];
+  $settings = activeedit_types($type);
+  activeedit_node_form_id($form_id, $key);
+  $object = NULL;
+  // We only need to set the object if we are returning data after a submit.
+  if  ($submit) {
+    switch ($form_id) {
+      case 'node_form':
+        // Third argument forces a refresh to reflect changed data.
+        if (arg(0) == 'node' && is_numeric(arg(1))) {
+          $object = node_load(arg(1), NULL, TRUE);
+        }
+        break;
+      case 'comment_form':
+        if (arg(0) == 'comment' && arg(1) == 'edit' && is_numeric(arg(2))) {
+          $object = _comment_load(arg(2), NULL, TRUE);
+        }
+        break;
+    }
+  }
+  $error = form_get_errors() ? TRUE : FALSE;
+
+  $targets = activeedit_get_targets($type, FALSE, TRUE, $object);
+  if ($submit && !$error) {
+    $data = array('error' => $error, 'message' => theme('status_messages'), 'content' => $targets[$key]['#content'], 'placement' => $settings['#placement']);
+  }
+  else {
+    // Filter the form.
+    // Only filter if there are filters registered.
+    // Otherwise we present the full form.
+    if (count($targets[$key]['#form'][$form_id])) {
+      formfilter_filter_form($form, $targets[$key]['#form'][$form_id], TRUE);
+    }
+    unset($form['#prefix']);
+    unset($form['#suffix']);
+    activeedit_convert_submits($form, $targets[$key]['#submit_text']);
+    $data = array('error' => $error, 'message' => theme('status_messages'), 'content' => drupal_render($form));
+  }
+  print drupal_to_js(array('status' => TRUE, 'data' => $data));
+  exit();
+}
+
+function activeedit_set_transfer(&$form, $transfer_element, $transfer_value) {
+  static $set = FALSE;
+  // Don't keep iterating if the field was already found.
+  if ($set) {
+    return;
+  }
+  if (array_key_exists($transfer_element, $form)) {
+    if ($form[$transfer_element]['#type'] == 'textfield') {
+      $form[$transfer_element]['#default_value'] = $transfer_value;
+    }
+    $set = TRUE;
+  }
+  else {
+    foreach (element_children($form) as $key) {
+      activeedit_set_transfer($form[$key], $transfer_element, $transfer_value);
+    }
+  }
+}
+
+function activeedit_convert_submits(&$form, $submit_text) {
+  foreach (element_children($form) as $key) {
+    if ($form[$key]['#type'] && in_array($form[$key]['#type'], array('button', 'submit')) && $form[$key]['#value'] && $form[$key]['#value'] != $submit_text) {
+      unset($form[$key]);
+    }
+    activeedit_convert_submits($form[$key], $submit_text);
+  }
+}
+
+function activeedit_get_targets($type, $prepare = FALSE, $flatten = FALSE, $object = NULL) {
+  $settings = activeedit_types($type);
+  $targets = array();
+  foreach (module_implements('activeedit_'. $type) as $module) {
+    $targets = array_merge_recursive($targets, module_invoke($module, 'activeedit_'. $type, $object));
+  }
+
+  // Test for access.
+  foreach (array_keys ($targets) as $key) {
+    if (!element_children($targets[$key]) && !$targets[$key]['#access']) {
+      unset($targets[$key]);
+    }
+  }
+  if ($prepare) {
+    $selectors = jstools_theme_data('activeedit');
+    _activeedit_prepare($targets, $selectors, $settings);
+  }
+  if ($flatten) {
+    foreach (element_children ($targets) as $key) {
+      foreach (element_children ($targets[$key]) as $child) {
+        $targets[$child] = $targets[$key][$child];
+        unset($targets[$key][$child]);
+      }
+    }
+  }
+  return $targets;
+}
+
+function _activeedit_prepare(&$targets, $selectors, $settings) {
+  foreach (element_children ($targets) as $key) {
+    // Convert to appropriate paths.
+    $targets[$key]['#target'] = url($targets[$key]['#target']);
+    // Allow overrides of the selectors.
+    $targets[$key]['#selector'] = $selectors[$key] ? $selectors[$key] : variable_get('activeedit_selector_'. $key, $targets[$key]['#selector']);
+    // Add form for bars.
+    if ($settings['#send_form'] && $targets[$key]['#form_function'] && function_exists($targets[$key]['#form_function'])) {
+      $node = new StdClass();
+      // Set to an available node type.
+      $node->type = key(node_get_types());
+      $form = $targets[$key]['#form_function']($node);
+      $targets[$key]['#form_data'] = drupal_get_form('activeedit_bars_form', $form);
+    }
+    // Unset the properties we don't need to pass to the client.
+    foreach (element_properties($targets[$key]) as $property) {
+      if (!in_array($property, array('#selector', '#target', '#title', '#marker', '#parent', '#text', '#form_data', '#id_field'))) {
+        unset($targets[$key][$property]);
+      }
+    }
+    _activeedit_prepare($targets[$key], $selectors, $settings);
+  }
+}
+
+function activeedit_types($type = NULL) {
+  $types = array();
+  $types['elements'] = array(
+    '#placement' => 'html',
+    '#send_form' => FALSE,
+  );
+  $types['autocompletes'] = array(
+    '#placement' => 'html',
+    '#send_form' => FALSE,
+  );
+  $types['links'] = array(
+    '#placement' => 'after',
+    '#send_form' => FALSE,
+  );
+  $types['bars'] = array(
+    '#placement' => NULL,
+    '#send_form' => TRUE,
+  );
+  return $type ? $types[$type] : $types;
+}
+

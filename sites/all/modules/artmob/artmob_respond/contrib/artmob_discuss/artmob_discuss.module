@@ -1,0 +1,211 @@
+<?php
+/**
+ * @file
+ * Comments are displayed in a separate 'discuss' tab, for node types you wish
+ * Made for Drupal 5.x
+ */
+
+/**
+ * Implementation of hook_help().
+ */
+function artmob_discuss_help($section) {
+  switch ($section) {
+    case 'admin/help#artmob_discuss':
+      $output = '<p>'. t('The artmob_discuss module gives you the option to display comments on a separate tab. The option is per content type and can be set in the workflow options of a content type.') .'</p>';
+      return $output;
+  }
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function artmob_discuss_menu($may_cache) {
+  $items = array();
+  if ($may_cache) {
+  }
+  else {
+    $items[] = array(
+      'path' => 'admin/artmob/discuss',
+      'title' => 'Artmob Discuss Settings',
+      'description' => 'Configure settings for the discuss page.',
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('artmob_discuss_admin_form'),
+      'weight'            => -9,
+    );
+
+    if (arg(0) == 'node' && is_numeric(arg(1))) {
+      $node = node_load(arg(1));
+      if (artmob_discuss_activated($node->type) && $node->nid && _artmob_discuss_node_comment_value($node)) {
+        $items[] = array(
+          'path' => 'node/'. arg(1) .'/discuss',
+          'title' => artmob_discuss_title(),
+          'callback' => 'artmob_discuss_handle',
+          'callback arguments' => array(arg(1)),
+          'access' => (user_access('access comments') && node_access('view', $node)),
+          'type' => MENU_LOCAL_TASK,
+          'weight' => 1,
+        );
+      } else {
+        //drupal_set_message( 'NOT in activated' );
+      }
+    }
+  }
+  return $items;
+}
+
+/**
+ * Helper item for artmob_discuss_menu: access callback.
+ */
+function _artmob_discuss_access($perm, $node) {
+  return (user_access($perm) && artmob_discuss_activated($node->type) && $node->nid && _artmob_discuss_node_comment_value($node));
+}
+
+/**
+ * Menu call back for admin form.
+ */
+function artmob_discuss_admin_form() {
+  $form = array();
+  $form['discuss_title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Title of the "discuss" page'),
+    '#default_value' => artmob_discuss_title(),
+    '#weight' => -5
+  );
+  
+  $form['discuss_text']['discuss_intro'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Discuss tab introductory text'),
+    '#weight' => -4,
+    '#rows' => 10,
+    '#default_value' => variable_get('discuss_intro','Please share news, reviews, links and comments.')
+  );
+  
+    $form['discuss_text']['discuss_intro_format'] = filter_form(variable_get('discuss_intro_format',FILTER_FORMAT_DEFAULT), NULL, array('discuss_text'));    
+  
+  return system_settings_form($form);
+}
+
+function artmob_discuss_title($title = NULL) {
+  if (is_null($title)) {
+    return variable_get('discuss_title', t('Discuss'));
+  }
+  variable_set('discuss_title', $title);
+}
+
+/**
+ * Menu callback for discuss page.
+ */
+function artmob_discuss_handle($nid) {
+  $node = node_load($nid);
+  drupal_set_title(check_plain($node->title));
+  $add_comments = _artmob_discuss_node_comment_value($node) == COMMENT_NODE_READ_WRITE && user_access('post comments');
+  return theme('discusspage', $node, $add_comments);
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ */
+function artmob_discuss_nodeapi(&$node, $op) {
+  switch ($op) {
+    case 'load':
+      if (artmob_discuss_activated($node->type) && arg(0) == 'node' && !arg(2)) {
+        // Overwrite setting of comment module and set comments for this node to disabled.
+        // This prevents the comments of being displayed.
+        $output['comment_original_value'] = $node->comment;
+        $output['comment'] = 0;
+        return $output;
+      }
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_link().
+ */
+function artmob_discuss_link($type, $node = NULL, $teaser = FALSE) {
+  if ($type == 'node' && artmob_discuss_activated($node->type) && user_access('access comments')) {
+    $result = array();
+    if ($node->comment_count) {
+      $result['artmob_discuss_view'] = array(
+        'title' => t('@title page (@nr comments)', array('@nr' => $node->comment_count, '@title' => artmob_discuss_title())),
+        'href' => 'node/'. $node->nid .'/discuss',
+      );
+    }
+    /*
+    if (_artmob_discuss_node_comment_value($node) == COMMENT_NODE_READ_WRITE) {
+      $result['comment_add'] = array(
+        'title' => t('Add new comment'),
+        'href' => "comment/reply/$node->nid",
+      );
+    }*/
+    return $result;
+  }
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function artmob_discuss_form_alter($form_id, &$form) {
+  // Add option to comment options of node types.
+  if ($form_id == 'node_type_form' && isset($form['identity']['type']) && module_exists('comment')) {
+    $form['workflow']['comment_discuss'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Display comments on separate discuss page'),
+      '#prefix' => '<strong>'. t('Discuss pages:') .'</strong>',
+      '#weight' => 5,
+      '#default_value' => artmob_discuss_activated($form['#node_type']->type),
+    );
+  }
+}
+
+/**
+ * Implementation of hook_comment()
+ * Changing the destination to the discuss page after posting a comment
+ */
+function artmob_discuss_comment($a1, $op) {
+  if ($op == 'insert' || $op == 'update') {
+    $nid = $a1['nid'];
+    $node = node_load($nid);
+    if (artmob_discuss_activated($node->type)) {
+      $_REQUEST['destination'] = 'node/'. $a1['nid'] .'/discuss';
+    }
+  }
+} 
+/**
+ * Is discuss page option activated for node tpye?
+ */
+function artmob_discuss_activated($node_type, $value = NULL) {
+  if (is_null($value)) {
+    return variable_get('comment_discuss_'. $node_type, FALSE);
+  }
+  variable_set('comment_discuss_'. $node_type, $value);
+}
+
+/**
+ * Value of 'comment' of node.
+ */
+function _artmob_discuss_node_comment_value(&$node) {
+  return isset($node->comment_original_value) ? $node->comment_original_value : $node->comment;
+}
+
+/*
+ * Theme functions
+ */
+
+/**
+ * Theme discusspage for node
+ * @param $node
+ *   node whose discuss page is displayed
+ * @param $add_comments
+ *   boolean which indicates if the adding of comments is allowed for current user
+ */
+function theme_discusspage($node, $add_comments) {
+
+  $introductory_text = check_markup(variable_get('discuss_intro','Please share news, reviews, links and comments.'),variable_get('discuss_intro_format',FILTER_FORMAT_DEFAULT));
+  $output = $introductory_text;
+  $output .= comment_render($node);  
+  if ($add_comments) {
+    $output .= '<p>' . l(t('Add new comment'), "comment/reply/$node->nid") . '</p>';
+  }
+  return $output;
+}

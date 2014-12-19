@@ -1,0 +1,10 @@
+; $Id: artmob_citation_ticket.info,v 1.0 2008/03/01 20:55:33 dries Exp $
+name = Artmob Citation Ticket
+description = Citation Ticket
+package = Artmob
+version = VERSION
+
+; Information added by drupal.org packaging script on 2007-01-30
+version = "5.1"
+project = "drupal"
+

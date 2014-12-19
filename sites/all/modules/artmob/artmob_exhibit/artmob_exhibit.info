@@ -1,0 +1,5 @@
+; $Id: artmob_exhibit.info,v 1.0 2011/03/31 20:55:33 stop14 Exp $
+name = Artmob Exhibit
+description = Allows you to add curatorial and exhibition functions to your website.
+package = Artmob
+version = 3.1

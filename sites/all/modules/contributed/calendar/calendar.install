@@ -1,0 +1,59 @@
+<?php
+//$Id: calendar.install,v 1.1.4.6 2007/10/25 16:54:15 karens Exp $
+/**
+ * @file
+ * Install File
+ */
+
+/**
+ * Implementation of hook_enable().
+ * Reset the calendar caches.
+ */
+function calendar_enable() {
+  include_once(drupal_get_path('module', 'calendar') .'/calendar.module');
+  calendar_clear_all();
+}
+
+/**
+ * Implementation of hook_disable().
+ * Empty the calendar caches.
+ */
+function calendar_disable() {
+  include_once(drupal_get_path('module', 'calendar') .'/calendar.module');
+  calendar_clear_all(TRUE);
+}
+
+/**
+ * Implementation of hook_install().
+ * Reset the calendar caches.
+ */
+function calendar_install() {
+  include_once(drupal_get_path('module', 'calendar') .'/calendar.module');
+  calendar_clear_all();
+}
+
+/**
+ * Implementation of hook_uninstall().
+ *
+ */
+function calendar_uninstall() {
+  include_once(drupal_get_path('module', 'calendar') .'/calendar.module');
+  variable_del('calendar_empty_arg');
+  foreach (array_keys(calendar_info()) as $view_name) {
+    variable_del('calendar_time_format_'. $view_name);
+    variable_del('calendar_display_format_'. $view_name);
+  }
+  // Empty the calendar caches.
+  calendar_clear_all(TRUE);
+}
+
+/**
+ * Move these caches from 'cache' to 'cache_views' so they get cleared
+ * automatically whenever views_invalidate_cache() is called.
+ */
+function calendar_update_5000() {
+  $ret = array();
+  cache_clear_all('calendar_fields', 'cache');
+  cache_clear_all('calendar_views', 'cache');
+  return $ret;
+}

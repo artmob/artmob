@@ -1,0 +1,10 @@
+; $Id: transliteration.info,v 1.1.6.1 2008/06/12 21:20:01 smk Exp $
+name = Transliteration
+description = Provides transliteration for UTF-8 text input and sanitizes file names.
+
+
+; Information added by drupal.org packaging script on 2008-06-12
+version = "5.x-2.0"
+project = "transliteration"
+datestamp = "1213307122"
+

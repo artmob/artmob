@@ -1,0 +1,33 @@
+<?php
+// $Id: artmob_respond.install,v 1.2.2.12 2008/01/06 20:00:14 quicksketch Exp $
+
+function artmob_respond_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      $success = TRUE;
+      break;
+    case 'pgsql':
+      break;
+  }
+
+  if ($success) {
+      // Insert a starting record.
+
+      $sql = "INSERT INTO {sequences} (name, id) VALUES ('am_ticketid', 1)";
+      db_query($sql);
+  }
+
+  if ($success) {
+    drupal_set_message(t('artmob_respond module installed successfully.'));
+  }
+  else {
+    drupal_set_message(t('The installation of artmob_respond failed.'), 'error');
+  }
+}
+
+function artmob_respond_uninstall() {
+  db_query('DELETE FROM {sequences} WHERE name = "am_ticketid"');
+  drupal_set_message(t('artmob_respond has been uninstalled.'));
+}
+

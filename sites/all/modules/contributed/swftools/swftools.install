@@ -1,0 +1,7 @@
+<?php
+// $Id: swftools.install,v 1.1.2.2 2008/08/08 22:37:23 stuartgreenfield Exp $
+
+function swftools_uninstall() {
+  db_query("DELETE from {variable} WHERE name LIKE 'swftools%'");
+}
+

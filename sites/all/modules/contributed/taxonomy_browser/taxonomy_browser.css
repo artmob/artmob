@@ -1,0 +1,33 @@
+/* $Id: taxonomy_browser.css,v 1.1.2.5 2008/06/06 18:03:38 nancyw Exp $ */
+
+.taxonomy_browser_checkboxes .form-item label.option {
+  float: left;
+  width: 20%;
+}
+
+.taxonomy_browser_checkboxes .form-item .description {
+  clear: both;
+}
+
+.taxonomy_browser_radios .form-item label.option {
+  float: left;
+  width: 20%;
+}
+
+.taxonomy_browser_radios .form-item .description {
+  clear: both;
+}
+
+.block-taxonomy_browser {
+  font-size: 89%;
+}
+
+.block-taxonomy_browser .taxonomy_browser_radios .form-item label.option {
+  float: none; 
+  width: 100%;
+}
+
+.block-taxonomy_browser .taxonomy_browser_checkboxes .form-item label.option {
+  float: none; 
+  width: 100%;
+}

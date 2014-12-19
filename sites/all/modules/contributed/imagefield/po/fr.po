@@ -1,0 +1,235 @@
+# $Id: fr.po,v 1.1.2.1 2008/09/23 14:30:54 slybud Exp $
+#
+# French translation of Drupal (general)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  imagefield.module,v 1.30.2.6.2.64 2008/05/13 00:02:02 dopry
+#  imagefield.info,v 1.4.4.3 2008/04/19 23:17:02 dopry
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: french translation for imagefield drupal module\n"
+"POT-Creation-Date: 2008-09-23 15:59+0200\n"
+"PO-Revision-Date: 2008-09-23 16:21+0100\n"
+"Last-Translator: Sylvain Moreau <sylvain.moreau@ows.fr>\n"
+"Language-Team: Sylvain Moreau, OWS <sylvain.moreau@ows.fr>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: msgid_plural\n"
+"X-Poedit-Language: French\n"
+
+#: imagefield.module:125
+msgid "Default image"
+msgstr "Image par défaut"
+
+#: imagefield.module:130
+msgid "Use default image"
+msgstr "utiliser l'image par défaut"
+
+#: imagefield.module:132
+msgid "Check here if you want to use a image as default."
+msgstr "Cochez cette case si vous souhaitez utiliser une image comme image par défaut"
+
+#: imagefield.module:142
+msgid "Upload image"
+msgstr "Téléverser une image"
+
+#: imagefield.module:143
+msgid "Choose a image that will be used as default."
+msgstr "Choisissez une image qui sera utilisée par défaut."
+
+#: imagefield.module:168
+msgid "The default image could not be uploaded. The destination(%d) does not exist or is not writable by the webserver."
+msgstr "L'image par défaut n'a pas pu être téléversée. Le chemin de destination (%d) n'existe pas ou n'est pas accessible en écriture par le serveur web."
+
+#: imagefield.module:173
+msgid "The default image could not be uploaded. Failed saving to destination(%d)."
+msgstr "L'image par défaut n'a pas pu être téléversée. Echec lors de l'enregistrement dans la destination (%d)."
+
+#: imagefield.module:197
+msgid "Has Image"
+msgstr "Possède une Image"
+
+#: imagefield.module:265
+msgid "Image upload was unsuccessful."
+msgstr "Le téléversement de l'image a echoué."
+
+#: imagefield.module:423
+msgid "Maximum resolution for Images"
+msgstr "Résolution maximale pour les Images"
+
+#: imagefield.module:428
+msgid "The maximum allowed image size expressed as WIDTHxHEIGHT (e.g. 640x480). Set to 0 for no restriction. If a larger image is uploaded, it will be resized to reflect the given width and height."
+msgstr "La taille maximale d'image autorisée exprimée sous la forme LARGEUR*HAUTEUR (par exemple 640*480). Régler à 0 pour aucune restriction. Si une image plus grande est téléversée, elle sera redimensionnée pour s'accorder à la largeur et la hauteur définies."
+
+#: imagefield.module:432
+msgid "Maximum filesize for Images"
+msgstr "Taille maximale de fichier pour les Images"
+
+#: imagefield.module:435
+msgid "The maximum allowed image file size expressed in kilobytes. Set to 0 for no restriction."
+msgstr "La taille maximale de fichier image autorisée, exprimée en kylobytes. Régler à 0 pour aucune restriction"
+
+#: imagefield.module:439
+msgid "Maximum number of images"
+msgstr "Le nombre maximum d'images"
+
+#: imagefield.module:442
+msgid "The maximum number of images allowed. Set to 0 for no restriction. This only applies if multiple values are enabled."
+msgstr "Le nombre maximum d'images autorisées. Régler à 0 pour aucune restriction. Ceci s'applique uniquement si les valeurs multiples sont activées."
+
+#: imagefield.module:446
+msgid "Image path"
+msgstr "Chemin de l'image"
+
+#: imagefield.module:448
+msgid "Optional subdirectory within the \"%dir\" directory where images will be stored. Do not include trailing slash."
+msgstr "Sous-répertoire optionnel où seront stockées les images à l'intérieur du répertoire \"%dir\". Ne pas inclure le slash de fin."
+
+#: imagefield.module:451
+msgid "You can use the following tokens in the image path."
+msgstr "Vous pouvez utilisez les jetons (tokens) suivants dans le chemin de l'image."
+
+#: imagefield.module:456
+msgid "Permitted upload file extensions."
+msgstr "Extensions de fichiers téléversés autorisées."
+
+#: imagefield.module:460
+msgid "Extensions a user can upload to this field. Seperate extensions with a space and do not include the leading dot."
+msgstr "Les extensions que l'utilisateur peut téléverser pour ce champ. Séparer les extensions par un espace et ne pas inclure les points de début."
+
+#: imagefield.module:465
+msgid "Enable custom alternate text"
+msgstr "Activer le texte alternatif personnalisé"
+
+#: imagefield.module:467
+msgid "Enable custom alternate text for images. Filename will be used if not checked."
+msgstr "Activer le texte alternatif personnalisé pour les images. Le nom du fichier sera utilisé si non coché."
+
+#: imagefield.module:471
+msgid "Enable custom title text"
+msgstr "Activer le texte de titre personnalisé"
+
+#: imagefield.module:473
+msgid "Enable custom title text for images. Filename will be used if not checked."
+msgstr "Activer le texte de titre personnalisé pour les images. Le nom de fichier sera utilisé si non coché."
+
+#: imagefield.module:512
+msgid "Imagefield failed to create directory(%d) at (%p)."
+msgstr "Le module Imagefield a échoué dans la création du répertoire (%d) dans (%p)."
+
+#: imagefield.module:527
+msgid "The image %filename was resized to fit within the maximum allowed resolution of %resolution pixels"
+msgstr "L'image %filename a été redimensionnée pour tenir dans la résolution maximale autorisée de %resolution pixels"
+
+#: imagefield.module:672
+msgid "Images are not saved until the form is submitted."
+msgstr "Les images ne seront pas enregistrées avant la soumission du formulaire."
+
+#: imagefield.module:704
+msgid "<br />Allowed extensions: %ext"
+msgstr " <br />Extensions autorisées: %ext"
+
+#: imagefield.module:710
+msgid "Upload a new image"
+msgstr "Téléverser une nouvelle image"
+
+#: imagefield.module:719
+msgid "Upload"
+msgstr "Transfert"
+
+#: imagefield.module:740
+msgid "Delete"
+msgstr "Supprimer"
+
+#: imagefield.module:759
+msgid "Filename: "
+msgstr "Nom du fichier : "
+
+#: imagefield.module:770
+msgid "Alternate text"
+msgstr "Texte alternatif"
+
+#: imagefield.module:772
+msgid "Alternate text to be displayed if the image cannot be displayed."
+msgstr "Texte alternatif à afficher dans le cas où l'image de peut pas l'être."
+
+#: imagefield.module:786
+msgid "Title"
+msgstr "Titre"
+
+#: imagefield.module:788
+msgid "Text to be displayed on mouse overs."
+msgstr "Texte à afficher au survol par la souris."
+
+#: imagefield.module:798
+msgid "If a new image is chosen, the current image will be replaced upon submitting the form."
+msgstr "Si une nouvelle image est choisie, l'image actuelle sera remplacée à la soumission du formulaire."
+
+#: imagefield.module:857
+msgid "@field is required. Please upload an image."
+msgstr "@field ets obligatoire. Veuillez téléverser une image."
+
+#: imagefield.module:860
+msgid "@field is required. Please uncheck at least one delete checkbox or upload another image."
+msgstr "@field ets obligatoire. Veuillez décocher au moins une case de suppression ou téléverser une autre image."
+
+#: imagefield.module:877
+msgid "Files with the extension %ext are not allowed. Please upload a file with an extension from the following list: %allowed_extensions"
+msgstr "Les fichiers avec l'extension %ext ne sont pas admis. Veuillez envoyer un fichier avec une extension figurant dans la liste suivante: %allowed_extensions"
+
+#: imagefield.module:885
+msgid "The file you uploaded has a filesize greater than the maximum allowed filesize of %sizekb."
+msgstr "Le fichier que vous avez téléversé possède une taille supérieure à la limite autorisée de %sizekb."
+
+#: imagefield.module:893
+msgid "Mime Type mismatch. Only image files may be upload. You uploaded a file with mime type: %mime"
+msgstr "Erreur de Type Mime. Seuls les fichiers images peuvent être téléversés. Vous avez téléversé un fichier du type mime : %mime"
+
+#: imagefield.module:901
+msgid "You are only allowed to upload up to %maximages images."
+msgstr "Vous êtes seulement autorisé à téléverser jusqu'à %maximages images."
+
+#: imagefield.module:921
+msgid "link to node"
+msgstr "lien vers le noeud"
+
+#: imagefield.module:925
+msgid "link to image"
+msgstr "lien vers l'image"
+
+#: imagefield.module:929
+msgid "path to image"
+msgstr "chemin de l'image"
+
+#: imagefield.module:933
+msgid "url to image"
+msgstr "url de l'image"
+
+#: imagefield.module:512;0
+msgid "imagefield"
+msgstr "imagefield"
+
+#: imagefield.module:691
+msgid "You can only attach one image to this field. Delete the image if you wish to be able to upload a different one."
+msgid_plural "You can only attach @count images to this field. Delete an image if you wish to be able to upload different images."
+msgstr[0] "Vous ne pouvez attacher qu'une image à ce champ. Supprimez l'image si vous souhaitez pouvoir en téléverser une différente."
+msgstr[1] "Vous ne pouvez attacher que @count images à ce champ. Supprimez une image si vous souhaitez pouvoir en téléverser de nouvelles."
+
+#: imagefield.module:101
+msgid "view imagefield uploads"
+msgstr "voir les téléversements imagefield"
+
+#: imagefield.info:0
+msgid "ImageField"
+msgstr "ImageField"
+
+#: imagefield.info:0
+msgid "Defines an image field type."
+msgstr "Définit un type de champ image."
+
+#: imagefield.info:0
+msgid "CCK"
+msgstr "CCK"
+

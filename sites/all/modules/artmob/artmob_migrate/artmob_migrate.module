@@ -1,0 +1,704 @@
+<?php
+// $Id: artmob_migrate.info,v 1.0 2008/03/07 20:55:33 dries Exp $
+
+//Tool IDs
+define (TOOLID_UPDATE_LICENSE_TABLE, 1 );
+define (TOOLID_UPDATE_CITATION_TABLE, 2 );
+define (TOOLID_UPDATE_CONTRIBUTOR_TABLE, 3 );
+define (TOOLID_UPDATE_IMAGES, 4 );
+define (TOOLID_UPDATE_AUDIO, 5 );
+define (TOOLID_UPDATE_VIDEO, 6 );
+define (TOOLID_UPDATE_CITATION, 7 );
+define (TOOLID_UPDATE_IMAGE_ATTACH_IMAGES, 8 );
+
+function artmob_migrate_init() {
+}
+
+//----------------------------------------------
+/**
+ * Implementation of hook_help().
+ */
+function artmob_migrate_help($section) {
+  switch ($section) {
+    case 'admin/help#artmob_migrate':
+      $output = '<p>'. t('The artmob_migrate module contains general global functions') .'</p>';
+      return $output;
+    case 'admin/modules#description':
+    case 'admin/settings/amMain':
+      return (t('Contains general global functions.'));
+  }
+}
+
+//----------------------------------------------
+/**
+ * Implementation of hook_menu().
+ */
+function artmob_migrate_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+  } else {
+    $items[] = array(
+      'path'          => 'admin/migrate',
+      'title'         => t('Artmob Migration Tools'),
+      'description'   => t('Tools to aid in migration to phase 3d'),
+      'position'      => 'right',
+      'weight'        => -7,
+      'callback'      => 'system_admin_menu_block_page',
+      'access'        => user_access('administer site configuration')
+    );
+
+    $items[] = array(
+      'path'              => 'admin/migrate/update_tables',
+      'title'             => t('Update Table Definitions'),
+      'description'       => t('Update Table Definitions'),
+      'weight'            => -7,
+      'callback'          => 'drupal_get_form',
+      'callback arguments'=> array( 'artmob_migrate_update_tables'),
+      'access'            => user_access('administer site configuration')
+    );
+
+    $items[] = array(
+      'path'              => 'admin/migrate/update_images',
+      'title'             => t('Update Images'),
+      'description'       => t('Update Images'),
+      'weight'            => -7,
+      'callback'          => 'drupal_get_form',
+      'callback arguments'=> array( 'artmob_migrate_update_images'),
+      'access'            => user_access('administer site configuration')
+    );
+
+    $items[] = array(
+      'path'              => 'admin/migrate/update_image_attach_images',
+      'title'             => t('Update Images in Digitized Works'),
+      'description'       => t('Update Images in Digitized Works'),
+      'weight'            => -7,
+      'callback'          => 'drupal_get_form',
+      'callback arguments'=> array( 'artmob_migrate_update_image_attach_images'),
+      'access'            => user_access('administer site configuration')
+    );
+
+    $items[] = array(
+      'path'              => 'admin/migrate/update_audio',
+      'title'             => t('Update Audio'),
+      'description'       => t('Update Audio'),
+      'weight'            => -7,
+      'callback'          => 'drupal_get_form',
+      'callback arguments'=> array( 'artmob_migrate_update_audio'),
+      'access'            => user_access('administer site configuration')
+    );
+
+    $items[] = array(
+      'path'              => 'admin/migrate/update_video',
+      'title'             => t('Update Video'),
+      'description'       => t('Update Video'),
+      'weight'            => -7,
+      'callback'          => 'drupal_get_form',
+      'callback arguments'=> array( 'artmob_migrate_update_video'),
+      'access'            => user_access('administer site configuration')
+    );
+
+    $items[] = array(
+      'path'              => 'admin/migrate/update_citation',
+      'title'             => t('Update Citation'),
+      'description'       => t('Update Citation'),
+      'weight'            => -7,
+      'callback'          => 'drupal_get_form',
+      'callback arguments'=> array( 'artmob_migrate_update_citation'),
+      'access'            => user_access('administer site configuration')
+    );
+
+    $items[] = array(
+      'path'              => 'admin/migrate/citation_bridge',
+      'title'             => t('Make Citation Bridge'),
+      'description'       => t('Make Citation Bridge'),
+      'weight'            => -7,
+      'callback'          => 'drupal_get_form',
+      'callback arguments'=> array( 'artmob_migrate_citation_bridge'),
+      'access'            => user_access('administer site configuration')
+    );
+  }
+  return $items;
+}
+
+function artmob_migrate_update_tables(){
+  $form['update_tables'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Update Tables'),
+    '#weight' => -2
+    );
+
+  $form['update_tables']['Update'] = array(
+    '#type'     => 'submit',
+    '#value'    => t('Update'),
+    '#submit'   => True,
+    '#weight'   => 2
+  );
+
+  return $form;
+}
+
+function artmob_migrate_update_tables_submit ($form_id, $form_values){
+  global $user;
+  if ( $form_values['op'] == 'Update' ){
+    if ( artmob_migrate_can_run_tool( TOOLID_UPDATE_LICENSE_TABLE ) ){
+        db_query("ALTER TABLE {am_license} CHANGE cid license_id INT( 10 ) UNSIGNED NOT NULL AUTO_INCREMENT ");
+
+        db_query( "ALTER TABLE {am_license}
+                   ADD license_name TEXT NOT NULL ,
+                   ADD license_description TEXT NOT NULL,
+                   ADD description_format int unsigned NOT NULL default '0',
+                   ADD source text,
+                   ADD related_license_id int unsigned NOT NULL default '0',
+                   ADD large_icon_path text,
+                   ADD small_icon_path text,
+                   ADD additional_instructions text,
+                   ADD instruction_format int unsigned NOT NULL default '0'");
+
+      artmob_migrate_add_to_migrate( TOOLID_UPDATE_LICENSE_TABLE, 'Update License Table' );
+    } else {
+      drupal_set_message( '"Update License Table" had already been run' );
+    }
+
+    if ( artmob_migrate_can_run_tool( TOOLID_UPDATE_CITATION_TABLE ) ){
+        db_query("ALTER TABLE {am_citation} CHANGE cid citation_id INT( 10 ) UNSIGNED NOT NULL AUTO_INCREMENT ");
+
+        db_query( "ALTER TABLE {am_citation}
+                   ADD work_type TEXT NOT NULL ,
+                   ADD edition TEXT CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL, 
+                   ADD link_eid varchar(20) NOT NULL default ''");
+
+      artmob_migrate_add_to_migrate( TOOLID_UPDATE_CITATION_TABLE, 'Update Citation Table' );
+    } else {
+      drupal_set_message( '"Update Citation Table" had already been run' );
+    }
+
+
+    if ( artmob_migrate_can_run_tool( TOOLID_UPDATE_CONTRIBUTOR_TABLE ) ){
+        db_query("ALTER TABLE {am_contributor} CHANGE cid contributor_id INT( 10 ) UNSIGNED NOT NULL AUTO_INCREMENT ");
+
+        db_query( "ALTER TABLE {am_contributor}
+                   ADD contributor_type int unsigned NOT NULL default '0'");
+
+      artmob_migrate_add_to_migrate( TOOLID_UPDATE_CONTRIBUTOR_TABLE, 'Update Contributor Table' );
+    } else {
+      drupal_set_message( '"Update Contributor Table" had already been run' );
+    }
+
+    drupal_set_message ( t('The tables have been updated'));
+  }
+}
+
+function artmob_migrate_update_images(){
+  $form['update_images'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Update Images'),
+    '#weight' => -2
+    );
+
+  $form['update_images']['Update'] = array(
+    '#type'     => 'submit',
+    '#value'    => t('Update'),
+    '#submit'   => True,
+    '#weight'   => 2
+  );
+
+  return $form;
+}
+
+function artmob_migrate_update_images_submit ($form_id, $form_values){
+  global $user;
+  if ( $form_values['op'] == 'Update' ){
+    if ( artmob_migrate_can_run_tool( TOOLID_UPDATE_IMAGES ) ){
+      //Get a list of all attached images that have not been converted to cck yet
+      $db_query = db_query( "SELECT n.vid,i.iid as nid, i.nid as node_nid, t.field_picture_fid
+                 FROM image_attach i
+                 left join node n on i.nid = n.nid
+                 left join content_type_amPicture t on i.nid = t.nid
+                 where isnull( field_picture_fid)" );
+
+      while ($row = db_fetch_object($db_query)) {
+        //drupal_set_message( 'nid = '.$row->nid );
+        $file_query = db_query ("SELECT * FROM {files}
+                                where nid = %d
+                                and ( filename = '_original' )
+                                order by filename",$row->nid );
+        while ($file_row = db_fetch_object($file_query)) {
+          $vid = $row->vid;
+          //drupal_set_message( '$vid = '.$vid );
+          $nid = $row->node_nid;
+          $image_nid = $row->nid;
+          $fid = $file_row->fid;
+          $filepath = $file_row->filepath;
+          $files = explode( "/", $filepath );
+          $file_type = $file_row->filename;
+          $filename = array_pop( $files );
+          //drupal_set_message( '$file_type = '.$file_type );
+          if ( $file_type == '_original' ){
+            db_query( "INSERT INTO {content_type_amPicture}
+                       set vid = %d,
+                       nid = %d,
+                       field_artmob_image_fid = %d,
+                       field_artmob_image_title = '%s',
+                       field_artmob_image_alt = '%s'",
+                       $vid, $nid, $fid, $filename, $filename );
+          }
+
+          db_query ("UPDATE {files} set filename = '%s',
+                     nid = %d
+                     where fid = %d",
+                     $filename, $nid, $fid );
+          drupal_set_message( '$nid = '.$nid );
+          //drupal_set_message( '$fid = '.$fid );
+          break; //Only take the first one which is _original
+        }
+        //break; //temporary for testing
+      }
+
+
+      artmob_migrate_add_to_migrate( TOOLID_UPDATE_IMAGES, 'Update Images' );
+    } else {
+      drupal_set_message( '"Update Images" had already been run' );
+    }
+
+    drupal_set_message ( t('The images have been updated') );
+  }
+}
+
+function artmob_migrate_update_image_attach_images(){
+  $form['update_image_attach_images'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Update Digitzed Works Images'),
+    '#weight' => -2
+    );
+
+  $form['update_image_attach_images']['Update'] = array(
+    '#type'     => 'submit',
+    '#value'    => t('Update'),
+    '#submit'   => True,
+    '#weight'   => 2
+  );
+
+  return $form;
+}
+
+function artmob_migrate_update_image_attach_images_submit ($form_id, $form_values){
+  global $user;
+  if ( $form_values['op'] == 'Update' ){
+    if ( artmob_migrate_can_run_tool( TOOLID_UPDATE_IMAGE_ATTACH_IMAGES ) ){
+
+
+      //Get a list of all attached images that have not been converted to cck yet
+      $db_query = db_query( "SELECT i.*,n.vid
+                 FROM image_attach i
+                 left join node n on i.nid = n.nid
+                 where n.type = 'DigitizedWorks'" );
+
+      while ($row = db_fetch_object($db_query)) {
+        //drupal_set_message( 'nid = '.$row->nid );
+        //drupal_set_message( 'iid = '.$row->iid );
+        $file_query = db_query ("SELECT * FROM {files}
+                                where nid = %d
+                                and ( filename = 'thumbnail' )
+                                order by filename",$row->iid );
+        while ($file_row = db_fetch_object($file_query)) {
+          $vid = $row->vid;
+          //drupal_set_message( '$vid = '.$vid );
+          $nid = $row->nid;
+          $image_nid = $row->iid;
+          $fid = $file_row->fid;
+          $filepath = $file_row->filepath;
+          $files = explode( "/", $filepath );
+          $file_type = $file_row->filename;
+          $filename = array_pop( $files );
+          drupal_set_message( '$file_type = '.$file_type );
+          if ( $file_type == 'thumbnail' ){
+            db_query( "INSERT INTO {content_field_illustration}
+                       set vid = %d,
+                       nid = %d,
+                       field_illustration_fid = %d,
+                       field_illustration_title = '%s',
+                       field_illustration_alt = '%s'",
+                       $vid, $nid, $fid, $filename, $filename );
+          }
+
+          db_query ("UPDATE {files} set filename = '%s',
+                     nid = %d
+                     where fid = %d",
+                     $filename, $nid, $fid );
+          drupal_set_message( '$nid = '.$nid );
+          //drupal_set_message( '$fid = '.$fid );
+          break; //Only take the first one which is _original
+        }
+        //break; //temporary for testing
+      }
+
+
+      artmob_migrate_add_to_migrate( TOOLID_UPDATE_IMAGE_ATTACH_IMAGES, 'Update Image Attach Images' );
+    } else {
+      drupal_set_message( '"Update Digitized Works Images" had already been run' );
+    }
+
+    drupal_set_message ( t('The Digitized Works images have been updated') );
+  }
+}
+
+function artmob_migrate_update_audio(){
+  $form['update_audio'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Update Audio'),
+    '#weight' => -2
+    );
+
+  $form['update_audio']['Update'] = array(
+    '#type'     => 'submit',
+    '#value'    => t('Update'),
+    '#submit'   => True,
+    '#weight'   => 2
+  );
+
+  return $form;
+}
+
+function artmob_migrate_update_audio_submit ($form_id, $form_values){
+  global $user;
+  if ( $form_values['op'] == 'Update' ){
+    if ( artmob_migrate_can_run_tool( TOOLID_UPDATE_AUDIO ) ){
+      //select all files from audio_file (joined withe node)
+      //load the node
+      //write to files table
+      //populate the node->field_audio array
+      //resave them as amAudio nodes
+
+      $db_query = db_query( "select * from {audio_file} a left join {node} n on n.vid = a.vid" );
+      $counter = 0;
+      while ($row = db_fetch_object($db_query)) {
+        $counter++;
+        $nid = $row->nid;
+        $node = node_load( $nid );
+        $node->type = 'amAudio';
+        $node->citation_include = 1;
+        $fid = db_next_id('{files}_fid');
+        db_query( "insert into {files} set
+                   fid = %d,
+                   nid = %d,
+                   filename = '%s',
+                   filepath = '%s',
+                   filemime = '%s',
+                   filesize = %d",
+                   $fid,
+                   $row->nid,
+                   $row->filename,
+                   $row->filepath,
+                   $row->filemime,
+                   $row->filesize);
+        $fid_array = array();
+        $fid_array['fid'] = $fid;
+        $fid_array['description'] = $row->filename;
+        $fid_array['list'] = 0;
+        $fid_array['nid']= $row->nid;
+        $fid_array['filename']= $row->filename;
+        $fid_array['filepath'] = $row->filepath;
+        $fid_array['filemime'] = $row->filemime;
+        $fid_array['filesize'] = $row->filesize;
+        $fid_array['view'] = '';
+        $field_audio = array();
+        $field_audio[0] = $fid_array;
+        $node->field_audio = $field_audio;
+        node_save( $node );
+      }
+      drupal_set_message( $counter.' records processed' );
+      artmob_migrate_add_to_migrate( TOOLID_UPDATE_AUDIO, 'Update Audio' );
+    } else {
+      drupal_set_message( '"Update Audio" had already been run' );
+    }
+
+    drupal_set_message ( t('The audio has been updated') );
+  }
+}
+
+function artmob_migrate_update_video(){
+  $form['update_video'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Update Video'),
+    '#weight' => -2
+    );
+
+  $form['update_video']['Update'] = array(
+    '#type'     => 'submit',
+    '#value'    => t('Update'),
+    '#submit'   => True,
+    '#weight'   => 2
+  );
+
+  return $form;
+}
+
+function artmob_migrate_update_video_submit ($form_id, $form_values){
+  global $user;
+  if ( $form_values['op'] == 'Update' ){
+    if ( artmob_migrate_can_run_tool( TOOLID_UPDATE_VIDEO ) ){
+      //find all video nodes
+      //resave them as amVideo nodes
+      //Write an entry into the flashvideo
+
+      $db_query = db_query( "select nid from {node} where type = 'amVideo'" );
+      $counter = 0;
+      while ($row = db_fetch_object($db_query)) {
+        $counter++;
+        $nid = $row->nid;
+        $node = node_load( $nid );
+        $node->type = 'amVideo';
+        $node->citation_include = 1;
+        node_save( $node );
+        $files = $node->files;
+        foreach( $files as $fid->file_object ){
+          db_query( "insert into {flashvideo} set
+                     fid = %d,
+                     nid = %d,
+                     oid = %d,
+                     status = 3,
+                     width = 450,
+                     height = 337,
+                     play_counter = 3",
+                     $fid,
+                     $node->nid,
+                     $fid );
+        }
+      }
+      drupal_set_message( $counter.' records processed' );
+      artmob_migrate_add_to_migrate( TOOLID_UPDATE_VIDEO, 'Update Video' );
+    } else {
+      drupal_set_message( '"Update Video" had already been run' );
+    }
+
+    drupal_set_message ( t('The video has been updated') );
+  }
+}
+
+function artmob_migrate_update_citation(){
+  $form['update_citation'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Update Citation'),
+    '#weight' => -2
+    );
+
+  $form['update_citation']['Update'] = array(
+    '#type'     => 'submit',
+    '#value'    => t('Update'),
+    '#submit'   => True,
+    '#weight'   => 2
+  );
+
+  return $form;
+}
+
+function artmob_migrate_update_citation_submit ($form_id, $form_values){
+  global $user;
+  if ( $form_values['op'] == 'Update' ){
+    if ( artmob_migrate_can_run_tool( TOOLID_UPDATE_CITATION ) ){
+      //add a citation to every node that does not have one
+      //by loading it and saving it. If the "use citation" switch is on
+      //for this node type then it will automatically create a citation
+      //for this node
+      $node_types = node_get_types('types');
+      $type_list_array = array();
+      foreach ($node_types as $type=>$type_object){
+        if ( variable_get( 'rdo_license_options_'.$type, ARTMOB_LICENSE_MODE_NONE )  == ARTMOB_LICENSE_MODE_FULL ){
+        //if (variable_get('rdo_citation_'. $type, 0)) {
+          drupal_set_message( $type );
+          $type_list_array[] = "'".$type."'";
+        }
+      }
+      $type_list = implode( ",", $type_list_array);
+      $sql = sprintf( "select * from {node} where type in (%s)", $type_list );
+      drupal_set_message( $sql );
+      $db_query = db_query( $sql );
+      $counter = 0;
+      while ($row = db_fetch_object($db_query)) {
+        $counter++;
+        $node = node_load( $row->nid );
+        $node->changed = time();
+        $node->citation_include = 1;
+        drupal_set_message( 'loaded node '.$row->nid );
+        //artmob_citation_nodeapi($node, 'insert' );
+        node_save( $node ); //for some reason this was not calling the artmob_citation_nodeapi
+      }
+
+      //Temporarily disable this for testing
+      //artmob_migrate_add_to_migrate( TOOLID_UPDATE_CITATION, 'Update Citation' );
+    } else {
+      drupal_set_message( '"Update Citation" had already been run' );
+    }
+
+    drupal_set_message ( t('The citation has been updated - '.$counter.' records') );
+  }
+}
+
+
+
+function artmob_migrate_citation_bridge(){
+  $form['citation_bridge'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Citation Bridge'),
+    '#weight' => -2
+    );
+
+  $form['citation_bridge']['Update'] = array(
+    '#type'     => 'submit',
+    '#value'    => t('Update'),
+    '#submit'   => True,
+    '#weight'   => 2
+  );
+
+  return $form;
+}
+
+function artmob_migrate_citation_bridge_submit ($form_id, $form_values){
+  global $user;
+  if ( $form_values['op'] == 'Update' ){
+    //1. Empty the table
+    db_query( "DELETE FROM {am_citation_bridge");
+
+    //2.
+    $node_types = node_get_types('types');
+    $type_list_array = array();
+    foreach ($node_types as $type=>$type_object){
+      if (variable_get('rdo_citation_'. $type, 0)) {
+        //drupal_set_message( $type );
+        $type_list_array[] = "'".$type."'";
+      }
+    }
+    $type_list = implode( ",", $type_list_array);
+    $sql = sprintf( "select * from {node} where type in (%s)", $type_list );
+    //drupal_set_message( $sql );
+    $db_query = db_query( $sql );
+    $counter = 0;
+    while ($row = db_fetch_object($db_query)) {
+      $node = node_load( $row->nid );
+      $html = theme('artmob_citation_tab_basic_view',$node, False);
+      //drupal_set_message( 'html = '.$html );
+      //break; //only show one for testing
+      db_query( "insert into {am_citation_bridge}
+                 set nid = %d,
+                 citation_html = '%s'", $row->nid, $html );
+      $counter ++;
+    }
+    drupal_set_message ( t( $counter.' items have been created in the citation bridge') );
+  }
+}
+
+function artmob_migrate_form_alter($form_id, &$form) {
+  // boilerplate code to determine the node type of the form
+  if (isset($form['type'])) {
+      $type = $form['type']['#value'];
+    }
+  elseif (isset($form['orig_type'])) {
+      $type = $form['orig_type']['#value'];
+    }
+  else {
+//    return;
+  }
+
+  switch ($form_id) {
+    //can't get this field to insert after the View Type
+    //it either ends up at the top or bottom.
+
+    case 'views_edit_view':
+      break;
+
+    case 'node_type_form':
+    break;
+
+    case $type .'_node_form':
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_nodeapi().
+*/
+function artmob_migrate_nodeapi(&$node, $op, $teaser=NULL,$page=NULL) {
+  switch ($op) {
+    case 'update':
+      $update = TRUE;
+
+      //Fall through, with flag.  Therefore with every update we delete
+      //the old associated records and then resave the new ones
+
+    case 'delete':
+      if (!$update) {
+        break;
+      }
+
+    case 'insert':
+      break;
+    case 'load':
+      break;
+    case 'prepare':
+      break;
+    case 'view':
+     break;
+    case 'delete revision':
+      break;
+    case 'submit':
+      break;
+  }
+}
+
+function artmob_migrate_can_run_tool( $tool_id ){
+  $count = db_result( db_query( "SELECT COUNT( tool_id )
+                                 FROM {am_migrate}
+                                 WHERE tool_id = %d and is_run = 1", $tool_id ) );
+  $result = ( $count == 0 );
+  return $result;
+}
+
+function artmob_migrate_add_to_migrate( $tool_id, $tool_name ){
+  global $user;
+  $now = time();
+  db_query( "INSERT INTO {am_migrate} SET
+             tool_id = %d,
+             tool_name = '%s',
+             date_run = %d,
+             is_run = 1,
+             uid = %d",
+             $tool_id, $tool_name, $now, $user->uid );
+  return;
+}
+
+/**
+ * Implementation of hook_block().
+ */
+function artmob_migrate_block($op = 'list', $delta = 0) {
+  if ($op == 'list') {
+    $block[0]['info'] = t('Display citation Bridge');
+    return $block;
+  }
+  else if ($op == 'configure') {
+  }
+  else if ($op == 'save') {
+        }
+  else if ($op == 'view') {
+    switch ($delta) {
+      case 0:  //Display citation Bridge
+        if (arg(0) == 'node' && is_numeric(arg(1))) {
+          $nid = arg(1);
+          $tab_title = arg(2);
+          if (( $tab_title == 'citation') or ( $tab_title == 'attribute' )) {
+            $db_query = db_query( "SELECT * from {am_citation_bridge}
+                                   where nid = %d", $nid );
+            while ($row = db_fetch_object($db_query)) {
+              $content = $row->citation_html;
+            }
+          }
+          $block['subject'] = 'Citation Information';
+          $block['content'] = $content;
+        }
+        break;
+    }
+    return $block;
+
+  }
+}
+

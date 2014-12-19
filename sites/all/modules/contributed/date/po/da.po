@@ -1,0 +1,2878 @@
+# Danish translation of Drupal (date.module)
+# Copyright 2007 Morten Wulff <wulff@ratatosk.net>
+msgid ""
+msgstr ""
+"Project-Id-Version: Danish translation of Drupal (date.module) $Id: da.po,v 1.1.2.1 2007/12/09 23:09:09 wulff Exp $\n"
+"POT-Creation-Date: 2007-12-07 11:43+0100\n"
+"PO-Revision-Date: 2007-12-09 23:58+0100\n"
+"Last-Translator: Morten Wulff <wulff@ratatosk.net>\n"
+"Language-Team: Danish <l10n@drupaldanmark.dk>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Poedit-Language: Danish\n"
+"X-Poedit-Country: DENMARK\n"
+
+#: date.inc:350
+msgid "Unable to set date. "
+msgstr "Kan ikke indstille dato."
+
+#: date.inc:580
+msgid "zone name"
+msgstr "zonenavn"
+
+#: date.inc:640
+msgid "Site's time zone"
+msgstr "Sitets tidszone"
+
+#: date.inc:641
+msgid "Date's time zone"
+msgstr "Datomodulets tidszone"
+
+#: date.inc:643
+msgid "No time zone conversion"
+msgstr "Ingen tidszonekonvertering"
+
+#: date.inc:698
+#: ;892 date_views.inc:40
+#: date.info:0
+msgid "Date"
+msgstr "Dato"
+
+#: date.inc:759
+msgid "day"
+msgstr "dag"
+
+#: date.inc:778
+msgid "month"
+msgstr "måned"
+
+#: date.inc:797
+msgid "year"
+msgstr "år"
+
+#: date.inc:821
+msgid "hour"
+msgstr "time"
+
+#: date.inc:832
+msgid "minute"
+msgstr "minut"
+
+#: date.inc:843
+msgid "second"
+msgstr "sekund"
+
+#: date.inc:848
+msgid "am"
+msgstr "am"
+
+#: date.inc:848
+msgid "pm"
+msgstr "pm"
+
+#: date.inc:855
+msgid "am/pm"
+msgstr "am/pm"
+
+#: date.inc:977
+msgid "timezone"
+msgstr "tidszone"
+
+#: date.inc:1095
+msgid "year must be a number between %min and %max."
+msgstr "år skal være et tal mellem %min og %max."
+
+#: date.inc:1098
+msgid "month must be a number between 1 and 12."
+msgstr "måned skal være et tal mellem 1 og 12."
+
+#: date.inc:1101
+msgid "day must be a number between 1 and 31."
+msgstr "dag skal være et tal mellem 1 og 31."
+
+#: date.inc:1105
+msgid "Date cannot be constructed using values %s."
+msgstr "Dato kan ikke oprettes med værdierne %s."
+
+#: date.inc:1122
+#: ;1128;1145;1150
+msgid "The text '%s' is not a valid date."
+msgstr "Teksten '%s' er ikke en gyldig dato."
+
+#: date.inc:1260
+#: ;1401;1752
+msgid "Jan"
+msgstr "Jan"
+
+#: date.inc:1260
+#: ;1401
+msgid "Feb"
+msgstr "Feb"
+
+#: date.inc:1260
+#: ;1401
+msgid "Mar"
+msgstr "Mar"
+
+#: date.inc:1260
+#: ;1401
+msgid "Apr"
+msgstr "Apr"
+
+#: date.inc:1261
+#: ;1394;1402
+msgid "May"
+msgstr "Maj"
+
+#: date.inc:1261
+#: ;1402
+msgid "Jun"
+msgstr "Jun"
+
+#: date.inc:1261
+#: ;1402
+msgid "Jul"
+msgstr "Jul"
+
+#: date.inc:1261
+#: ;1402
+msgid "Aug"
+msgstr "Aug"
+
+#: date.inc:1262
+#: ;1403
+msgid "Sep"
+msgstr "Sep"
+
+#: date.inc:1262
+#: ;1403
+msgid "Oct"
+msgstr "Okt"
+
+#: date.inc:1262
+#: ;1403
+msgid "Nov"
+msgstr "Nov"
+
+#: date.inc:1262
+#: ;1403
+msgid "Dec"
+msgstr "Dec"
+
+#: date.inc:1265
+msgid "Mon"
+msgstr "Man"
+
+#: date.inc:1265
+msgid "Tue"
+msgstr "Tir"
+
+#: date.inc:1265
+msgid "Wed"
+msgstr "Ons"
+
+#: date.inc:1265
+msgid "Thu"
+msgstr "Tor"
+
+#: date.inc:1266
+msgid "Fri"
+msgstr "Fre"
+
+#: date.inc:1266
+msgid "Sat"
+msgstr "Lør"
+
+#: date.inc:1266
+msgid "Sun"
+msgstr "Søn"
+
+#: date.inc:1393
+#: ;1755
+msgid "January"
+msgstr "Januar"
+
+#: date.inc:1393
+msgid "February"
+msgstr "Februar"
+
+#: date.inc:1393
+msgid "March"
+msgstr "Marts"
+
+#: date.inc:1393
+msgid "April"
+msgstr "April"
+
+#: date.inc:1394
+msgid "June"
+msgstr "Juni"
+
+#: date.inc:1394
+msgid "July"
+msgstr "Juli"
+
+#: date.inc:1394
+msgid "August"
+msgstr "August"
+
+#: date.inc:1395
+msgid "September"
+msgstr "September"
+
+#: date.inc:1395
+msgid "October"
+msgstr "Oktober"
+
+#: date.inc:1395
+msgid "November"
+msgstr "November"
+
+#: date.inc:1395
+msgid "December"
+msgstr "December"
+
+#: date.inc:1658
+msgid "default"
+msgstr "standard"
+
+#: date_timezones.inc:162
+msgid "None"
+msgstr "Ingen"
+
+#: date_timezones.inc:163
+#: ;561
+msgid "Egypt"
+msgstr "Ægypten"
+
+#: date_timezones.inc:164
+msgid "Namibia"
+msgstr "Namibia"
+
+#: date_timezones.inc:165
+msgid "Asia - Former USSR"
+msgstr "Asien - tidligere USSR"
+
+#: date_timezones.inc:166
+msgid "Iraq, Syria"
+msgstr "Irak, Syrien"
+
+#: date_timezones.inc:167
+#: ;657
+msgid "Israel"
+msgstr "Israel"
+
+#: date_timezones.inc:168
+msgid "Lebanon, Kirgizstan"
+msgstr "Libanon, Kirgisistan"
+
+#: date_timezones.inc:169
+msgid "Palestine"
+msgstr "Palæstina"
+
+#: date_timezones.inc:170
+#: ;656
+msgid "Iran"
+msgstr "Iran"
+
+#: date_timezones.inc:171
+msgid "South Australia"
+msgstr "Sydaustralien"
+
+#: date_timezones.inc:172
+msgid "Australia, Tasmania"
+msgstr "Australien, Tasmanien"
+
+#: date_timezones.inc:173
+msgid "New Zealand"
+msgstr "New Zealand"
+
+#: date_timezones.inc:174
+msgid "Tonga"
+msgstr "Tonga"
+
+#: date_timezones.inc:175
+msgid "EU and other European countries"
+msgstr "EU og andre Europæiske lande"
+
+#: date_timezones.inc:176
+msgid "Russian Federation"
+msgstr "Russiske føderation"
+
+#: date_timezones.inc:177
+msgid "North America"
+msgstr "Nordamerika"
+
+#: date_timezones.inc:178
+#: ;559
+msgid "Cuba"
+msgstr "Cuba"
+
+#: date_timezones.inc:179
+msgid "Brazil"
+msgstr "Brasilien"
+
+#: date_timezones.inc:180
+msgid "Chile"
+msgstr "Chile"
+
+#: date_timezones.inc:181
+msgid "Falklands"
+msgstr "Falklandsøerne"
+
+#: date_timezones.inc:182
+msgid "Paraguay"
+msgstr "Paraguay"
+
+#: date_timezones.inc:265
+msgid "GMT"
+msgstr "GMT"
+
+#: date_timezones.inc:266
+msgid "Africa/Addis_Ababa"
+msgstr "Afrika/Addis_Ababa"
+
+#: date_timezones.inc:267
+msgid "Africa/Algiers"
+msgstr "Afrika/Algiers"
+
+#: date_timezones.inc:268
+msgid "Africa/Asmera"
+msgstr "Afrika/Asmera"
+
+#: date_timezones.inc:269
+msgid "Africa/Bangui"
+msgstr "Afrika/Bangui"
+
+#: date_timezones.inc:270
+msgid "Africa/Blantyre"
+msgstr "Afrika/Blantyre"
+
+#: date_timezones.inc:271
+msgid "Africa/Brazzaville"
+msgstr "Afrika/Brazzaville"
+
+#: date_timezones.inc:272
+msgid "Africa/Bujumbura"
+msgstr "Afrika/Bujumbura"
+
+#: date_timezones.inc:273
+msgid "Africa/Cairo"
+msgstr "Afrika/Cairo"
+
+#: date_timezones.inc:274
+msgid "Africa/Ceuta"
+msgstr "Afrika/Ceuta"
+
+#: date_timezones.inc:275
+msgid "Africa/Dar_es_Salaam"
+msgstr "Afrika/Dar_es_Salaam"
+
+#: date_timezones.inc:276
+msgid "Africa/Djibouti"
+msgstr "Afrika/Djibouti"
+
+#: date_timezones.inc:277
+msgid "Africa/Douala"
+msgstr "Afrika/Douala"
+
+#: date_timezones.inc:278
+msgid "Africa/Gaborone"
+msgstr "Afrika/Gaborone"
+
+#: date_timezones.inc:279
+msgid "Africa/Harare"
+msgstr "Afrika/Harare"
+
+#: date_timezones.inc:280
+msgid "Africa/Johannesburg"
+msgstr "Afrika/Johannesburg"
+
+#: date_timezones.inc:281
+msgid "Africa/Kampala"
+msgstr "Afrika/Kampala"
+
+#: date_timezones.inc:282
+msgid "Africa/Khartoum"
+msgstr "Afrika/Khartoum"
+
+#: date_timezones.inc:283
+msgid "Africa/Kigali"
+msgstr "Afrika/Kigali"
+
+#: date_timezones.inc:284
+msgid "Africa/Kinshasa"
+msgstr "Afrika/Kinshasa"
+
+#: date_timezones.inc:285
+msgid "Africa/Lagos"
+msgstr "Afrika/Lagos"
+
+#: date_timezones.inc:286
+msgid "Africa/Libreville"
+msgstr "Afrika/Libreville"
+
+#: date_timezones.inc:287
+msgid "Africa/Luanda"
+msgstr "Afrika/Luanda"
+
+#: date_timezones.inc:288
+msgid "Africa/Lubumbashi"
+msgstr "Afrika/Lubumbashi"
+
+#: date_timezones.inc:289
+msgid "Africa/Lusaka"
+msgstr "Afrika/Lusaka"
+
+#: date_timezones.inc:290
+msgid "Africa/Malabo"
+msgstr "Afrika/Malabo"
+
+#: date_timezones.inc:291
+msgid "Africa/Maputo"
+msgstr "Afrika/Maputo"
+
+#: date_timezones.inc:292
+msgid "Africa/Maseru"
+msgstr "Afrika/Maseru"
+
+#: date_timezones.inc:293
+msgid "Africa/Mbabane"
+msgstr "Afrika/Mbabane"
+
+#: date_timezones.inc:294
+msgid "Africa/Mogadishu"
+msgstr "Afrika/Mogadishu"
+
+#: date_timezones.inc:295
+msgid "Africa/Nairobi"
+msgstr "Afrika/Nairobi"
+
+#: date_timezones.inc:296
+msgid "Africa/Ndjamena"
+msgstr "Afrika/Ndjamena"
+
+#: date_timezones.inc:297
+msgid "Africa/Niamey"
+msgstr "Afrika/Niamey"
+
+#: date_timezones.inc:298
+msgid "Africa/Porto-Novo"
+msgstr "Afrika/Porto-Novo"
+
+#: date_timezones.inc:299
+msgid "Africa/Tripoli"
+msgstr "Afrika/Tripoli"
+
+#: date_timezones.inc:300
+msgid "Africa/Tunis"
+msgstr "Afrika/Tunis"
+
+#: date_timezones.inc:301
+msgid "Africa/Windhoek"
+msgstr "Afrika/Windhoek"
+
+#: date_timezones.inc:302
+msgid "America/Adak"
+msgstr "Amerika/Adak"
+
+#: date_timezones.inc:303
+msgid "America/Anchorage"
+msgstr "Amerika/Anchorage"
+
+#: date_timezones.inc:304
+msgid "America/Anguilla"
+msgstr "Amerika/Anguilla"
+
+#: date_timezones.inc:305
+msgid "America/Antigua"
+msgstr "Amerika/Antigua"
+
+#: date_timezones.inc:306
+msgid "America/Araguaina"
+msgstr "Amerika/Araguaina"
+
+#: date_timezones.inc:307
+msgid "America/Aruba"
+msgstr "Amerika/Aruba"
+
+#: date_timezones.inc:308
+msgid "America/Asuncion"
+msgstr "Amerika/Asuncion"
+
+#: date_timezones.inc:309
+msgid "America/Atka"
+msgstr "Amerika/Atka"
+
+#: date_timezones.inc:310
+msgid "America/Barbados"
+msgstr "Amerika/Barbados"
+
+#: date_timezones.inc:311
+msgid "America/Belem"
+msgstr "Amerika/Belem"
+
+#: date_timezones.inc:312
+msgid "America/Belize"
+msgstr "Amerika/Belize"
+
+#: date_timezones.inc:313
+msgid "America/Boa_Vista"
+msgstr "Amerika/Boa_Vista"
+
+#: date_timezones.inc:314
+msgid "America/Bogota"
+msgstr "Amerika/Bogota"
+
+#: date_timezones.inc:315
+msgid "America/Boise"
+msgstr "Amerika/Boise"
+
+#: date_timezones.inc:316
+msgid "America/Buenos_Aires"
+msgstr "Amerika/Buenos_Aires"
+
+#: date_timezones.inc:317
+msgid "America/Cambridge_Bay"
+msgstr "Amerika/Cambridge_Bay"
+
+#: date_timezones.inc:318
+msgid "America/Cancun"
+msgstr "Amerika/Cancun"
+
+#: date_timezones.inc:319
+msgid "America/Caracas"
+msgstr "Amerika/Caracas"
+
+#: date_timezones.inc:320
+msgid "America/Catamarca"
+msgstr "Amerika/Catamarca"
+
+#: date_timezones.inc:321
+msgid "America/Cayenne"
+msgstr "Amerika/Cayenne"
+
+#: date_timezones.inc:322
+msgid "America/Cayman"
+msgstr "Amerika/Cayman"
+
+#: date_timezones.inc:323
+msgid "America/Chicago"
+msgstr "Amerika/Chicago"
+
+#: date_timezones.inc:324
+msgid "America/Chihuahua"
+msgstr "Amerika/Chihuahua"
+
+#: date_timezones.inc:325
+msgid "America/Cordoba"
+msgstr "Amerika/Cordoba"
+
+#: date_timezones.inc:326
+msgid "America/Costa_Rica"
+msgstr "Amerika/Costa_Rica"
+
+#: date_timezones.inc:327
+msgid "America/Cuiaba"
+msgstr "Amerika/Cuiaba"
+
+#: date_timezones.inc:328
+msgid "America/Curacao"
+msgstr "Amerika/Curacao"
+
+#: date_timezones.inc:329
+msgid "America/Dawson"
+msgstr "Amerika/Dawson"
+
+#: date_timezones.inc:330
+msgid "America/Dawson_Creek"
+msgstr "Amerika/Dawson_Creek"
+
+#: date_timezones.inc:331
+msgid "America/Denver"
+msgstr "Amerika/Denver"
+
+#: date_timezones.inc:332
+msgid "America/Detroit"
+msgstr "Amerika/Detroit"
+
+#: date_timezones.inc:333
+msgid "America/Dominica"
+msgstr "Amerika/Dominica"
+
+#: date_timezones.inc:334
+msgid "America/Edmonton"
+msgstr "Amerika/Edmonton"
+
+#: date_timezones.inc:335
+msgid "America/Eirunepe"
+msgstr "Amerika/Eirunepe"
+
+#: date_timezones.inc:336
+msgid "America/El_Salvador"
+msgstr "Amerika/El_Salvador"
+
+#: date_timezones.inc:337
+msgid "America/Ensenada"
+msgstr "Amerika/Ensenada"
+
+#: date_timezones.inc:338
+msgid "America/Fort_Wayne"
+msgstr "Amerika/Fort_Wayne"
+
+#: date_timezones.inc:339
+msgid "America/Fortaleza"
+msgstr "Amerika/Fortaleza"
+
+#: date_timezones.inc:340
+msgid "America/Glace_Bay"
+msgstr "Amerika/Glace_Bay"
+
+#: date_timezones.inc:341
+msgid "America/Godthab"
+msgstr "Amerika/Godthab"
+
+#: date_timezones.inc:342
+msgid "America/Goose_Bay"
+msgstr "Amerika/Goose_Bay"
+
+#: date_timezones.inc:343
+msgid "America/Grand_Turk"
+msgstr "Amerika/Grand_Turk"
+
+#: date_timezones.inc:344
+msgid "America/Grenada"
+msgstr "Amerika/Grenada"
+
+#: date_timezones.inc:345
+msgid "America/Guadeloupe"
+msgstr "Amerika/Guadeloupe"
+
+#: date_timezones.inc:346
+msgid "America/Guatemala"
+msgstr "Amerika/Guatemala"
+
+#: date_timezones.inc:347
+msgid "America/Guayaquil"
+msgstr "Amerika/Guayaquil"
+
+#: date_timezones.inc:348
+msgid "America/Guyana"
+msgstr "Amerika/Guyana"
+
+#: date_timezones.inc:349
+msgid "America/Halifax"
+msgstr "Amerika/Halifax"
+
+#: date_timezones.inc:350
+msgid "America/Havana"
+msgstr "Amerika/Havana"
+
+#: date_timezones.inc:351
+msgid "America/Hermosillo"
+msgstr "Amerika/Hermosillo"
+
+#: date_timezones.inc:352
+msgid "America/Indiana/Indianapolis"
+msgstr "Amerika/Indiana/Indianapolis"
+
+#: date_timezones.inc:353
+msgid "America/Indiana/Knox"
+msgstr "Amerika/Indiana/Knox"
+
+#: date_timezones.inc:354
+msgid "America/Indiana/Marengo"
+msgstr "Amerika/Indiana/Marengo"
+
+#: date_timezones.inc:355
+msgid "America/Indiana/Vevay"
+msgstr "Amerika/Indiana/Vevay"
+
+#: date_timezones.inc:356
+msgid "America/Indianapolis"
+msgstr "Amerika/Indianapolis"
+
+#: date_timezones.inc:357
+msgid "America/Inuvik"
+msgstr "Amerika/Inuvik"
+
+#: date_timezones.inc:358
+msgid "America/Iqaluit"
+msgstr "Amerika/Iqaluit"
+
+#: date_timezones.inc:359
+msgid "America/Jamaica"
+msgstr "Amerika/Jamaica"
+
+#: date_timezones.inc:360
+msgid "America/Jujuy"
+msgstr "Amerika/Jujuy"
+
+#: date_timezones.inc:361
+msgid "America/Juneau"
+msgstr "Amerika/Juneau"
+
+#: date_timezones.inc:362
+msgid "America/Kentucky/Louisville"
+msgstr "Amerika/Kentucky/Louisville"
+
+#: date_timezones.inc:363
+msgid "America/Kentucky/Monticello"
+msgstr "Amerika/Kentucky/Monticello"
+
+#: date_timezones.inc:364
+msgid "America/Knox_IN"
+msgstr "Amerika/Knox_IN"
+
+#: date_timezones.inc:365
+msgid "America/La_Paz"
+msgstr "Amerika/La_Paz"
+
+#: date_timezones.inc:366
+msgid "America/Lima"
+msgstr "Amerika/Lima"
+
+#: date_timezones.inc:367
+msgid "America/Los_Angeles"
+msgstr "Amerika/Los_Angeles"
+
+#: date_timezones.inc:368
+msgid "America/Louisville"
+msgstr "Amerika/Louisville"
+
+#: date_timezones.inc:369
+msgid "America/Maceio"
+msgstr "Amerika/Maceio"
+
+#: date_timezones.inc:370
+msgid "America/Managua"
+msgstr "Amerika/Managua"
+
+#: date_timezones.inc:371
+msgid "America/Manaus"
+msgstr "Amerika/Manaus"
+
+#: date_timezones.inc:372
+msgid "America/Martinique"
+msgstr "Amerika/Martinique"
+
+#: date_timezones.inc:373
+msgid "America/Mazatlan"
+msgstr "Amerika/Mazatlan"
+
+#: date_timezones.inc:374
+msgid "America/Mendoza"
+msgstr "Amerika/Mendoza"
+
+#: date_timezones.inc:375
+msgid "America/Menominee"
+msgstr "Amerika/Menominee"
+
+#: date_timezones.inc:376
+msgid "America/Merida"
+msgstr "Amerika/Merida"
+
+#: date_timezones.inc:377
+msgid "America/Mexico_City"
+msgstr "Amerika/Mexico_City"
+
+#: date_timezones.inc:378
+msgid "America/Miquelon"
+msgstr "Amerika/Miquelon"
+
+#: date_timezones.inc:379
+msgid "America/Monterrey"
+msgstr "Amerika/Monterrey"
+
+#: date_timezones.inc:380
+msgid "America/Montevideo"
+msgstr "Amerika/Montevideo"
+
+#: date_timezones.inc:381
+msgid "America/Montreal"
+msgstr "Amerika/Montreal"
+
+#: date_timezones.inc:382
+msgid "America/Montserrat"
+msgstr "Amerika/Montserrat"
+
+#: date_timezones.inc:383
+msgid "America/Nassau"
+msgstr "Amerika/Nassau"
+
+#: date_timezones.inc:384
+msgid "America/New_York"
+msgstr "Amerika/New_York"
+
+#: date_timezones.inc:385
+msgid "America/Nipigon"
+msgstr "Amerika/Nipigon"
+
+#: date_timezones.inc:386
+msgid "America/Nome"
+msgstr "Amerika/Nome"
+
+#: date_timezones.inc:387
+msgid "America/Noronha"
+msgstr "Amerika/Noronha"
+
+#: date_timezones.inc:388
+msgid "America/Panama"
+msgstr "Amerika/Panama"
+
+#: date_timezones.inc:389
+msgid "America/Pangnirtung"
+msgstr "Amerika/Pangnirtung"
+
+#: date_timezones.inc:390
+msgid "America/Paramaribo"
+msgstr "Amerika/Paramaribo"
+
+#: date_timezones.inc:391
+msgid "America/Phoenix"
+msgstr "Amerika/Phoenix"
+
+#: date_timezones.inc:392
+msgid "America/Port-au-Prince"
+msgstr "Amerika/Port-au-Prince"
+
+#: date_timezones.inc:393
+msgid "America/Port_of_Spain"
+msgstr "Amerika/Port_of_Spain"
+
+#: date_timezones.inc:394
+msgid "America/Porto_Acre"
+msgstr "Amerika/Porto_Acre"
+
+#: date_timezones.inc:395
+msgid "America/Porto_Velho"
+msgstr "Amerika/Porto_Velho"
+
+#: date_timezones.inc:396
+msgid "America/Puerto_Rico"
+msgstr "Amerika/Puerto_Rico"
+
+#: date_timezones.inc:397
+msgid "America/Rainy_River"
+msgstr "Amerika/Rainy_River"
+
+#: date_timezones.inc:398
+msgid "America/Rankin_Inlet"
+msgstr "Amerika/Rankin_Inlet"
+
+#: date_timezones.inc:399
+msgid "America/Recife"
+msgstr "Amerika/Recife"
+
+#: date_timezones.inc:400
+msgid "America/Regina"
+msgstr "Amerika/Regina"
+
+#: date_timezones.inc:401
+msgid "America/Rio_Branco"
+msgstr "Amerika/Rio_Branco"
+
+#: date_timezones.inc:402
+msgid "America/Rosario"
+msgstr "Amerika/Rosario"
+
+#: date_timezones.inc:403
+msgid "America/Santiago"
+msgstr "Amerika/Santiago"
+
+#: date_timezones.inc:404
+msgid "America/Santo_Domingo"
+msgstr "Amerika/Santo_Domingo"
+
+#: date_timezones.inc:405
+msgid "America/Sao_Paulo"
+msgstr "Amerika/Sao_Paulo"
+
+#: date_timezones.inc:406
+msgid "America/Scoresbysund"
+msgstr "Amerika/Scoresbysund"
+
+#: date_timezones.inc:407
+msgid "America/Shiprock"
+msgstr "Amerika/Shiprock"
+
+#: date_timezones.inc:408
+msgid "America/St_Johns"
+msgstr "Amerika/St_Johns"
+
+#: date_timezones.inc:409
+msgid "America/St_Kitts"
+msgstr "Amerika/St_Kitts"
+
+#: date_timezones.inc:410
+msgid "America/St_Lucia"
+msgstr "Amerika/St_Lucia"
+
+#: date_timezones.inc:411
+msgid "America/St_Thomas"
+msgstr "Amerika/St_Thomas"
+
+#: date_timezones.inc:412
+msgid "America/St_Vincent"
+msgstr "Amerika/St_Vincent"
+
+#: date_timezones.inc:413
+msgid "America/Swift_Current"
+msgstr "Amerika/Swift_Current"
+
+#: date_timezones.inc:414
+msgid "America/Tegucigalpa"
+msgstr "Amerika/Tegucigalpa"
+
+#: date_timezones.inc:415
+msgid "America/Thule"
+msgstr "Amerika/Thule"
+
+#: date_timezones.inc:416
+msgid "America/Thunder_Bay"
+msgstr "Amerika/Thunder_Bay"
+
+#: date_timezones.inc:417
+msgid "America/Tijuana"
+msgstr "Amerika/Tijuana"
+
+#: date_timezones.inc:418
+msgid "America/Tortola"
+msgstr "Amerika/Tortola"
+
+#: date_timezones.inc:419
+msgid "America/Vancouver"
+msgstr "Amerika/Vancouver"
+
+#: date_timezones.inc:420
+msgid "America/Virgin"
+msgstr "Amerika/Virgin"
+
+#: date_timezones.inc:421
+msgid "America/Whitehorse"
+msgstr "Amerika/Whitehorse"
+
+#: date_timezones.inc:422
+msgid "America/Winnipeg"
+msgstr "Amerika/Winnipeg"
+
+#: date_timezones.inc:423
+msgid "America/Yakutat"
+msgstr "Amerika/Yakutat"
+
+#: date_timezones.inc:424
+msgid "America/Yellowknife"
+msgstr "Amerika/Yellowknife"
+
+#: date_timezones.inc:425
+msgid "Antarctica/Casey"
+msgstr "Antarktika/Casey"
+
+#: date_timezones.inc:426
+msgid "Antarctica/Davis"
+msgstr "Antarktika/Davis"
+
+#: date_timezones.inc:427
+msgid "Antarctica/DumontDUrville"
+msgstr "Antarktika/DumontDUrville"
+
+#: date_timezones.inc:428
+msgid "Antarctica/Mawson"
+msgstr "Antarktika/Mawson"
+
+#: date_timezones.inc:429
+msgid "Antarctica/McMurdo"
+msgstr "Antarktika/McMurdo"
+
+#: date_timezones.inc:430
+msgid "Antarctica/Palmer"
+msgstr "Antarktika/Palmer"
+
+#: date_timezones.inc:431
+msgid "Antarctica/South_Pole"
+msgstr "Antarktika/South_Pole"
+
+#: date_timezones.inc:432
+msgid "Antarctica/Syowa"
+msgstr "Antarktika/Syowa"
+
+#: date_timezones.inc:433
+msgid "Antarctica/Vostok"
+msgstr "Antarktika/Vostok"
+
+#: date_timezones.inc:434
+msgid "Arctic/Longyearbyen"
+msgstr "Arctic/Longyearbyen"
+
+#: date_timezones.inc:435
+msgid "Asia/Aden"
+msgstr "Asien/Aden"
+
+#: date_timezones.inc:436
+msgid "Asia/Almaty"
+msgstr "Asien/Almaty"
+
+#: date_timezones.inc:437
+msgid "Asia/Amman"
+msgstr "Asien/Amman"
+
+#: date_timezones.inc:438
+msgid "Asia/Anadyr"
+msgstr "Asien/Anadyr"
+
+#: date_timezones.inc:439
+msgid "Asia/Aqtau"
+msgstr "Asien/Aqtau"
+
+#: date_timezones.inc:440
+msgid "Asia/Aqtobe"
+msgstr "Asien/Aqtobe"
+
+#: date_timezones.inc:441
+msgid "Asia/Ashgabat"
+msgstr "Asien/Ashgabat"
+
+#: date_timezones.inc:442
+msgid "Asia/Ashkhabad"
+msgstr "Asien/Ashkhabad"
+
+#: date_timezones.inc:443
+msgid "Asia/Baghdad"
+msgstr "Asien/Baghdad"
+
+#: date_timezones.inc:444
+msgid "Asia/Bahrain"
+msgstr "Asien/Bahrain"
+
+#: date_timezones.inc:445
+msgid "Asia/Baku"
+msgstr "Asien/Baku"
+
+#: date_timezones.inc:446
+msgid "Asia/Bangkok"
+msgstr "Asien/Bangkok"
+
+#: date_timezones.inc:447
+msgid "Asia/Beirut"
+msgstr "Asien/Beirut"
+
+#: date_timezones.inc:448
+msgid "Asia/Bishkek"
+msgstr "Asien/Bishkek"
+
+#: date_timezones.inc:449
+msgid "Asia/Brunei"
+msgstr "Asien/Brunei"
+
+#: date_timezones.inc:450
+msgid "Asia/Calcutta"
+msgstr "Asien/Calcutta"
+
+#: date_timezones.inc:451
+msgid "Asia/Chungking"
+msgstr "Asien/Chungking"
+
+#: date_timezones.inc:452
+msgid "Asia/Colombo"
+msgstr "Asien/Colombo"
+
+#: date_timezones.inc:453
+msgid "Asia/Dacca"
+msgstr "Asien/Dacca"
+
+#: date_timezones.inc:454
+msgid "Asia/Damascus"
+msgstr "Asien/Damascus"
+
+#: date_timezones.inc:455
+msgid "Asia/Dhaka"
+msgstr "Asien/Dhaka"
+
+#: date_timezones.inc:456
+msgid "Asia/Dili"
+msgstr "Asien/Dili"
+
+#: date_timezones.inc:457
+msgid "Asia/Dubai"
+msgstr "Asien/Dubai"
+
+#: date_timezones.inc:458
+msgid "Asia/Dushanbe"
+msgstr "Asien/Dushanbe"
+
+#: date_timezones.inc:459
+msgid "Asia/Gaza"
+msgstr "Asien/Gaza"
+
+#: date_timezones.inc:460
+msgid "Asia/Harbin"
+msgstr "Asien/Harbin"
+
+#: date_timezones.inc:461
+msgid "Asia/Hong_Kong"
+msgstr "Asien/Hong_Kong"
+
+#: date_timezones.inc:462
+msgid "Asia/Hovd"
+msgstr "Asien/Hovd"
+
+#: date_timezones.inc:463
+msgid "Asia/Irkutsk"
+msgstr "Asien/Irkutsk"
+
+#: date_timezones.inc:464
+msgid "Asia/Istanbul"
+msgstr "Asien/Istanbul"
+
+#: date_timezones.inc:465
+msgid "Asia/Jakarta"
+msgstr "Asien/Jakarta"
+
+#: date_timezones.inc:466
+msgid "Asia/Jayapura"
+msgstr "Asien/Jayapura"
+
+#: date_timezones.inc:467
+msgid "Asia/Jerusalem"
+msgstr "Asien/Jerusalem"
+
+#: date_timezones.inc:468
+msgid "Asia/Kabul"
+msgstr "Asien/Kabul"
+
+#: date_timezones.inc:469
+msgid "Asia/Kamchatka"
+msgstr "Asien/Kamchatka"
+
+#: date_timezones.inc:470
+msgid "Asia/Karachi"
+msgstr "Asien/Karachi"
+
+#: date_timezones.inc:471
+msgid "Asia/Kashgar"
+msgstr "Asien/Kashgar"
+
+#: date_timezones.inc:472
+msgid "Asia/Katmandu"
+msgstr "Asien/Katmandu"
+
+#: date_timezones.inc:473
+msgid "Asia/Krasnoyarsk"
+msgstr "Asien/Krasnoyarsk"
+
+#: date_timezones.inc:474
+msgid "Asia/Kuala_Lumpur"
+msgstr "Asien/Kuala_Lumpur"
+
+#: date_timezones.inc:475
+msgid "Asia/Kuching"
+msgstr "Asien/Kuching"
+
+#: date_timezones.inc:476
+msgid "Asia/Kuwait"
+msgstr "Asien/Kuwait"
+
+#: date_timezones.inc:477
+msgid "Asia/Macao"
+msgstr "Asien/Macao"
+
+#: date_timezones.inc:478
+msgid "Asia/Magadan"
+msgstr "Asien/Magadan"
+
+#: date_timezones.inc:479
+msgid "Asia/Manila"
+msgstr "Asien/Manila"
+
+#: date_timezones.inc:480
+msgid "Asia/Muscat"
+msgstr "Asien/Muscat"
+
+#: date_timezones.inc:481
+msgid "Asia/Nicosia"
+msgstr "Asien/Nicosia"
+
+#: date_timezones.inc:482
+msgid "Asia/Novosibirsk"
+msgstr "Asien/Novosibirsk"
+
+#: date_timezones.inc:483
+msgid "Asia/Omsk"
+msgstr "Asien/Omsk"
+
+#: date_timezones.inc:484
+msgid "Asia/Phnom_Penh"
+msgstr "Asien/Phnom_Penh"
+
+#: date_timezones.inc:485
+msgid "Asia/Pyongyang"
+msgstr "Asien/Pyongyang"
+
+#: date_timezones.inc:486
+msgid "Asia/Qatar"
+msgstr "Asien/Qatar"
+
+#: date_timezones.inc:487
+msgid "Asia/Rangoon"
+msgstr "Asien/Rangoon"
+
+#: date_timezones.inc:488
+msgid "Asia/Riyadh"
+msgstr "Asien/Riyadh"
+
+#: date_timezones.inc:489
+msgid "Asia/Riyadh87"
+msgstr "Asien/Riyadh87"
+
+#: date_timezones.inc:490
+msgid "Asia/Riyadh88"
+msgstr "Asien/Riyadh88"
+
+#: date_timezones.inc:491
+msgid "Asia/Riyadh89"
+msgstr "Asien/Riyadh89"
+
+#: date_timezones.inc:492
+msgid "Asia/Saigon"
+msgstr "Asien/Saigon"
+
+#: date_timezones.inc:493
+msgid "Asia/Samarkand"
+msgstr "Asien/Samarkand"
+
+#: date_timezones.inc:494
+msgid "Asia/Seoul"
+msgstr "Asien/Seoul"
+
+#: date_timezones.inc:495
+msgid "Asia/Shanghai"
+msgstr "Asien/Shanghai"
+
+#: date_timezones.inc:496
+msgid "Asia/Singapore"
+msgstr "Asien/Singapore"
+
+#: date_timezones.inc:497
+msgid "Asia/Taipei"
+msgstr "Asien/Taipei"
+
+#: date_timezones.inc:498
+msgid "Asia/Tashkent"
+msgstr "Asien/Tashkent"
+
+#: date_timezones.inc:499
+msgid "Asia/Tbilisi"
+msgstr "Asien/Tbilisi"
+
+#: date_timezones.inc:500
+msgid "Asia/Tehran"
+msgstr "Asien/Tehran"
+
+#: date_timezones.inc:501
+msgid "Asia/Tel_Aviv"
+msgstr "Asien/Tel_Aviv"
+
+#: date_timezones.inc:502
+msgid "Asia/Thimbu"
+msgstr "Asien/Thimbu"
+
+#: date_timezones.inc:503
+msgid "Asia/Thimphu"
+msgstr "Asien/Thimphu"
+
+#: date_timezones.inc:504
+msgid "Asia/Tokyo"
+msgstr "Asien/Tokyo"
+
+#: date_timezones.inc:505
+msgid "Asia/Ujung_Pandang"
+msgstr "Asien/Ujung_Pandang"
+
+#: date_timezones.inc:506
+msgid "Asia/Ulaanbaatar"
+msgstr "Asien/Ulaanbaatar"
+
+#: date_timezones.inc:507
+msgid "Asia/Ulan_Bator"
+msgstr "Asien/Ulan_Bator"
+
+#: date_timezones.inc:508
+msgid "Asia/Urumqi"
+msgstr "Asien/Urumqi"
+
+#: date_timezones.inc:509
+msgid "Asia/Vientiane"
+msgstr "Asien/Vientiane"
+
+#: date_timezones.inc:510
+msgid "Asia/Vladivostok"
+msgstr "Asien/Vladivostok"
+
+#: date_timezones.inc:511
+msgid "Asia/Yakutsk"
+msgstr "Asien/Yakutsk"
+
+#: date_timezones.inc:512
+msgid "Asia/Yekaterinburg"
+msgstr "Asien/Yekaterinburg"
+
+#: date_timezones.inc:513
+msgid "Asia/Yerevan"
+msgstr "Asien/Yerevan"
+
+#: date_timezones.inc:514
+msgid "Atlantic/Azores"
+msgstr "Atlanten/Azores"
+
+#: date_timezones.inc:515
+msgid "Atlantic/Bermuda"
+msgstr "Atlanten/Bermuda"
+
+#: date_timezones.inc:516
+msgid "Atlantic/Canary"
+msgstr "Atlanten/Canary"
+
+#: date_timezones.inc:517
+msgid "Atlantic/Cape_Verde"
+msgstr "Atlanten/Cape_Verde"
+
+#: date_timezones.inc:518
+msgid "Atlantic/Faeroe"
+msgstr "Atlanten/Faeroe"
+
+#: date_timezones.inc:519
+msgid "Atlantic/Jan_Mayen"
+msgstr "Atlanten/Jan_Mayen"
+
+#: date_timezones.inc:520
+msgid "Atlantic/Madeira"
+msgstr "Atlanten/Madeira"
+
+#: date_timezones.inc:521
+msgid "Atlantic/South_Georgia"
+msgstr "Atlanten/South_Georgia"
+
+#: date_timezones.inc:522
+msgid "Atlantic/Stanley"
+msgstr "Atlanten/Stanley"
+
+#: date_timezones.inc:523
+msgid "Australia/ACT"
+msgstr "Australien/ACT"
+
+#: date_timezones.inc:524
+msgid "Australia/Adelaide"
+msgstr "Australien/Adelaide"
+
+#: date_timezones.inc:525
+msgid "Australia/Brisbane"
+msgstr "Australien/Brisbane"
+
+#: date_timezones.inc:526
+msgid "Australia/Broken_Hill"
+msgstr "Australien/Broken_Hill"
+
+#: date_timezones.inc:527
+msgid "Australia/Canberra"
+msgstr "Australien/Canberra"
+
+#: date_timezones.inc:528
+msgid "Australia/Darwin"
+msgstr "Australien/Darwin"
+
+#: date_timezones.inc:529
+msgid "Australia/Hobart"
+msgstr "Australien/Hobart"
+
+#: date_timezones.inc:530
+msgid "Australia/LHI"
+msgstr "Australien/LHI"
+
+#: date_timezones.inc:531
+msgid "Australia/Lindeman"
+msgstr "Australien/Lindeman"
+
+#: date_timezones.inc:532
+msgid "Australia/Lord_Howe"
+msgstr "Australien/Lord_Howe"
+
+#: date_timezones.inc:533
+msgid "Australia/Melbourne"
+msgstr "Australien/Melbourne"
+
+#: date_timezones.inc:534
+msgid "Australia/NSW"
+msgstr "Australien/NSW"
+
+#: date_timezones.inc:535
+msgid "Australia/North"
+msgstr "Australien/Nord"
+
+#: date_timezones.inc:536
+msgid "Australia/Perth"
+msgstr "Australien/Perth"
+
+#: date_timezones.inc:537
+msgid "Australia/Queensland"
+msgstr "Australien/Queensland"
+
+#: date_timezones.inc:538
+msgid "Australia/South"
+msgstr "Australien/Syd"
+
+#: date_timezones.inc:539
+msgid "Australia/Sydney"
+msgstr "Australien/Sydney"
+
+#: date_timezones.inc:540
+msgid "Australia/Tasmania"
+msgstr "Australien/Tasmania"
+
+#: date_timezones.inc:541
+msgid "Australia/Victoria"
+msgstr "Australien/Victoria"
+
+#: date_timezones.inc:542
+msgid "Australia/West"
+msgstr "Australien/West"
+
+#: date_timezones.inc:543
+msgid "Australia/Yancowinna"
+msgstr "Australien/Yancowinna"
+
+#: date_timezones.inc:544
+msgid "Brazil/Acre"
+msgstr "Brazil/Acre"
+
+#: date_timezones.inc:545
+msgid "Brazil/DeNoronha"
+msgstr "Brazil/DeNoronha"
+
+#: date_timezones.inc:546
+msgid "Brazil/East"
+msgstr "Brazil/East"
+
+#: date_timezones.inc:547
+msgid "Brazil/West"
+msgstr "Brazil/West"
+
+#: date_timezones.inc:548
+msgid "Canada/Atlantic"
+msgstr "Canada/Atlantic"
+
+#: date_timezones.inc:549
+msgid "Canada/Central"
+msgstr "Canada/Central"
+
+#: date_timezones.inc:550
+msgid "Canada/East-Saskatchewan"
+msgstr "Canada/East-Saskatchewan"
+
+#: date_timezones.inc:551
+msgid "Canada/Eastern"
+msgstr "Canada/Eastern"
+
+#: date_timezones.inc:552
+msgid "Canada/Mountain"
+msgstr "Canada/Mountain"
+
+#: date_timezones.inc:553
+msgid "Canada/Newfoundland"
+msgstr "Canada/Newfoundland"
+
+#: date_timezones.inc:554
+msgid "Canada/Pacific"
+msgstr "Canada/Pacific"
+
+#: date_timezones.inc:555
+msgid "Canada/Saskatchewan"
+msgstr "Canada/Saskatchewan"
+
+#: date_timezones.inc:556
+msgid "Canada/Yukon"
+msgstr "Canada/Yukon"
+
+#: date_timezones.inc:557
+msgid "Chile/Continental"
+msgstr "Chile/Continental"
+
+#: date_timezones.inc:558
+msgid "Chile/EasterIsland"
+msgstr "Chile/EasterIsland"
+
+#: date_timezones.inc:560
+msgid "EST"
+msgstr "EST"
+
+#: date_timezones.inc:562
+msgid "Eire"
+msgstr "Irland"
+
+#: date_timezones.inc:563
+msgid "Etc/GMT-1"
+msgstr "Andre/GMT-1"
+
+#: date_timezones.inc:564
+msgid "Etc/GMT-10"
+msgstr "Andre/GMT-10"
+
+#: date_timezones.inc:565
+msgid "Etc/GMT-11"
+msgstr "Andre/GMT-11"
+
+#: date_timezones.inc:566
+msgid "Etc/GMT-12"
+msgstr "Andre/GMT-12"
+
+#: date_timezones.inc:567
+msgid "Etc/GMT-2"
+msgstr "Andre/GMT-2"
+
+#: date_timezones.inc:568
+msgid "Etc/GMT-3"
+msgstr "Andre/GMT-3"
+
+#: date_timezones.inc:569
+msgid "Etc/GMT-4"
+msgstr "Andre/GMT-4"
+
+#: date_timezones.inc:570
+msgid "Etc/GMT-5"
+msgstr "Andre/GMT-5"
+
+#: date_timezones.inc:571
+msgid "Etc/GMT-6"
+msgstr "Andre/GMT-6"
+
+#: date_timezones.inc:572
+msgid "Etc/GMT-7"
+msgstr "Andre/GMT-7"
+
+#: date_timezones.inc:573
+msgid "Etc/GMT-8"
+msgstr "Andre/GMT-8"
+
+#: date_timezones.inc:574
+msgid "Etc/GMT-9"
+msgstr "Andre/GMT-9"
+
+#: date_timezones.inc:575
+msgid "Etc/GMT"
+msgstr "Andre/GMT"
+
+#: date_timezones.inc:576
+msgid "Etc/GMT+1"
+msgstr "Andre/GMT+1"
+
+#: date_timezones.inc:577
+msgid "Etc/GMT+10"
+msgstr "Andre/GMT+10"
+
+#: date_timezones.inc:578
+msgid "Etc/GMT+11"
+msgstr "Andre/GMT+11"
+
+#: date_timezones.inc:579
+msgid "Etc/GMT+12"
+msgstr "Andre/GMT+12"
+
+#: date_timezones.inc:580
+msgid "Etc/GMT+13"
+msgstr "Andre/GMT+13"
+
+#: date_timezones.inc:581
+msgid "Etc/GMT+14"
+msgstr "Andre/GMT+14"
+
+#: date_timezones.inc:582
+msgid "Etc/GMT+2"
+msgstr "Andre/GMT+2"
+
+#: date_timezones.inc:583
+msgid "Etc/GMT+3"
+msgstr "Andre/GMT+3"
+
+#: date_timezones.inc:584
+msgid "Etc/GMT+4"
+msgstr "Andre/GMT+4"
+
+#: date_timezones.inc:585
+msgid "Etc/GMT+5"
+msgstr "Andre/GMT+5"
+
+#: date_timezones.inc:586
+msgid "Etc/GMT+6"
+msgstr "Andre/GMT+6"
+
+#: date_timezones.inc:587
+msgid "Etc/GMT+7"
+msgstr "Andre/GMT+7"
+
+#: date_timezones.inc:588
+msgid "Etc/GMT+8"
+msgstr "Andre/GMT+8"
+
+#: date_timezones.inc:589
+msgid "Etc/GMT+9"
+msgstr "Andre/GMT+9"
+
+#: date_timezones.inc:590
+msgid "Europe/Amsterdam"
+msgstr "Europa/Amsterdam"
+
+#: date_timezones.inc:591
+msgid "Europe/Andorra"
+msgstr "Europa/Andorra"
+
+#: date_timezones.inc:592
+msgid "Europe/Athens"
+msgstr "Europa/Athens"
+
+#: date_timezones.inc:593
+msgid "Europe/Belfast"
+msgstr "Europa/Belfast"
+
+#: date_timezones.inc:594
+msgid "Europe/Belgrade"
+msgstr "Europa/Belgrade"
+
+#: date_timezones.inc:595
+msgid "Europe/Berlin"
+msgstr "Europa/Berlin"
+
+#: date_timezones.inc:596
+msgid "Europe/Bratislava"
+msgstr "Europa/Bratislava"
+
+#: date_timezones.inc:597
+msgid "Europe/Brussels"
+msgstr "Europa/Brussels"
+
+#: date_timezones.inc:598
+msgid "Europe/Bucharest"
+msgstr "Europa/Bucharest"
+
+#: date_timezones.inc:599
+msgid "Europe/Budapest"
+msgstr "Europa/Budapest"
+
+#: date_timezones.inc:600
+msgid "Europe/Chisinau"
+msgstr "Europa/Chisinau"
+
+#: date_timezones.inc:601
+msgid "Europe/Copenhagen"
+msgstr "Europa/Copenhagen"
+
+#: date_timezones.inc:602
+msgid "Europe/Dublin"
+msgstr "Europa/Dublin"
+
+#: date_timezones.inc:603
+msgid "Europe/Gibraltar"
+msgstr "Europa/Gibraltar"
+
+#: date_timezones.inc:604
+msgid "Europe/Helsinki"
+msgstr "Europa/Helsinki"
+
+#: date_timezones.inc:605
+msgid "Europe/Istanbul"
+msgstr "Europa/Istanbul"
+
+#: date_timezones.inc:606
+msgid "Europe/Kaliningrad"
+msgstr "Europa/Kaliningrad"
+
+#: date_timezones.inc:607
+msgid "Europe/Kiev"
+msgstr "Europa/Kiev"
+
+#: date_timezones.inc:608
+msgid "Europe/Lisbon"
+msgstr "Europa/Lisbon"
+
+#: date_timezones.inc:609
+msgid "Europe/Ljubljana"
+msgstr "Europa/Ljubljana"
+
+#: date_timezones.inc:610
+msgid "Europe/London"
+msgstr "Europa/London"
+
+#: date_timezones.inc:611
+msgid "Europe/Luxembourg"
+msgstr "Europa/Luxembourg"
+
+#: date_timezones.inc:612
+msgid "Europe/Madrid"
+msgstr "Europa/Madrid"
+
+#: date_timezones.inc:613
+msgid "Europe/Malta"
+msgstr "Europa/Malta"
+
+#: date_timezones.inc:614
+msgid "Europe/Minsk"
+msgstr "Europa/Minsk"
+
+#: date_timezones.inc:615
+msgid "Europe/Monaco"
+msgstr "Europa/Monaco"
+
+#: date_timezones.inc:616
+msgid "Europe/Moscow"
+msgstr "Europa/Moscow"
+
+#: date_timezones.inc:617
+msgid "Europe/Nicosia"
+msgstr "Europa/Nicosia"
+
+#: date_timezones.inc:618
+msgid "Europe/Oslo"
+msgstr "Europa/Oslo"
+
+#: date_timezones.inc:619
+msgid "Europe/Paris"
+msgstr "Europa/Paris"
+
+#: date_timezones.inc:620
+msgid "Europe/Prague"
+msgstr "Europa/Prague"
+
+#: date_timezones.inc:621
+msgid "Europe/Riga"
+msgstr "Europa/Riga"
+
+#: date_timezones.inc:622
+msgid "Europe/Rome"
+msgstr "Europa/Rome"
+
+#: date_timezones.inc:623
+msgid "Europe/Samara"
+msgstr "Europa/Samara"
+
+#: date_timezones.inc:624
+msgid "Europe/San_Marino"
+msgstr "Europa/San_Marino"
+
+#: date_timezones.inc:625
+msgid "Europe/Sarajevo"
+msgstr "Europa/Sarajevo"
+
+#: date_timezones.inc:626
+msgid "Europe/Simferopol"
+msgstr "Europa/Simferopol"
+
+#: date_timezones.inc:627
+msgid "Europe/Skopje"
+msgstr "Europa/Skopje"
+
+#: date_timezones.inc:628
+msgid "Europe/Sofia"
+msgstr "Europa/Sofia"
+
+#: date_timezones.inc:629
+msgid "Europe/Stockholm"
+msgstr "Europa/Stockholm"
+
+#: date_timezones.inc:630
+msgid "Europe/Tallinn"
+msgstr "Europa/Tallinn"
+
+#: date_timezones.inc:631
+msgid "Europe/Tirane"
+msgstr "Europa/Tirane"
+
+#: date_timezones.inc:632
+msgid "Europe/Tiraspol"
+msgstr "Europa/Tiraspol"
+
+#: date_timezones.inc:633
+msgid "Europe/Uzhgorod"
+msgstr "Europa/Uzhgorod"
+
+#: date_timezones.inc:634
+msgid "Europe/Vaduz"
+msgstr "Europa/Vaduz"
+
+#: date_timezones.inc:635
+msgid "Europe/Vatican"
+msgstr "Europa/Vatican"
+
+#: date_timezones.inc:636
+msgid "Europe/Vienna"
+msgstr "Europa/Vienna"
+
+#: date_timezones.inc:637
+msgid "Europe/Vilnius"
+msgstr "Europa/Vilnius"
+
+#: date_timezones.inc:638
+msgid "Europe/Warsaw"
+msgstr "Europa/Warsaw"
+
+#: date_timezones.inc:639
+msgid "Europe/Zagreb"
+msgstr "Europa/Zagreb"
+
+#: date_timezones.inc:640
+msgid "Europe/Zaporozhye"
+msgstr "Europa/Zaporozhye"
+
+#: date_timezones.inc:641
+msgid "Europe/Zurich"
+msgstr "Europa/Zurich"
+
+#: date_timezones.inc:642
+msgid "GB"
+msgstr "Storbritanien"
+
+#: date_timezones.inc:643
+msgid "GB-Eire"
+msgstr "Storbritanien-Irland"
+
+#: date_timezones.inc:644
+msgid "Hongkong"
+msgstr "Hongkong"
+
+#: date_timezones.inc:645
+msgid "Indian/Antananarivo"
+msgstr "Indien/Antananarivo"
+
+#: date_timezones.inc:646
+msgid "Indian/Chagos"
+msgstr "Indien/Chagos"
+
+#: date_timezones.inc:647
+msgid "Indian/Christmas"
+msgstr "Indien/Christmas"
+
+#: date_timezones.inc:648
+msgid "Indian/Cocos"
+msgstr "Indien/Cocos"
+
+#: date_timezones.inc:649
+msgid "Indian/Comoro"
+msgstr "Indien/Comoro"
+
+#: date_timezones.inc:650
+msgid "Indian/Kerguelen"
+msgstr "Indien/Kerguelen"
+
+#: date_timezones.inc:651
+msgid "Indian/Mahe"
+msgstr "Indien/Mahe"
+
+#: date_timezones.inc:652
+msgid "Indian/Maldives"
+msgstr "Indien/Maldives"
+
+#: date_timezones.inc:653
+msgid "Indian/Mauritius"
+msgstr "Indien/Mauritius"
+
+#: date_timezones.inc:654
+msgid "Indian/Mayotte"
+msgstr "Indien/Mayotte"
+
+#: date_timezones.inc:655
+msgid "Indian/Reunion"
+msgstr "Indien/Reunion"
+
+#: date_timezones.inc:658
+msgid "Jamaica"
+msgstr "Jamaica"
+
+#: date_timezones.inc:659
+msgid "Japan"
+msgstr "Japan"
+
+#: date_timezones.inc:660
+msgid "Kwajalein"
+msgstr "Kwajalein"
+
+#: date_timezones.inc:661
+msgid "Libya"
+msgstr "Libyen"
+
+#: date_timezones.inc:662
+msgid "Mexico/BajaNorte"
+msgstr "Mexico/BajaNorte"
+
+#: date_timezones.inc:663
+msgid "Mexico/BajaSur"
+msgstr "Mexico/BajaSur"
+
+#: date_timezones.inc:664
+msgid "Mexico/General"
+msgstr "Mexico/Generelt"
+
+#: date_timezones.inc:665
+msgid "Mideast/Riyadh87"
+msgstr "Mellemøsten/Riyadh87"
+
+#: date_timezones.inc:666
+msgid "Mideast/Riyadh88"
+msgstr "Mellemøsten/Riyadh88"
+
+#: date_timezones.inc:667
+msgid "Mideast/Riyadh89"
+msgstr "Mellemøsten/Riyadh89"
+
+#: date_timezones.inc:668
+msgid "NZ"
+msgstr "NZ"
+
+#: date_timezones.inc:669
+msgid "Navajo"
+msgstr "Navajo"
+
+#: date_timezones.inc:670
+msgid "Pacific/Apia"
+msgstr "Stillehavet/Apia"
+
+#: date_timezones.inc:671
+msgid "Pacific/Auckland"
+msgstr "Stillehavet/Auckland"
+
+#: date_timezones.inc:672
+msgid "Pacific/Chatham"
+msgstr "Stillehavet/Chatham"
+
+#: date_timezones.inc:673
+msgid "Pacific/Easter"
+msgstr "Stillehavet/Easter"
+
+#: date_timezones.inc:674
+msgid "Pacific/Efate"
+msgstr "Stillehavet/Efate"
+
+#: date_timezones.inc:675
+msgid "Pacific/Enderbury"
+msgstr "Stillehavet/Enderbury"
+
+#: date_timezones.inc:676
+msgid "Pacific/Fakaofo"
+msgstr "Stillehavet/Fakaofo"
+
+#: date_timezones.inc:677
+msgid "Pacific/Fiji"
+msgstr "Stillehavet/Fiji"
+
+#: date_timezones.inc:678
+msgid "Pacific/Funafuti"
+msgstr "Stillehavet/Funafuti"
+
+#: date_timezones.inc:679
+msgid "Pacific/Galapagos"
+msgstr "Stillehavet/Galapagos"
+
+#: date_timezones.inc:680
+msgid "Pacific/Gambier"
+msgstr "Stillehavet/Gambier"
+
+#: date_timezones.inc:681
+msgid "Pacific/Guadalcanal"
+msgstr "Stillehavet/Guadalcanal"
+
+#: date_timezones.inc:682
+msgid "Pacific/Guam"
+msgstr "Stillehavet/Guam"
+
+#: date_timezones.inc:683
+msgid "Pacific/Honolulu"
+msgstr "Stillehavet/Honolulu"
+
+#: date_timezones.inc:684
+msgid "Pacific/Johnston"
+msgstr "Stillehavet/Johnston"
+
+#: date_timezones.inc:685
+msgid "Pacific/Kiritimati"
+msgstr "Stillehavet/Kiritimati"
+
+#: date_timezones.inc:686
+msgid "Pacific/Kosrae"
+msgstr "Stillehavet/Kosrae"
+
+#: date_timezones.inc:687
+msgid "Pacific/Kwajalein"
+msgstr "Stillehavet/Kwajalein"
+
+#: date_timezones.inc:688
+msgid "Pacific/Majuro"
+msgstr "Stillehavet/Majuro"
+
+#: date_timezones.inc:689
+msgid "Pacific/Marquesas"
+msgstr "Stillehavet/Marquesas"
+
+#: date_timezones.inc:690
+msgid "Pacific/Midway"
+msgstr "Stillehavet/Midway"
+
+#: date_timezones.inc:691
+msgid "Pacific/Nauru"
+msgstr "Stillehavet/Nauru"
+
+#: date_timezones.inc:692
+msgid "Pacific/Niue"
+msgstr "Stillehavet/Niue"
+
+#: date_timezones.inc:693
+msgid "Pacific/Norfolk"
+msgstr "Stillehavet/Norfolk"
+
+#: date_timezones.inc:694
+msgid "Pacific/Noumea"
+msgstr "Stillehavet/Noumea"
+
+#: date_timezones.inc:695
+msgid "Pacific/Pago_Pago"
+msgstr "Stillehavet/Pago_Pago"
+
+#: date_timezones.inc:696
+msgid "Pacific/Palau"
+msgstr "Stillehavet/Palau"
+
+#: date_timezones.inc:697
+msgid "Pacific/Pitcairn"
+msgstr "Stillehavet/Pitcairn"
+
+#: date_timezones.inc:698
+msgid "Pacific/Ponape"
+msgstr "Stillehavet/Ponape"
+
+#: date_timezones.inc:699
+msgid "Pacific/Port_Moresby"
+msgstr "Stillehavet/Port_Moresby"
+
+#: date_timezones.inc:700
+msgid "Pacific/Rarotonga"
+msgstr "Stillehavet/Rarotonga"
+
+#: date_timezones.inc:701
+msgid "Pacific/Saipan"
+msgstr "Stillehavet/Saipan"
+
+#: date_timezones.inc:702
+msgid "Pacific/Samoa"
+msgstr "Stillehavet/Samoa"
+
+#: date_timezones.inc:703
+msgid "Pacific/Tahiti"
+msgstr "Stillehavet/Tahiti"
+
+#: date_timezones.inc:704
+msgid "Pacific/Tarawa"
+msgstr "Stillehavet/Tarawa"
+
+#: date_timezones.inc:705
+msgid "Pacific/Tongatapu"
+msgstr "Stillehavet/Tongatapu"
+
+#: date_timezones.inc:706
+msgid "Pacific/Truk"
+msgstr "Stillehavet/Truk"
+
+#: date_timezones.inc:707
+msgid "Pacific/Wake"
+msgstr "Stillehavet/Wake"
+
+#: date_timezones.inc:708
+msgid "Pacific/Wallis"
+msgstr "Stillehavet/Wallis"
+
+#: date_timezones.inc:709
+msgid "Pacific/Yap"
+msgstr "Stillehavet/Yap"
+
+#: date_timezones.inc:710
+msgid "Poland"
+msgstr "Polen"
+
+#: date_timezones.inc:711
+msgid "Portugal"
+msgstr "Portugal"
+
+#: date_timezones.inc:712
+msgid "Singapore"
+msgstr "Singapore"
+
+#: date_timezones.inc:713
+msgid "Turkey"
+msgstr "Tyrkiet"
+
+#: date_timezones.inc:714
+msgid "US/Alaska"
+msgstr "USA/Alaska"
+
+#: date_timezones.inc:715
+msgid "US/Aleutian"
+msgstr "USA/Aleutian"
+
+#: date_timezones.inc:716
+msgid "US/Arizona"
+msgstr "USA/Arizona"
+
+#: date_timezones.inc:717
+msgid "US/Central"
+msgstr "USA/Central"
+
+#: date_timezones.inc:718
+msgid "US/East-Indiana"
+msgstr "USA/East-Indiana"
+
+#: date_timezones.inc:719
+msgid "US/Eastern"
+msgstr "USA/Eastern"
+
+#: date_timezones.inc:720
+msgid "US/Hawaii"
+msgstr "USA/Hawaii"
+
+#: date_timezones.inc:721
+msgid "US/Indiana-Starke"
+msgstr "USA/Indiana-Starke"
+
+#: date_timezones.inc:722
+msgid "US/Michigan"
+msgstr "USA/Michigan"
+
+#: date_timezones.inc:723
+msgid "US/Mountain"
+msgstr "USA/Mountain"
+
+#: date_timezones.inc:724
+msgid "US/Pacific"
+msgstr "USA/Pacific"
+
+#: date_timezones.inc:725
+msgid "US/Samoa"
+msgstr "USA/Samoa"
+
+#: date_timezones.inc:726
+msgid "Pacific/French Polynesia-Marquesas Islands"
+msgstr "Stillehavet/French Polynesia-Marquesas Islands"
+
+#: date_views.inc:25
+msgid "now"
+msgstr "nu"
+
+#: date_views.inc:30
+msgid "is equal to"
+msgstr "er lig med"
+
+#: date_views.inc:31
+msgid "is not equal to"
+msgstr "er ikke lig med"
+
+#: date_views.inc:32
+msgid "greater than"
+msgstr "større end"
+
+#: date_views.inc:33
+msgid "greater than or equal to"
+msgstr "større end eller lig med"
+
+#: date_views.inc:34
+msgid "less than"
+msgstr "mindre end"
+
+#: date_views.inc:35
+msgid "less than or equal to"
+msgstr "mindre en eller lig med"
+
+#: date_views.inc:47
+#: ;93
+msgid "This filter allows events to be filtered by their date. Enter dates in the format: %format. Enter 'now' to use the current time. You may enter a delta (in seconds) to the option that will be added to the time; this is most useful when combined with now. If you have the jscalendar module from jstools installed, you can use a popup date picker here."
+msgstr "Filtrer arrangementer efter dato. Indtast datoer i formatet: %format. Indtast 'nu' for at bruge den aktuelle tid. Du kan indtaste en forskel (i sekunder) der lægges til tiden (mest nyttigt sammen med 'nu'). Hvis jscalendar modulet fra jstools er installeret, kan du bruger en popup datovælger."
+
+#: date_views.inc:50
+#: date.module:79
+msgid "Year"
+msgstr "År"
+
+#: date_views.inc:56
+#: ;102
+msgid "Filter by year. Enter 'now' to use the current year.  You may enter a delta (in seconds) to the option that will be added to the time; this is most useful when combined with now. "
+msgstr "Filtrer efter år. Indtast 'nu' for at bruge det aktuelle år. Du kan indtaste en forskel (i sekunder) der lægges til tiden (mest nyttigt sammen med 'nu')."
+
+#: date_views.inc:59
+#: date.module:80
+msgid "Month"
+msgstr "Måned"
+
+#: date_views.inc:67
+#: ;113
+msgid "Filter by month. Enter 'now' to use the current month.  You may enter a delta (in seconds) to the option that will be added to the time; this is most useful when combined with now. "
+msgstr "Filtrer efter måned. Indtast 'nu' for at bruge den aktuelle måned. Du kan indtaste en forskel (i sekunder) der lægges til tiden (mest nyttigt sammen med 'nu')."
+
+#: date_views.inc:70
+#: date.module:81
+msgid "Day"
+msgstr "Dag"
+
+#: date_views.inc:78
+#: ;124
+msgid "Filter by day. Enter 'now' to use the current day.  You may enter a delta (in seconds) to the option that will be added to the time; this is most useful when combined with now. "
+msgstr "Filtrer efter dag. Indtast 'nu' for at bruge den aktuelle dag. Du kan indtaste en forskel (i sekunder) der lægges til tiden (mest nyttigt sammen med 'nu')."
+
+#: date_views.inc:86
+#: date.module:98
+msgid "To Date"
+msgstr "Til-dato"
+
+#: date_views.inc:96
+msgid "To Year"
+msgstr "Til år"
+
+#: date_views.inc:105
+msgid "To Month"
+msgstr "Til måned"
+
+#: date_views.inc:116
+msgid "To Day"
+msgstr "Til dag"
+
+#: date_views.inc:241
+#: ;259
+msgid ": From "
+msgstr ": Fra"
+
+#: date_views.inc:243
+#: ;251;261;269
+msgid "Defines an argument to filter for dates within a range, in the format 'YYYY-MM-DD--YYYY-MM-DD'. Many other options can be used in arguments. See !link for other examples."
+msgstr "Filterer efter datointerval i formatet 'YYYY-MM-DD--YYYY-MM-DD'. Flere argumenter er tilgængelige. Se !link for andre eksempler."
+
+#: date_views.inc:243
+#: ;251;261;269
+msgid "help"
+msgstr "hjælp"
+
+#: date_views.inc:249
+#: ;267
+msgid ": To "
+msgstr ": Til"
+
+#: date_views.inc:580
+msgid "summarize by year"
+msgstr "sammendrag pr. år"
+
+#: date_views.inc:581
+msgid "summarize by month"
+msgstr "sammendrag pr. måned"
+
+#: date_views.inc:582
+msgid "summarize by day"
+msgstr "sammendrag pr. dag"
+
+#: date_views.inc:583
+msgid "summarize by week"
+msgstr "sammendrag pr. uge"
+
+#: date_views.inc:584
+msgid "summarize by hour"
+msgstr "sammendrag pr. time"
+
+#: date_views.inc:606
+msgid "Date: Date Browser"
+msgstr "Date: Datoviser"
+
+#: date_views.inc:846
+msgid "%period of %date"
+msgstr "%period af %date"
+
+#: date_views.inc:855
+msgid "‹ prev !period  "
+msgstr "‹ forrige !period  "
+
+#: date_views.inc:857
+msgid "  next !period  ›"
+msgstr "  næste !period  ›"
+
+#: date.module:46
+msgid "<p>Complete documentation for the Date and Date API modules is available at !link.</p>"
+msgstr "<p>Komplet dokumentation af Dato og Dato API modulerne er tilgængelig på !link.</p>"
+
+#: date.module:76
+msgid "Input options"
+msgstr "Inddatavalg"
+
+#: date.module:82
+msgid "Hour"
+msgstr "Time"
+
+#: date.module:83
+msgid "Minute"
+msgstr "Minut"
+
+#: date.module:84
+msgid "Second"
+msgstr "Sekund"
+
+#: date.module:89
+msgid "Granularity"
+msgstr "Granularitet"
+
+#: date.module:94
+msgid "Set the date elements to be collected on input (at least a year is required)."
+msgstr "Vælg hvilke datoelementer, der skal gemmes (som minimum et årstal)."
+
+#: date.module:99
+msgid "Never"
+msgstr "Aldrig"
+
+#: date.module:99
+msgid "Optional"
+msgstr "Valgfri"
+
+#: date.module:99
+msgid "Required"
+msgstr "Påkrævet"
+
+#: date.module:100
+msgid "Display a matching second date field as a 'To date'. If marked 'Optional' field will be presented but not required. If marked 'Required' the 'To date' will be required if the 'From date' is required or filled in."
+msgstr "Vis et tilsvarende datofelt som 'Til dato'. Hvis feltet markeres som valgfrit bliver det vist, men vil ikke være påkrævet. Hvis det markeres som påkrævet vil 'Til dato' være påkrævet hvis 'Fra dato' er påkrævet eller udfyldt."
+
+#: date.module:105
+msgid "Advanced input options"
+msgstr "Avancerede inddatavalg"
+
+#: date.module:111
+msgid "Input format"
+msgstr "Inddataformat"
+
+#: date.module:114
+msgid "The specified format will be adapted to the chosen <b>granularity</b>. The 'default' value uses the 'short date format' defined in !settings"
+msgstr "Det angivne format ændres så det stemmer overens med den valgt granularitet. Standardværdien bruger det korte datoformat defineret i !settings."
+
+#: date.module:118
+msgid "Custom input format"
+msgstr "Tilpasset inddataformat"
+
+#: date.module:120
+msgid "The custom format, if provided, will override the input format selected above. See more about custom date formats below."
+msgstr "Det tilpassede format tilsidesætter formatet ovenfor. Se mere om tilpassede formater nedenfor."
+
+#: date.module:124
+msgid "Display Options"
+msgstr "Indstillinger for visning"
+
+#: date.module:125
+msgid "Choose the way the date should be displayed."
+msgstr "Vælg hvordan datoen skal vises."
+
+#: date.module:133
+msgid "Advanced display options"
+msgstr "Avancerede indstillinger for visning"
+
+#: date.module:136
+msgid "Define alternate formatting for the date display. Options other than the default are made available to views and themes. Possible formats are default, long, medium, and short."
+msgstr "Definer alternativ formatering af datovisning. Værdier udover standardværdierne gøre tilgængelige for visninger og temaer. Mulige formater er standard, lang, medium og kort."
+
+#: date.module:145
+msgid "Timezone options"
+msgstr "Tidszone-egenskaber"
+
+#: date.module:149
+msgid "Time zone handling"
+msgstr "Håndtering af tidszone"
+
+#: date.module:152
+msgid "Select the timezone handling method to be used for this date field"
+msgstr "Vælg hvordan tidszoner skal håndteres af dette felt"
+
+#: date.module:156
+msgid "Advanced timezone options"
+msgstr "Avancerede indstillinger for tidszone"
+
+#: date.module:165
+msgid "Site timezone"
+msgstr "Site tidszone"
+
+#: date.module:168
+msgid "Select the timezone to be used as the site's timezone for all date fields in every content type in which they appear. List includes GMT and all timezones with the same GMT offset as the site timezone setting."
+msgstr "Vælg hvilken tidszone der bruges som sitets tidszone for alle datofelter i alle indholdstyper. Listen indeholder GMT og alle tidszone med samme GMT-afvigelse som sitets tidszonevalg."
+
+#: date.module:170
+msgid "<div class=\"form-item\"><div class=\"description\">* The custom format, if provided, will override the selected date display. Define a php date format like 'm-d-Y H:i' (see <a href=\"http://php.net/date\">http://php.net/date</a>). Do not add time zone formatting to the custom format, it will not work correctly. Use the zone display option instead.</div></div>"
+msgstr "<div class=\"form-item\"><div class=\"description\">* Et evt. tilpasset format tilsidesætter de valgte input- og visningsindstillinger. Definer et PHP datoformat som f.eks. 'm-d-Y H:i' (se <a href=\"http://php.net/date\">http://php.net/date</a>). Tilføj ikke tidszone-formattering til et tilpasset format; brug zone-visnings egenskaben i stedet.</div></div>"
+
+#: date.module:178
+msgid "Input granularity must include a year."
+msgstr "Input-granularitet skal indeholde et år."
+
+#: date.module:181
+msgid "Dates without hours granularity must not use any timezone handling."
+msgstr "Datoer uden time-granularitet kan ikke bruge tidszonehåndtering."
+
+#: date.module:224
+#: ;683
+msgid "Long"
+msgstr "Langt datoformat"
+
+#: date.module:229
+#: ;687
+msgid "Medium"
+msgstr "Medium datoformat"
+
+#: date.module:234
+#: ;691
+msgid "Short"
+msgstr "Kort datoformat"
+
+#: date.module:239
+#: ;679
+msgid "Default"
+msgstr "Standard"
+
+#: date.module:249
+msgid "Date display"
+msgstr "Datovisning"
+
+#: date.module:256
+msgid "Zone display"
+msgstr "Zonevisning"
+
+#: date.module:262
+msgid "*Custom date format"
+msgstr "* Tilpasset datoformat"
+
+#: date.module:289
+msgid "A 'From date' date is required for %field %delta"
+msgstr "En 'fra dato' er påkrævet for %field %delta"
+
+#: date.module:292
+msgid "A 'To date' is required for %field %delta"
+msgstr "En til dato' er påkrævet for %field %delta"
+
+#: date.module:298
+msgid "%name %delta %column is not a valid date."
+msgstr "%name %delta %column er ikke en gyldig dato."
+
+#: date.module:301
+#: ;512;535
+msgid "To date"
+msgstr "Til dato"
+
+#: date.module:301
+#: ;510;532
+msgid "From date"
+msgstr "Fra dato"
+
+#: date.module:345
+msgid "Select List"
+msgstr "Valgliste"
+
+#: date.module:349
+msgid "Text Field with strtotime validation"
+msgstr "Tekstfelt med strtotime validering"
+
+#: date.module:355
+msgid "Text Field with javascript pop-up calendar"
+msgstr "Tekstfelt med javascript popup kalender"
+
+#: date.module:378
+msgid "Advanced select options"
+msgstr "Avancerede indstillinger for valg"
+
+#: date.module:384
+msgid "Days"
+msgstr "Dage"
+
+#: date.module:386
+#: ;393;400
+msgid "text field"
+msgstr "tekstfelt"
+
+#: date.module:386
+#: ;393;400
+msgid "select list"
+msgstr "valgliste"
+
+#: date.module:387
+msgid "Type of form to use for day selection."
+msgstr "Formulartype til valg af dag."
+
+#: date.module:391
+msgid "Months"
+msgstr "Måneder"
+
+#: date.module:394
+msgid "Type of form to use for month selection."
+msgstr "Formulartype til valg af måned."
+
+#: date.module:398
+msgid "Years"
+msgstr "År"
+
+#: date.module:401
+msgid "Type of form to use for year selection."
+msgstr "Formulartype til valg af år."
+
+#: date.module:405
+msgid "Years back"
+msgstr "År tilbage"
+
+#: date.module:409
+msgid "Number of years to go back when using a selection list."
+msgstr "Antal år der gås tilbage når årslisten bruges."
+
+#: date.module:413
+msgid "Years forward"
+msgstr "År frem"
+
+#: date.module:417
+msgid "Number of years to go forward when using a selection list."
+msgstr "Antal år der gås frem når årslisten bruges."
+
+#: date.module:421
+msgid "Time increment"
+msgstr "Tidsforøgelse"
+
+#: date.module:424
+msgid "Increment the minute and second fields by this amount."
+msgstr "Forøg minut- og sekund-felterne med denne værdi."
+
+#: date.module:695
+msgid "ISO"
+msgstr "ISO"
+
+#: date.module:699
+msgid "Timestamp"
+msgstr "Tidsstempel"
+
+#: date.module:703
+msgid "Feed"
+msgstr "Feed"
+
+#: date.module:707
+#: date_copy.module:56
+msgid "iCal"
+msgstr "iCal"
+
+#: date.module:711
+msgid "As Time Ago"
+msgstr "Tid siden"
+
+#: date.module:918
+msgid "More"
+msgstr "Mere"
+
+#: date.module:1106
+msgid "!time"
+msgstr "!time"
+
+#: date.module:1111
+msgid "ongoing"
+msgstr "løbende"
+
+#: date.module:1115
+msgid "!time ago"
+msgstr "!time siden"
+
+#: date.module:0
+msgid "date"
+msgstr "dato"
+
+#: date_api.module:0
+msgid "date_api"
+msgstr "date_api"
+
+#: date_copy.module:16
+msgid "Copy data in and out of Date module."
+msgstr "Kopier data ind og ud af datomodulet."
+
+#: date_copy.module:29
+msgid "Date Import/Export"
+msgstr "Dato import/eksport"
+
+#: date_copy.module:30
+#: date_copy.info:0
+msgid "Import and export date data."
+msgstr "Importer og eksporter dato data."
+
+#: date_copy.module:38
+msgid "Import"
+msgstr "Importer"
+
+#: date_copy.module:47
+msgid "Export"
+msgstr "Eksporter"
+
+#: date_copy.module:65
+msgid "Events"
+msgstr "Arrangementer"
+
+#: date_copy.module:74
+msgid "CSV"
+msgstr "CSV"
+
+#: date_copy.module:100
+#: ;146
+msgid "There are no date fields in this database to import the data into. Please add a date field to the desired node types and be sure to indicate it uses both a \"from\" and a \"to\" date."
+msgstr "Der er ingen datofelter i databasen som data kan importeres til. Tilføj et datofelt til de ønskede indholdstyper og sørg at det både har et 'fra' og 'til' felt."
+
+#: date_copy.module:104
+msgid "Target type"
+msgstr "Måltype"
+
+#: date_copy.module:104
+#: ;452
+msgid "Source type"
+msgstr "Kildetype"
+
+#: date_copy.module:144
+msgid "body"
+msgstr "indhold"
+
+#: date_copy.module:152
+msgid "Date field"
+msgstr "Datofelt"
+
+#: date_copy.module:154
+msgid "The field which will contain the source dates in target content type."
+msgstr "Feltet som indeholder originale datoer i indholdstypen."
+
+#: date_copy.module:159
+msgid "Description field"
+msgstr "Beksrivelse"
+
+#: date_copy.module:161
+msgid "The text or body field which will contain the source description in the target content type."
+msgstr "Tekst- eller indholdsfeltet som indeholder beskrivelsen i indholdstypen."
+
+#: date_copy.module:167
+msgid "Url field"
+msgstr "URL-felt"
+
+#: date_copy.module:169
+msgid "The text or link field which will contain the source url in the target content type."
+msgstr "Tekst- eller linkfeltet som indeholder URLen i indholdstypen."
+
+#: date_copy.module:174
+msgid "Location field"
+msgstr "Lokationsfelt"
+
+#: date_copy.module:176
+msgid "The text field which will contain the source location text in the target content type."
+msgstr "Tekstfeltet som indeholder lokationen i indholdstypen."
+
+#: date_copy.module:181
+msgid "Uid field"
+msgstr "UID-felt"
+
+#: date_copy.module:183
+msgid "The text field which will contain the source uid in the target content type."
+msgstr "Tekstfeltet som indeholder bruger ID i indholdstypen."
+
+#: date_copy.module:210
+msgid "Categories"
+msgstr "Kategorier"
+
+#: date_copy.module:211
+msgid "Select the categories that should be used for the imported nodes."
+msgstr "Vælg hvilke kategorier der skal bruges til de importerede indholdselementer."
+
+#: date_copy.module:219
+msgid "Authored by"
+msgstr "Skrevet af"
+
+#: date_copy.module:219
+msgid "Leave blank for %anonymous."
+msgstr "Lad feltet være blankt for %anonymous."
+
+#: date_copy.module:219
+msgid "Anonymous"
+msgstr "Anonyme"
+
+#: date_copy.module:220
+msgid "Published"
+msgstr "Udgivet"
+
+#: date_copy.module:221
+msgid "Promoted to front page"
+msgstr "Forfremmet til forside"
+
+#: date_copy.module:222
+msgid "Sticky at top of lists"
+msgstr "Klæbrig"
+
+#: date_copy.module:223
+msgid "Create new revision"
+msgstr "Opret ny version"
+
+#: date_copy.module:252
+msgid "Import dates into CCK from various sources."
+msgstr "Importer datoer til CCK fra forskellige kilder."
+
+#: date_copy.module:257
+msgid "This feature is not yet functional."
+msgstr "Denne funktion er endnu ikke brugbar."
+
+#: date_copy.module:262
+msgid "Importing dates into CCK from a comma separated file can be done using the !link."
+msgstr "Du kan importere datoer fra en kommasepareret fil til CCK på !link."
+
+#: date_copy.module:279
+#: ;439
+msgid "Create a new CCK content type to import your events into. Make sure it has a date field that can allows a To date so it can accept the From date and To date of the iCal feed. Test the new type by trying to create a node manually and make sure all the right options are available in the form before attempting an import. The import will create new nodes and trigger all related hooks, so you may want to turn off automatic email messaging for this node type while performing the import."
+msgstr "Opret en ny CCK indholdstype som du kan importere arrangementer til. Sørg for at den har et datofelt med en 'til dato' så den kan håndtere information fra et iCal feed. Test den nye indholdstype ved at oprette et nyt indholdselement manuelt og tjek at alle valgmuligheder er tilgængelige i formularen før du prøver at importere. Importen opretter nye indholdselementer og kalder alle relevante hooks, så det kan være en god ide at deaktivere e-mail-notifikation for denne indholdstype når du importerer."
+
+#: date_copy.module:282
+msgid "Source file"
+msgstr "Kildefil"
+
+#: date_copy.module:286
+#: ;307;456;478
+msgid "Submit"
+msgstr "Indsend"
+
+#: date_copy.module:302
+#: ;471
+msgid "!type Fields"
+msgstr "!type felter"
+
+#: date_copy.module:324
+msgid "This is an invalid file."
+msgstr "Ugyldig fil."
+
+#: date_copy.module:398
+#: ;590
+msgid "!type: created %title."
+msgstr "!type: %title oprettet."
+
+#: date_copy.module:398
+#: ;590;596
+msgid "view"
+msgstr "vis"
+
+#: date_copy.module:408
+msgid "%limit ical events have been added."
+msgstr "%limit iCal arrangementer tilføjet."
+
+#: date_copy.module:409
+#: ;508
+msgid "Title"
+msgstr "Titel"
+
+#: date_copy.module:409
+msgid "Id"
+msgstr "Id"
+
+#: date_copy.module:409
+#: ;508
+msgid "Start"
+msgstr "Start"
+
+#: date_copy.module:409
+#: ;508
+msgid "End"
+msgstr "Slut"
+
+#: date_copy.module:412
+msgid "No ical events have been added."
+msgstr "Ingen iCal arrangementer tilføjet."
+
+#: date_copy.module:424
+msgid "There is no event table in this database. No event import options are available."
+msgstr "Der er ingen arrangementstabel i databasen. Kan ikke importere arrangementer."
+
+#: date_copy.module:446
+msgid "There are no event nodes in this database. No event import options are available."
+msgstr "Der er arrangementer i databasen. Kan ikke importere arrangementer."
+
+#: date_copy.module:475
+msgid "Yes"
+msgstr "Ja"
+
+#: date_copy.module:475
+msgid "No"
+msgstr "Nej"
+
+#: date_copy.module:475
+msgid "Delete original event?"
+msgstr "Slet oprindeligt arrangement?"
+
+#: date_copy.module:475
+msgid "Should the original entry be deleted once it has been copied to the new content type? If so, be sure to back up your database first."
+msgstr "Skal det oprindelige indhold slettes når det er blevet kopieret til den nye indholdstype? Hvis det er tilfældet skal du huske tage en sikkerhedskopi af databasen."
+
+#: date_copy.module:476
+msgid "Limit"
+msgstr "Grænse"
+
+#: date_copy.module:476
+msgid "The maximum number of nodes to convert in this pass."
+msgstr "Det maksimale antal indholdselementer der konverteres i dette gennemløb."
+
+#: date_copy.module:477
+msgid "Starting nid"
+msgstr "Start NID"
+
+#: date_copy.module:477
+msgid "Convert nodes with nids greater than or equal to this number."
+msgstr "Konverter indholdselementer med NIDs større end eller lig med dette tal."
+
+#: date_copy.module:507
+msgid "%limit events have been converted."
+msgstr "%limit arrangementer konverteret."
+
+#: date_copy.module:508
+msgid "Source Id"
+msgstr "Kilde ID"
+
+#: date_copy.module:508
+msgid "Target Id"
+msgstr "Mål ID"
+
+#: date_copy.module:511
+msgid "No events have been converted."
+msgstr "Ingen arrangementer konverteret."
+
+#: date_copy.module:596
+msgid "!type: updated %title."
+msgstr "!type: %title opdateret."
+
+#: date_copy.module:398
+#: ;590;596;0
+msgid "date_copy"
+msgstr "date_copy"
+
+#: date.install:186
+msgid "Date module fields were updated to allow empty (NULL) values. Existing date fields with default values were reset to NULL."
+msgstr "Datofelter opdateret så de kan bruge NULL-værdier. Eksisterende datofelter med standardværdier er blevet ændret til NULL."
+
+#: date.install:262
+msgid "Date module timezone-specific fields were updated to add offset values."
+msgstr "Alle tidszone-specifikke felter opdateret til at håndtere forskydning."
+
+#: date.install:336
+msgid "All date module fields were updated to allow empty (NULL) values. Existing date fields with default values were reset to NULL."
+msgstr "Alle datofelter opdateret så de kan bruge NULL-værdier. Eksisterende datofelter med standardværdier er blevet ændret til NULL."
+
+#: date.info:0
+msgid "Defines a date/time field type."
+msgstr "Definerer et datofelt."
+
+#: date.info:0
+#: date_copy.info:0
+msgid "CCK"
+msgstr "CCK"
+
+#: date_api.info:0
+msgid "Date API"
+msgstr "Dato API"
+
+#: date_api.info:0
+msgid "Makes the date api available to other modules."
+msgstr "Stille dato APIet til rådighed for andre moduler."
+
+#: date_copy.info:0
+msgid "Date Copy"
+msgstr "Dato kopi"
+

@@ -1,0 +1,2028 @@
+<?php
+// $Id: artmob_exhibit.module, v 1.0 2011/03/31 08:31:22 stop14 Exp $
+
+/**
+ * @file
+ * Allows users to create browseable content exhibits.
+ */
+
+include(drupal_get_path('module', 'artmob_exhibit') .'/artmob_exhibit_support.inc');
+
+
+define(EXHIBIT_VOCABULARY, 'Exhibits');
+define (ROLE_CURATOR, 'curator');
+
+//* Implementation of hook_node_info().
+
+function artmob_exhibit_node_info() {
+  return array(
+    'Exhibit' => array(
+      'name' => t('Exhibit'),
+      'module' => 'artmob_exhibit',
+      'description' => t("Create an exhibit of archival items."),
+      'has_title' => TRUE,
+      'title_label' => t('Title'),
+      'has_body' => TRUE,
+      'body_title' => t('Description')
+   ),
+ );
+}
+
+// Implementation of hook_perm().
+
+function artmob_exhibit_perm() {
+  return array('Add Exhibit', 'Edit Exhibit', 'Remove Exhibit', 'View Exhibit', 'Edit All Exhibits');
+}
+
+
+// Implementation of hook_access().
+
+function artmob_exhibit_access($op, $node) {
+  global $user;
+
+  if ($op == 'create') {
+    // Only registered users can create an Exhibit.
+    return user_access('Add Exhibit');
+  }
+
+  else if ($op == 'update') {
+    // Only registered users can update an Exhibit.
+    return user_access('Edit Exhibit');
+  }
+  else if ($op == 'delete') {
+    // Only registered users can delete an Exhibit.
+    return user_access('Delete Exhibit');
+  }
+  else if ($op == 'view') {
+    // Only registered users can view an Exhibit
+    return user_access('View Exhibit');
+  }
+  else {
+    return FALSE;
+  }             
+}
+
+
+function artmob_exhibit_init() {
+  $path = drupal_get_path('module', 'artmob_exhibit');
+  $js_path = $path .'/js/exhibit_browser.js';
+  $css_path = $path .'/css/artmob_exhibit.css';
+  
+  define('ARTMOB_EXHIBIT_IMAGE_PATH', base_path() . $path .'/images');
+  
+  drupal_add_js($js_path);
+  drupal_add_css($css_path);
+
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function artmob_exhibit_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+  }
+  else {
+
+    $items[] = array(
+      'path' => 'exhibits',
+      'callback' => 'artmob_exhibit_exhibits_page',
+      'type'  => MENU_NORMAL_ITEM,
+      'access' => TRUE,
+      'title' => 'Exhibits'
+   );
+
+    $items[] = array(
+      'path' => 'content/exhibit/current',
+      'callback' => 'artmob_exhibit_set_exhibit_current',
+      'type' => MENU_CALLBACK,
+      'access' => user_access('Edit Exhibit')
+   );
+
+    $items[] = array(
+      'path' => 'exhibit/item',
+      'callback' => '_artmob_exhibit_jump_to_exhibit_item',
+      'type' => MENU_CALLBACK,
+      'access' => TRUE
+   );
+
+    $items[] = array(
+      'path' => 'content/exhibit/current_node',
+      'callback' => 'artmob_exhibit_set_exhibit_current_node',
+      'type' => MENU_CALLBACK,
+      'access' => user_access('Edit Exhibit')
+   );
+
+    $items[] = array(
+      'path' => 'exhibit/current_session',
+      'callback' => 'artmob_exhibit_set_current_session_exhibit',
+      'type' => MENU_CALLBACK,
+      'access' => True
+   );
+
+    $items[] = array(
+      'path' => 'exhibit/unmark',
+      'callback' => 'artmob_exhibit_unmark_exhibit_item',
+      'type' => MENU_CALLBACK,
+      'access' => user_access('Edit Exhibit')
+   );
+
+    $items[] = array(
+      'path' => 'exhibit/mark',
+      'callback' => 'artmob_exhibit_mark_exhibit_item',
+      'type' => MENU_CALLBACK,
+      'access' => user_access('Edit Exhibit')
+   );
+
+
+    $items[] = array(
+      'path' => 'admin/artmob/exhibit',
+      'title' => t('Exhibit Settings'),
+      'description' => t('Modify exhibit settings'),
+      'weight' => -7,
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('artmob_exhibit_admin_settings'),
+      'access' => user_access('administer site configuration')
+   );
+
+   $items[] = array(
+     'path'  => 'curator_note/delete',
+     'title' => t('Curator Note Delete'),
+     'description' => t('Delete a Curator Note'),
+     'weight' => 5,
+     'type'     => MENU_CALLBACK,
+     'callback' => 'drupal_get_form',
+     'callback arguments' => array( 'artmob_exhibit_curator_note_delete'),
+     'access' => user_access('Edit All Exhibits'),
+   );
+
+    if (arg(0) == 'node' && is_numeric(arg(1))) {
+      global $user;
+      if (user_access('Add Exhibit') || user_access('Edit Exhibit')) {
+        $taxonomy_types = artmob_exhibit_taxonomy_get_types_in_vocabulary_as_array(EXHIBIT_VOCABULARY);
+        $db_query = db_query("SELECT type FROM {node} WHERE nid=%d", arg(1));
+        $nobj = db_fetch_object($db_query);
+        if (in_array($nobj->type, $taxonomy_types, TRUE)) {
+          $items[] = array('path' => 'node/'. arg(1) .'/curator',
+            'title' => t('Curate'),
+            'callback' => 'artmob_exhibit_load_curator',
+            'callback arguments' => array(arg(1)),
+            'access' => TRUE,
+            'type' => MENU_LOCAL_TASK,
+           );
+
+          $items[] = array('path' => 'node/'. arg(1) .'/curator/note',
+            'title' => t('Curate'),
+            'callback' => 'artmob_exhibit_load_curator_note',
+            'callback arguments' => array(arg(1)),
+            'access' => TRUE,
+            'type' => MENU_LOCAL_TASK,
+          );
+        }
+      }
+    }
+  }
+
+  return $items;
+}
+
+function artmob_exhibit_admin_settings() {
+  $form['exhibit_settings'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Exhibit Settings'),
+    '#description' => t('Allows you to control how the exhibit functionality works with your site design. Also allows you to set a featured exhibit.'),
+    '#weight' => -2
+  );
+
+  $options = artmob_exhibit_list_all_exhibits();
+
+  $form['exhibit_settings']['featured_exhibit'] = array(
+    '#type'          => 'select',
+    '#title'         => t('Featured Exhibit'),
+    '#default_value' => variable_get('featured_exhibit', NULL),
+    '#description'   => t('Select the featured exhibit'),
+    '#options' => $options
+ );
+
+  $form['exhibit_settings']['exhibit_browser'] = array(
+    '#type'          => 'select',
+    '#title'         => t('Exhibit Browser'),
+    '#default_value' => variable_get('exhibit_browser', 'content'),
+    '#description'   => t('Choose whether the exhibit browser will display as part of the content or as its own block. The exhibit browsers allows visitors to navigate from one exhibit item to another. The exhibit browser block must be assigned via the '. l('blocks', 'admin/build/block') .' menu'),
+    '#options' => array('content' => 'Display as part of the content', 'block' => 'Display as a block')
+ );
+
+  $form['exhibit_settings']['curatorial_notes'] = array(
+    '#type'          => 'select',
+    '#title'         => t('Curatorial Notes'),
+    '#default_value' => variable_get('curatorial_notes', 'browser'),
+    '#description'   => t('Choose whether to display notes as part of the exhibit browser or as an independent block. The curatorial notes block must be assigned via the '. l('blocks', 'admin/build/block') .' menu'),
+    '#options' => array('browser' => 'Display as part of the browser', 'block' => 'Display as a block')
+ );
+
+
+ return system_settings_form($form);
+}
+
+// HERE'S HOW THE CURATOR NOTES WORK //
+/*
+  When we first open the curator tab(node/nid/curator)
+  we have a themed list (theme_Exhibit_curator_form_list)
+  showing all exhibits where this curator has a note for
+  this item.  There is also an add note link so that they
+  can add a new note.
+
+  Clicking on a link will take you to a new form,
+  (node/nid/curator/note)
+  still inside the curator tab, that will allow you to
+  add/edit the note.  This link can also take a final
+  argument, which is the exhibit nid.  If this argument
+  exists then we check to see if this curator has a note
+  for this item in this exhibit already. If they do then
+  we disable the exhibit selector and load their note.
+  if the link has no argument or the exhibit nid is
+  not valid (ie this curator doesn't have a note for this
+  exhibit and item) then a blank form appears where they
+  can choose the exhibit and enter the note.
+*/
+
+function artmob_exhibit_load_curator($nid) {
+  return drupal_get_form('artmob_exhibit_curator_form', $nid);
+}
+
+function artmob_exhibit_load_curator_note($nid) {
+  return drupal_get_form('artmob_exhibit_curator_form_note', $nid);
+}
+
+function artmob_exhibit_get_item_notes_for_user($exhibit_nid) {
+  global $user;
+  $content_array = array();
+  $result = db_query('SELECT n.*, e.* from {am_exhibit_items_note} e
+                      LEFT JOIN {node} n ON e.exhibit_nid = n.nid
+                      WHERE item_nid = %d
+                      AND curator_uid = %d
+                      AND NOT(IsNull(n.nid))', $exhibit_nid, $user->uid);
+
+
+
+  while ($row = db_fetch_object($result)) {
+    $content_array[] = $row;
+  }
+  
+  return ($content_array);
+}
+
+
+function artmob_exhibit_curator_form($nid, $form_values = NULL ) {
+
+	$content_array = artmob_exhibit_get_item_notes_for_user($nid);
+  $user_exhibits = artmob_exhibit_build_exhibits_for_curator_array($user->uid);
+  $options = artmob_exhibit_build_exhibits_for_item_array($nid);
+
+  $form = array();
+  
+  // If users have exhibits, show the appropriate forms.  Otherwise, prompt them to add a new exhibit.
+
+  if (count($user_exhibits) > 0) {
+  
+  	// If users have more exhibits than notes, show the Add Note form.
+  
+    if (artmob_exhibit_add_note_visibility($user_exhibits,$content_array)) {
+	    $form = array_merge($form,artmob_exhibit_curator_form_note($nid));  // Loads "Add a new note" fields
+    }
+    
+    // If users have existing notes to edit, show the Edit Notes list
+    
+    if (count($content_array) > 0) {
+      $form['list'] = array(
+        '#prefix' => '<div>',
+        '#value' => theme('artmob_exhibit_curator_form_list', $nid, $content_array),
+        '#weight' => 0,
+        '#suffix' => '</div>'
+      );
+    }
+  }
+  else {
+      $form['list'] = array(
+        '#prefix' => '<div>',
+        '#value' => theme('artmob_exhibit_curator_panel_no_exhibits'),
+        '#weight' => 0,
+        '#suffix' => '</div>'
+      );
+  }
+
+  $form['intro'] = array(
+    '#weight' => -20,
+    '#value' => "<p>The curate tab allows you to: Remove the item from an exhibit, Add curatorial note; create a new exhibit; or administer existing curatorial notes.</p>"
+  );
+
+
+  //-------------------------------------
+  //  CREATE A NEW EXHIBIT FIELDSET
+  //-------------------------------------
+
+  // Add a the current item to a new exhibit
+  // This option will always be present.
+  
+  
+  $form['exhibit_add'] = array(
+    '#type'          => 'fieldset',
+    '#title'         => t('Create a new exhibit'),
+    '#description'   => t('Start a new exhibit beginning with this item.'),
+    '#weight'        => 1,
+    '#collapsible'   => TRUE,
+    '#collapsed'     => FALSE
+  );
+
+  $form['exhibit_add']['title'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Exhibit Title'),
+    '#default_value' => $node->title,
+    '#description'   => t('enter the title of the exhibit that you wish to create.'),
+    '#tree'          => 'FALSE',
+    '#required'      => FALSE,
+    '#weight'        => -9
+  );
+
+  $form['exhibit_add']['submit'] = array(
+    '#type'          => 'submit',
+    '#weight'        => 5,
+    '#value'         => t('Create Exhibit')
+  );
+
+  $form['nid'] = array(
+    '#type'    => 'value',
+    '#value'   => $nid,
+  );
+
+  /* Now we add three items: an exhibit, a weight and a submit.
+   * This will give the item a weight in the selected exhibit
+   * If the item is not part of an exhibit then these fields will not appear. */
+
+
+  if (count($options) > 0) {
+    $form['weight_frame'] = array(
+      '#type'          => 'fieldset',
+      '#title'         => t('Item Weights in Exhibits'),
+      '#weight'        => 3,
+      '#collapsible'   => TRUE,
+      '#collapsed'     => TRUE
+   );
+
+    $form['options'] = array(
+      '#type'    => 'value',
+      '#value'   => $options,
+   );
+
+    $form['nid'] = array(
+      '#type'    => 'value',
+      '#value'   => $nid,
+   );
+
+    foreach ($options as $key => $value) {
+      $default_weight = db_result(db_query("SELECT weight FROM {am_exhibit_items_weight} WHERE item_nid = %d AND exhibit_nid = %d", $nid, $key));
+        $form['weight_frame']['Item_Weight_'. $key] = array(
+        '#type' => 'weight',
+        '#title' => t('Weight in exhibit '. $value),
+        '#default_value' => $default_weight,
+        '#delta' => 10,
+        '#description' => t('Set the weight for this item inside the exhibit '. $value .' Weights determine the relative order of items in the exhibit.'),
+       );
+    }
+
+    $form['weight_frame']['submit'] = array(
+      '#type'          => 'submit',
+      '#weight'        => 5,
+      '#value'         => t('Submit')
+   );
+
+    $form['#submit'] = array('artmob_exhibit_curator_form_weight_submit' => array());
+
+    $form['remove_frame'] = array(
+      '#type'          => 'fieldset',
+      '#title'         => t('Remove From Exhibit'),
+      '#weight'        => 3,
+      '#collapsible'   => TRUE,
+      '#collapsed'     => FALSE
+   );
+   $content = '<ul>';
+   $form['remove_frame']['before'] = array(
+      '#value' =>$content ,
+   );
+
+   $options_remove = artmob_exhibit_build_exhibits_for_item_array($nid);
+
+   $form['remove_frame']['remove_exhibit'] = array(
+      '#type'          => 'select',
+      '#title'         => t('Exhibit'),
+      '#description'   => t('Remove this item from the above exhibit'),
+      '#tree'          => 'FALSE',
+      '#required'      => False,
+      '#options'       => $options_remove
+   );
+
+    $form['remove_frame']['remove_submit'] = array(
+      '#type'          => 'submit',
+      '#weight'        => 5,
+      '#value'         => t('Remove From Exhibit')
+    );
+
+   $form['#submit'] = array('artmob_exhibit_curator_form_weight_submit' => array());
+
+  
+  }
+  
+  /**
+    * ADMINISTER ALL EXHIBITS
+    * Requires Edit All Exhibits permission
+    *
+  */
+  
+  if (user_access('Edit All Exhibits' )) {
+  	$content = artmob_exhibit_build_note_admin_table($nid);
+		$form['administer_notes'] = array(
+		  '#type'          => 'fieldset',
+		  '#title'         => t('Administer Curatorial Notes'),
+		  '#weight'        => 6,
+		  '#collapsible'   => TRUE,
+		  '#collapsed'     => FALSE
+		);
+		
+		$form['administer_notes']['note_admin'] = array(
+		  '#value'   => $content,
+		  '#weight'   => 0,
+		);
+  }
+
+  $form['#submit'] = array('artmob_exhibit_curator_form_weight_submit' => array());
+  return $form;
+}
+
+function artmob_exhibit_curator_form_weight_submit($form, $form_values) {
+		
+	
+  if ($form_values['op'] == 'Submit') {
+    $options = $form_values['options'];
+    $item_nid = $form_values['nid'];
+
+    foreach ($options as $key => $value) {
+      $exhibit_nid = $key;
+      $weight = $form_values['Item_Weight_'. $key];
+      db_query("delete from {am_exhibit_items_weight} where item_nid = %d and exhibit_nid = %d", $item_nid, $exhibit_nid);
+      db_query("insert into {am_exhibit_items_weight} set item_nid = %d, exhibit_nid = %d, weight = %d",
+                 $item_nid, $exhibit_nid, $weight);
+    }
+    drupal_set_message('Your exhibit item weights have been saved');
+  }
+  else if ($form_values['op'] == 'Create Exhibit') {
+    //we need to 1. create the exhibit, 2. Add this item to the exhibit, 3.jump to the exhibit edit with a redirect back here
+
+    //1. Create the exhibit
+    global $user;
+    $node = new stdClass();
+    $node->type = 'Exhibit';
+    $node->status = 1;
+    $node->title = $form_values['title'];
+    $node->nid = '';
+    $node->uid = $user->uid;
+    $node->curators = array($user->uid);
+    node_save( $node );
+    $exhibit_nid = $node->nid;
+
+    //2. Add this item to the exhibit
+    $item_nid = $form_values['nid'];
+    artmob_exhibit_add_node_to_exhibit($item_nid, $exhibit_nid);
+
+    //3. jump to the exhibit edit screen with a redirect back here
+    $url = 'node/'. $exhibit_nid .'/edit';
+    $destination = 'destination=node/'. $item_nid .'/curator';
+    drupal_goto($url, $destination);
+  }
+  else if (($form_values['op'] == 'Submit Note') or ($form_values['op'] == 'Add to exhibit' ) ) {
+    // PUT IN CODE TO SAVE TO am_exhibit_items_note
+    artmob_exhibit_delete_note( $form_values['exhibits'], $form_values['nid'], $form_values['uid'] );
+
+    if ( $form_values['note'] <> '' ) {
+      db_query("INSERT INTO {am_exhibit_items_note}
+               (item_nid, exhibit_nid, curator_uid, note, weight)
+                VALUES
+                (%d, %d, %d, '%s', %d)",
+                $form_values['nid'],
+                $form_values['exhibits'],
+                $form_values['uid'],
+                $form_values['note'],
+                $form_values['weight']
+     );
+    }
+
+    //Another thing that we want to do is to add this
+    //item to this exhibit if it isn't already.
+    artmob_exhibit_add_node_to_exhibit($form_values['nid'], $form_values['exhibits']);
+
+    drupal_set_message('The note has been saved and this item has been added to the exhibit');
+    drupal_goto('node/'. $form_values['return_nid'] .'/curator');
+  }
+  else if ($form_values['op'] == 'Cancel') {
+    drupal_goto('node/'. $form_values['return_nid'] .'/curator');
+  }
+  else if ( $form_values['op'] == 'Remove From Exhibit' ){
+    $options = $form_values['options'];
+    artmob_exhibit_remove_node_from_exhibit($form_values['nid'], $form_values['remove_exhibit'] );
+    drupal_set_message( "item removed from exhibit '".$options[ $form_values['remove_exhibit'] ]."'");
+    drupal_goto('node/'. $form_values['return_nid'] .'/curator');
+  }
+  return;
+}
+
+function artmob_exhibit_curator_form_note($nid, $form_values = NULL) {
+  global $user;
+  $uid = $user->uid;
+  $options_filter = FALSE;
+  
+  if (!arg(4)) {
+  	$options_filter = TRUE;
+  }
+
+  if (is_numeric(arg(4))) {
+    $exhibit_nid = arg(4);
+  }
+  else {
+    $exhibit_nid = 0;
+  }
+  
+  if (is_numeric(arg(5))) {
+    $uid = arg(5);
+  }
+
+  if (is_numeric(arg(6))) {
+    $return_nid = arg(6);
+  }
+  else {
+    $return_nid = $nid;
+  }
+
+  if ($exhibit_nid) {
+    $db_query = db_query("SELECT note, weight FROM {am_exhibit_items_note}
+                        WHERE item_nid = %d
+                        AND exhibit_nid = %d
+                        AND curator_uid = %d",
+                        $nid, $exhibit_nid, $uid);
+    $row = db_fetch_object($db_query);
+
+    $note = $row->note ? $row->note : NULL;
+    $weight = $row->weight ? $row->weight: 0;
+  }
+
+  //Let's store some variables as hidden fields so
+  //that we can pass them along to validate and/or submit
+  $form['nid'] = array(
+    '#type'  => 'hidden',
+    '#value' => $nid
+ );
+
+  $form['uid'] = array(
+    '#type'  => 'hidden',
+    '#value' => $uid
+ );
+
+  $form['return_nid'] = array(
+    '#type'  => 'hidden',
+    '#value' => $return_nid
+ );
+
+
+  $options = artmob_exhibit_build_exhibits_for_curator_array($user->uid);
+  
+  
+	$notes = artmob_exhibit_get_item_notes_for_user($nid);
+	
+	if ($options_filter !== FALSE) {
+	// remove exhibits that already have a note
+		foreach ($notes as $n) {
+			if (key_exists($n->nid,$options)) {
+				unset($options[$n->nid]);
+			}
+		}
+	}
+	
+	$current_exhibit = artmob_exhibit_get_current_exhibit();
+	$optkeys = array_keys($options);
+	
+	
+	$default_value = in_array($current_exhibit,$optkeys) ? $current_exhibit : $optkeys[0];
+	
+  if (count($options) > 0) {
+
+	  $form['curator'] = array(
+	     '#type' => 'fieldset',
+	     '#title' => t('Add a Curatorial Note'),
+	     '#weight' => 0
+	  );
+	  
+	  if ($exhibit_nid) {
+	        
+	    $form['curator']['exhibits'] = array(
+	      '#type'          => 'select',
+	      '#title'         => t('Exhibits'),
+	      '#default_value' => $exhibit_nid,
+	      '#description'   => t('Select the exhibit to put this note into'),
+	      '#tree'          => 'FALSE',
+	      '#required'      => True,
+	      '#disabled'      => True,
+	      '#options' => $options
+	   );
+	
+	  }
+	  else {
+	    //$options = artmob_exhibit_build_exhibits_for_curator_array($user->uid);
+	    $form['curator']['exhibits'] = array(
+	      '#type'          => 'select',
+	      '#title'         => t('Add to Exhibit'),
+	      '#default_value' => $default_value,
+	      '#description'   => t('Add this item and note to the selected exhibit.'),
+	      '#tree'          => 'FALSE',
+	      '#required'      => True,
+	      '#options'       => $options
+	    );
+	  }
+	
+	  $form['curator']['note'] = array(
+	    '#type'          => 'textarea',
+	    '#title'         => t('Curatorial Note'),
+	    '#default_value' => $note,
+	    '#description'   => t('Enter the curatorial note for this item in this exhibit. Leave blank to add this to an exhibit without creating a note.'),
+	    '#tree'          => 'FALSE',
+	    '#rows'          => 10
+	  );
+	
+	  $form['curator']['weight'] = array(
+	    '#type' => 'weight',
+	    '#title' => t('Note Weight'),
+	    '#default_value' => $weight,
+	    '#delta' => 10,
+	    '#description' => t('This determines the order of the item relative to the others.  Lower weights appear before higher ones.'),
+	  );
+	
+	  $form['curator']['submit'] = array(
+	    '#type'          => 'submit',
+	    '#value'         => t('Add to exhibit')
+	  );
+	
+	  if ($exhibit_nid) {
+	    $form['curator']['cancel'] = array(
+	      '#type'          => 'submit',
+	      '#value'         => t('Cancel')
+	    );
+	  }
+  
+  }
+
+  $extra_stuff = array();
+  $form['#submit'] = array('artmob_exhibit_curator_form_weight_submit' => $extra_stuff);
+
+  return $form;
+
+}
+
+function artmob_exhibit_build_exhibit(&$exhibit_node) {
+  // returns an ordered array of exhibit nodes;
+  $enodes = array();
+
+  if (!$exhibit_node->exhibit_tid) {
+    return $enodes;
+  }
+
+
+  $result = db_query('SELECT n.nid
+                   FROM {term_node} t
+                   LEFT JOIN {node} n on t.nid = n.nid
+                   LEFT JOIN {am_exhibit_items_weight} p on n.nid = p.item_nid
+                   WHERE n.status = 1
+                   and t.tid = %d
+                   and  p.exhibit_nid = %d
+                   ORDER BY p.weight, n.title', $exhibit_node->exhibit_tid, $exhibit_node->nid);
+  while ($row = db_fetch_object($result)) {
+    $enodes[] = $row->nid;
+  }
+
+  return $enodes;
+
+}
+
+
+function artmob_exhibit_nodeapi(&$node, $op, $a3, $a4) {
+  switch ($op) {
+    case 'submit':
+      break;
+
+    case 'insert':
+      artmob_exhibit_update_item_in_exhibits( $node );
+      break;
+    case 'update':
+      artmob_exhibit_update_item_in_exhibits( $node );
+      break;
+    case 'view':
+      if ($a4 != TRUE) { // only display exhibit browser block on pages.
+        break;
+      }
+    else {
+     artmob_exhibit_display_exhibit_browser($node);
+    }
+    break;
+  }
+
+}
+
+function artmob_exhibit_update_item_in_exhibits( $node ) {
+  //When we save an item, if they are attached to an exhibit
+  //we should call artmob_exhibit_add_node_to_exhibit($item_nid, $exhibit_nid);
+  $terms_array = artmob_exhibit_taxonomy_get_terms_node_in_vocabulary_by_name($node->nid, EXHIBIT_VOCABULARY);
+  foreach ($terms_array as $term) {
+    $name = $term->name;
+    $exhibit_nid = db_result( db_query( "SELECT nid from {node} where title = '%s'", $name ) );
+    if ( $exhibit_nid ) {
+      artmob_exhibit_add_node_to_exhibit($node->nid, $exhibit_nid);
+    }
+  }
+}
+
+function artmob_exhibit_build_note_admin_table( $item_nid = 0 ) {
+  if ( user_access('Edit All Exhibits' )) {
+    // BUILD THE TABLE ATTRIBUTES
+    $attributes = array(
+      'border'      => 1,
+      'cellspacing' => 0,
+      'cellpadding' => 5,
+      'class'       => 'exhibit-node-admin',
+      'id'          => 'contents-table',
+    );
+
+    // BUILD THE TABLE HEADER
+    $header = array(
+                0 => array( 'data' => 'Exhibit', 'field' => 'exhibit_title', 'sort' => 'asc'  ),
+                1 => array( 'data' => 'Item', 'field' => 'item_title', 'sort' => 'asc' ),
+                2 => array( 'data' => 'Curator', 'field' => 'name', 'sort' => 'asc' ),
+                3 => array( 'data' => 'Options' ),
+             );
+
+
+    $content_array = array();
+    $item['localized_options']['query'] = 'destination=node/'. $item_nid .'/curator';
+    $sqltablesort = tablesort_sql( $header );
+    $sql = "SELECT n.*, i.title AS item_title, e.title AS exhibit_title, u.name
+                        FROM {am_exhibit_items_note} n
+                        LEFT JOIN node i ON n.item_nid = i.nid
+                        LEFT JOIN node e ON n.exhibit_nid = e.nid
+                        LEFT JOIN users u ON n.curator_uid = u.uid
+                        WHERE NOT( ISNULL( i.nid ) ) AND e.status=1";
+    if ($item_nid) {
+      $sql .= sprintf( ' AND item_nid = %d', $item_nid );
+    }
+    $result = db_query($sql . $sqltablesort);
+    while ($row = db_fetch_object($result)) {
+      $content_array[] = array( l( $row->exhibit_title, 'node/'. $row->exhibit_nid), l($row->item_title, 'node/'. $row->item_nid), $row->name, l( '[edit]', 'node/'. $row->item_nid .'/curator/note/'. $row->exhibit_nid .'/'. $row->curator_uid .'/'. $item_nid, $item['localized_options'] ) .'<p>'. l( '[delete]', 'curator_note/delete/'. $row->exhibit_nid .'/'. $row->item_nid .'/'. $row->curator_uid .'/'. $item_nid, $item['localized_options'] ) );
+    }
+    if (count($content_array) > 0) {
+      $content = theme('table', $header, $content_array, $attributes);
+    } 
+    else {
+      $content = theme('artmob_exhibit_admin_table_no_notes');
+    }
+    return $content;
+  } 
+  else {
+    return '';
+  }
+}
+
+function artmob_exhibit_display_exhibit_browser(&$node) {
+  // display exhibit browser info;
+  $is_exhibit_node = $node->type == 'Exhibit' ? TRUE : FALSE;
+  $taxonomy_types = _artmob_exhibit_taxonomy_get_types_in_vocabulary_as_array(EXHIBIT_VOCABULARY);
+
+  //only proceed if the node is of the type that can be in an exhibit
+
+  if (in_array($node->type, $taxonomy_types) || $is_exhibit_node === TRUE) {
+    if ($is_exhibit_node) {
+      $active_nid = $node->nid;
+      $_SESSION["current_exhibit"] = $node->nid; // sets the exhibit browser to last exhibit viewed.
+    }
+    else {
+      $active_nid = artmob_exhibit_get_current_session_exhibit();
+    }
+
+    if (is_numeric($active_nid)) {
+      $exhibit_node = node_load($active_nid);
+      $enodes = artmob_exhibit_build_exhibit($exhibit_node);
+                  
+      if (($active_nid && in_array($node->nid, $enodes)) || $is_exhibit_node === TRUE) {
+        $total_items = count($enodes);
+        $current_node = $node;
+    
+        if ($is_exhibit_node) {  // main page
+          $node_prior = NULL;
+          $current_node->node_next = $enodes[0];
+          $current_node->node_prior = $enodes[$total_items -1];
+        } 
+        else { // exhibit node page
+        	//drupal_set_message(devtools_dump($enodes));
+          $current_key = array_search($current_node->nid, $enodes);
+          $current_node->node_next  = $current_key == $total_items - 1 ? NULL: $enodes[$current_key + 1];
+          $current_node->node_prior = $current_key == 0 ? NULL: $enodes[$current_key-1];
+          $current_node->current_item = $current_key + 1; // backwards compatibility
+        }
+    
+        $current_node->total_items = $total_items;
+        $current_node->notes = artmob_exhibit_display_notes($current_node->nid, $exhibit_node->nid);
+    
+        $node->content['exhibit_browser'] = array(
+         '#value' => theme('artmob_exhibit_exhibit_browser_block', $current_node, $exhibit_node),
+         '#weight' => -10
+        );
+      }
+    }
+  }
+}
+
+function artmob_exhibit_view($node, $teaser = FALSE, $page = FALSE) {
+  //The view will gather all nodes associated with the exhibit and
+  //pass them to the theme as an array of nodes
+
+  $nodes = artmob_exhibit_build_exhibit($node);
+
+  if ($page) {
+    $node->body = check_markup($node->body, $node->filter, FALSE);
+    $node->content['artmob_exhibit'] = array('#value' => theme('artmob_exhibit_basic_view', $nodes, $node, $page));
+    artmob_exhibit_artmob_exhibit_set_current_session_exhibit($node->nid);
+  }
+  else {
+   $node->teaser = check_markup($node->teaser, $node->filter, FALSE);
+   $node->content['body'] = array('#value' => theme('artmob_exhibit_teaser_view', $nodes, $node, $page));
+  }
+  return $node;
+}
+
+
+/**
+ * Implementation of hook_block().
+ *
+ * Displays the Link in a block.
+ */
+function artmob_exhibit_block($op = 'list', $delta = 0) {
+  
+  $display_exhibit_browser_as_block = variable_get('exhibit_browser', 'content') == 'block' ? TRUE : FALSE;
+  $display_curatorial_notes_as_block = variable_get('curatorial_notes', 'browser') == 'block' ? TRUE: FALSE;
+
+  if ($op == 'list') {
+    $block[0]['info'] = t('Curator Panel');
+    $block[1]['info'] = t('Featured Exhibit');
+    $block[2]['info'] = t('Related Exhibits');
+    if ($display_exhibit_browser_as_block === TRUE) {
+      $block[3]['info'] = t('Exhibit Browser');
+    }
+    if ($display_curatorial_notes_as_block === TRUE) {
+      $block[4]['info'] = t('Current Exhibit Item Curator Notes');
+    }
+    return $block;
+  } 
+  else if ($op == 'configure') {
+    switch ($delta) {
+    }
+    
+    return $form;
+  } 
+  else if ($op == 'save') {
+    switch ($delta) {
+    }
+    return $form;
+    
+  } 
+  else if ($op == 'view') {
+    switch ($delta) {
+      case 0: // Current Exhibit Selector
+    $form = drupal_get_form('artmob_exhibit_current_selector');
+
+    $block['subject'] = 'Curator Panel';
+    $block['content'] = theme('artmob_exhibit_current_selector_block', $form);
+    break;
+    
+      case 1: //Featured Exhibit
+        $featured_exhibit = variable_get('featured_exhibit', NULL);
+        
+        if ($featured_exhibit) {
+          $exhibit_node = node_load($featured_exhibit);
+          $nodes = artmob_exhibit_build_exhibit($exhibit_node);
+                  $node->teaser = check_markup($node->teaser, $node->filter, FALSE);
+
+          $block['subject'] = t('Featured Exhibit');
+          $block['content'] = theme('artmob_exhibit_featured_exhibit_block', $nodes, $exhibit_node);
+        }
+        break;
+        
+      case 2: //Related Exhibits
+        if (arg(0) == 'node' and is_numeric(arg(1))) {
+          $node = node_load(arg(1));
+          //only proceed if the node is of the type that can be in an exhibit
+          $taxonomy_types = artmob_exhibit_taxonomy_get_types_in_vocabulary_as_array(EXHIBIT_VOCABULARY);
+          if (in_array($node->type, $taxonomy_types, TRUE)) {
+            $content_array = array();
+            $terms_array = array();
+
+            //get all of the exhibit vocabulary terms(exhibits) that this node is attached to
+            $terms_array = artmob_exhibit_taxonomy_get_terms_node_in_vocabulary_by_name($node->nid, EXHIBIT_VOCABULARY);
+            foreach ($terms_array as $term) {
+              $tid = $term->tid;
+              //load the exhibit
+              $result = db_query('SELECT e.*, n.*
+                                 FROM {am_exhibit} e
+                                 LEFT JOIN {node} n on e.nid = n.nid
+                                 WHERE n.status = 1
+                                 and e.exhibit_tid = %d
+                                 ORDER BY n.title', $tid);
+              while ($row = db_fetch_object($result)) {
+                $exhibit_node = node_prepare(node_load($row->nid));
+                $notes = array();
+                //attach all of the curatorial notes for this item and exhibit
+                $notes = artmob_exhibit_display_notes($node->nid, $exhibit_node->nid);
+                $exhibit_node->notes = $notes;
+              }
+        
+              $content_array[] = $exhibit_node;
+         
+            }
+            if (count($content_array) > 0) {
+              $block['subject'] = 'Related Exhibits';
+              $block['content'] = theme('artmob_exhibit_related_exhibits_block', $content_array);
+            }
+          }
+         }
+         break;
+          
+    case 3: //exhibit browser
+     if ($display_exhibit_browser_as_block === TRUE) {
+       if (arg(0) == 'node' && is_numeric(arg(1))) {
+       artmob_exhibit_display_exhibit_browser(node_load(arg(1)));
+       }
+     }
+        case 4: //Current Exhibit Item Curator Notes
+      if (arg(0) == 'node' and is_numeric(arg(1)) && $display_curatorial_notes_as_block === TRUE) {
+      $node = node_load(arg(1));
+      $taxonomy_types = artmob_exhibit_taxonomy_get_types_in_vocabulary_as_array(EXHIBIT_VOCABULARY);
+      
+      if (in_array($node->type, $taxonomy_types, TRUE) || $is_exhibit_node) {
+        $active_nid = artmob_exhibit_get_current_session_exhibit();
+        if ($active_nid) {
+        $exhibit_node = node_load($active_nid);
+        $count = db_result(db_query('SELECT COUNT(*) from {term_node} WHERE tid = %d and nid = %d', $exhibit_node->exhibit_tid, $node->nid));
+          if ($count > 0) {
+          $notes = artmob_exhibit_display_notes($node->nid, $exhibit_node->nid);
+          $node->notes = $notes;
+          $block['content'] = theme('artmob_exhibit_current_item_notes_block', $node, $exhibit_node);
+          }
+        }
+      
+      }
+      }
+      break;
+    }
+    return $block;
+  }
+}
+
+
+function artmob_exhibit_get_remove_item_text() {
+  return t('Remove item from current exhibit');
+}
+
+function artmob_exhibit_get_add_item_text() {
+  return t('Add item to current exhibit');
+}
+
+function artmob_exhibit_current_selector() {
+  global $user;
+  $path = drupal_get_path('module', 'artmob_exhibit') .'/js/current_exhibit.js';
+  drupal_add_js($path);
+
+
+  $options = artmob_exhibit_build_exhibits_for_curator_array($user->uid);
+  $first_option = 0;
+  foreach ($options as $key => $value) {
+    $first_option = $key;
+    break;
+  }
+
+
+  //User exhibit_first_option_<uid> to make it unique for each user
+  variable_set('exhibit_first_option_'.$user->uid, $first_option);
+
+  //Get the current exhibit, for this user
+  //if the current exhibit is not in the $options list
+  //and therefore is not in the current curator's list of exhibits
+  //then set the current exhibit to the first_option
+  $is_found = False;
+  $current_exhibit = variable_get('current_exhibit'.$user->uid, $first_option);
+  foreach ($options as $key => $value) {
+    if ( $key == $current_exhibit ){
+      $is_found = True;
+      break;
+    }
+  }
+  if ( !$is_found ){
+    variable_set('current_exhibit'.$user->uid, $first_option );
+  }
+
+
+  $form['current_exhibit'] = array(
+    '#type'          => 'select',
+    '#title'         => t('Current Exhibit'),
+    '#default_value' => variable_get('current_exhibit'.$user->uid, $first_option),
+    '#description'   => t('Select the current exhibit'),
+    '#options' => $options
+   );
+
+  $form['#base'] = 'artmob_exhibit_current_selector';
+
+  return $form;
+
+}
+
+function artmob_exhibit_set_exhibit_current($nid) {
+  global $user;
+  variable_set('current_exhibit'.$user->uid, $nid);
+  exit();
+}
+
+function artmob_exhibit_set_exhibit_current_node() {
+  $nid = variable_get('current_node', 0);
+  print drupal_to_js(array('nid' => $nid));
+  exit();
+}
+
+function artmob_exhibit_exhibits_page() {
+  $result = db_query('SELECT e.*, n.*
+            FROM {am_exhibit} e
+            LEFT JOIN {node} n on e.nid = n.nid
+            WHERE n.status = 1
+            ORDER BY n.created DESC');
+  while ($row = db_fetch_object($result)) {
+  $node = node_prepare(node_load($row->nid));
+  $content_array[] = $node;
+  }
+  return theme('artmob_exhibit_landing_page', $content_array);
+}
+
+function artmob_exhibit_set_current_session_exhibit($nid) {
+  //used as a jquery callback(hence the exit)
+  $_SESSION["current_exhibit"] = $nid;
+  exit();
+}
+
+function artmob_exhibit_artmob_exhibit_set_current_session_exhibit($nid) {
+  $_SESSION["current_exhibit"] = $nid;
+}
+
+function artmob_exhibit_get_current_session_exhibit() {
+  return $_SESSION["current_exhibit"];
+}
+
+function artmob_exhibit_unmark_exhibit_item($nid, $exhibit = '') {
+  if ( $exhibit == '' ){
+    $exhibit = artmob_exhibit_get_current_exhibit();
+  }
+  artmob_exhibit_remove_node_from_exhibit($nid, $exhibit );
+  print drupal_to_js(array('name' => artmob_exhibit_get_add_item_text()));
+  exit();
+}
+
+function artmob_exhibit_mark_exhibit_item($nid) {
+  artmob_exhibit_add_node_to_exhibit($nid, artmob_exhibit_get_current_exhibit());
+  print drupal_to_js(array('name' => artmob_exhibit_get_remove_item_text()));
+  exit();
+}
+
+// Implementation of hook_insert().
+
+function artmob_exhibit_insert($node) {
+   //Create a new taxonomy term for this node
+  $serialized_value = serialize($node->curators);
+  $tid = artmob_exhibit_taxonomy_add_term_to_vocabulary_by_name(EXHIBIT_VOCABULARY, 'Exhibit', $node->title, $node->body, $vid);
+  db_query("INSERT INTO {am_exhibit}
+           (nid,
+            exhibit_tid,
+            curators)
+
+            VALUES
+
+            (%d,
+            %d,
+            '%s')",
+
+            $node->nid,
+            $tid,
+            $serialized_value);
+
+  foreach ($node->curators as $curator) {
+    db_query("INSERT INTO {am_exhibit_curators}
+           (exhibit_nid,
+             curator_uid)
+             VALUES
+             (%d,
+             %d)",
+             
+             $node->nid,
+             $curator);
+
+  }
+
+
+}
+
+// Implementation of hook_update().
+function artmob_exhibit_update($node) {
+  $serialized_value = serialize($node->curators);
+  db_query("UPDATE {am_exhibit}
+      SET exhibit_tid = %d,
+      curators = '%s'
+
+      WHERE nid = %d",
+
+      $node->exhibit_tid,
+      $serialized_value,
+      $node->nid);
+
+  db_query("DELETE FROM {am_exhibit_curators} WHERE exhibit_nid = %d", $node->nid);
+
+  foreach ($node->curators as $curator) {
+    db_query("INSERT INTO {am_exhibit_curators}
+             (exhibit_nid,
+             curator_uid)
+             VALUES
+             (%d,
+             %d)",
+
+             $node->nid,
+             $curator);
+ }
+}
+
+// Implementation of hook_delete().
+function artmob_exhibit_delete($node) {
+  db_query("DELETE FROM {am_exhibit} WHERE nid = %d", $node->nid);
+
+  //When deleting an exhibit we need to delete the taxonomy we created for it
+  //as well as any curator associations and even node associations
+
+  //Delete the curators linked to this exhibit
+  db_query("DELETE FROM {am_exhibit_curators} WHERE exhibit_nid = %d", $node->nid);
+
+  //Delete the notes from all items linked to this exhibit
+  db_query("DELETE FROM {am_exhibit_items_note} WHERE exhibit_nid = %d", $node->nid);
+
+  //This will delete the term as well as all node references to the term
+  artmob_exhibit_taxonomy_del_term_from_vocabulary_by_name(EXHIBIT_VOCABULARY, $node->title);
+}
+
+// Implementation of hook_load().
+function artmob_exhibit_load($node) {
+  $t = db_fetch_array(db_query('SELECT * FROM {am_exhibit} WHERE nid = %d', $node->nid));
+  return $t;
+}
+
+
+/**
+ * Implementation of hook_submit().
+ */
+function artmob_exhibit_submit(&$node) {
+  global $user;
+  // Set default values for non-administrators.
+  if (!user_access('administer nodes')) {
+    $node->revision = 1;
+    $node->uid = $user->uid;
+  }
+}
+
+
+// Implementation of hook_form().
+function artmob_exhibit_form(&$node) {
+
+  $type = node_get_types('type', $node);
+
+  $form['Exhibit'] = array(
+    '#type'          => 'fieldset',
+    '#title'         => t('Exhibit'),
+    '#weight'        => -5,
+    '#collapsible'   => TRUE,
+    '#collapsed'     => FALSE
+ );
+
+  $form['Exhibit']['title'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Title'),
+    '#default_value' => $node->title,
+    '#description'   => t('enter the title of the exhibit'),
+    '#tree'          => 'FALSE',
+    '#required'      => True,
+    '#weight'        => -9
+ );
+
+
+  $form['Exhibit']['body'] = array(
+    '#type'          => 'textarea',
+    '#title'         => t('Description'),
+    '#default_value' => $node->body,
+    '#description'   => 'enter a description of the exhibit',
+    '#tree'          => 'FALSE',
+    '#rows'          => 10,
+    '#required'      => True,
+    '#weight'        => -7
+ );
+  $form['Exhibit']['format'] = filter_form($node->format, -6);
+
+  /*
+  $node->StartDate = artmob_exhibit_set_date($node->StartDate);
+  $form['Exhibit']['StartDate'] = array(
+    '#type'          => 'date',
+    '#title'         => t('Starting Date'),
+    '#default_value' => artmob_exhibit_timestamp_to_date($node->StartDate),
+    '#description'   => t('Enter the date when the exhibit will start'),
+    '#tree'          => 'FALSE'
+ );
+
+  $node->StopDate = artmob_exhibit_set_date($node->StopDate);
+  $form['Exhibit']['StopDate'] = array(
+    '#type'          => 'date',
+    '#title'         => t('End Date'),
+    '#default_value' => artmob_exhibit_timestamp_to_date($node->StopDate),
+    '#description'   => t('Enter the date when the exhibit will end'),
+    '#tree'          => 'FALSE'
+ );
+  */
+  $unserialized_value = array();
+  
+    global $user;
+    
+
+  $curators = unserialize($node->curators);
+  
+    if (count($curators) == 0 || !is_array($curators)) {
+      $curators = array();
+      $curators[$user->uid] = $user->uid;
+    }
+
+  $options = artmob_exhibit_build_curators_array();
+  $form['Exhibit']['curators'] = array(
+    '#type'          => 'select',
+    '#title'         => t('Curators'),
+    '#default_value' => $curators,
+    '#description'   => t('Select the curators for this exhibit'),
+    '#multiple'      => 'TRUE',
+    '#tree'          => 'FALSE',
+    '#required'      => True,
+          '#options' => $options
+ );
+
+  return $form;
+
+}
+
+/**
+ * Implementation of hook_form_alter().
+ *
+ */
+function artmob_exhibit_form_alter($form_id, &$form) {
+
+//boilerplate code to determine the node type of the form
+  if (isset($form['type'])) {
+    $type = $form['type']['#value'];
+  }
+  elseif (isset($form['orig_type'])) {
+         $type = $form['orig_type']['#value'];
+  }
+  else {
+    return;
+  }
+
+  if (($form['#node_type']->type == 'Exhibit') || ($type == 'Exhibit')) {
+    $enabled = 0;
+  } 
+  else{
+    $enabled = _artmob_exhibit_taxonomy_is_type_in_vocabulary(EXHIBIT_VOCABULARY, $type);
+  }
+
+  switch ($form_id) {
+    // Form addition that appears on Content Types page. Drupal saves as a setting.
+    case 'node_type_form':
+      $form['workflow']['is_curator_allowed'] = array(
+        '#type' => 'radios',
+        '#title' => t('Allow Curators'),
+        '#default_value' => $enabled,
+        '#options' => array(0 => t('Disabled'), 1 => t('Enabled')),
+        '#description' => t('Should this node show the curator tab?'),
+      );
+
+      //Add our custom submit to the #submit array so we can save to vocabulary_node_types
+      $form['#submit']['artmob_exhibit_node_type_custom_submit'] = array();
+
+      break;
+    case $type .'_node_form':
+      break;
+  }
+}
+
+function artmob_exhibit_node_type_custom_submit( $form, $form_value ) {
+  //we couldn't use hook_node_type because the variables were not set yet
+  $type = trim($form_value['type']);
+  $is_update = $form_value['is_curator_allowed'];
+  _artmob_exhibit_taxonomy_update_type_in_vocabulary(EXHIBIT_VOCABULARY, $type, $is_update);
+}
+
+// Implementation of hook_help().
+function artmob_exhibit_help($section) {
+  switch ($section) {
+    case 'admin/help#description':
+      return t('Enables the creation of exhibit.');
+      break;
+    case 'admin/modules#description':
+      return t('Enables the creation of exhibits.');
+      break;
+    case 'admin/node/add#artmob_exhibit':
+      return t('An Exhibit. Use this page to add an exhibit.');
+      break;
+  }
+}
+
+
+function artmob_exhibit_build_curators_array() {
+  $options = array();
+  $db_query = db_query("SELECT u.name, u.uid FROM {users_roles} s
+             LEFT JOIN {role} r on s.rid=r.rid
+             LEFT JOIN users u on u.uid = s.uid
+             WHERE r.name = '". ROLE_CURATOR ."'");
+       
+  while ($item = db_fetch_object($db_query)) {
+    $options[$item->uid] = $item->name;
+  }
+   
+   // always add User 1
+   
+  $db_query = db_query("SELECT name FROM {users} WHERE uid=1");
+  $uobj = db_fetch_object($db_query);
+   
+  if (!$options[1]) {
+    $options[1] = $uobj->name;
+  }
+   
+   return $options;
+}
+
+function artmob_exhibit_build_exhibits_for_curator_array($curator_uid = NULL) {
+
+	if ($curator_uid == NULL) {
+		global $user;
+		$curator_uid = $user->uid;
+	}
+	
+
+  $options = array();
+  $db_query = db_query("SELECT n.nid, n.title FROM {am_exhibit_curators} c
+              LEFT JOIN {node} n ON c.exhibit_nid = n.nid
+              WHERE c.curator_uid = %d having NOT(IsNull(nid))", $curator_uid);
+  while ($item = db_fetch_object($db_query)) {
+    $options[$item->nid] = $item->title;
+  }
+  return $options;
+}
+
+function artmob_exhibit_list_all_exhibits( $include_none = True, $none_text = 'None') {
+  $options = array();
+  if ( $include_none ) {
+    $options[0] = $none_text;
+  }
+    
+  $db_query = db_query("SELECT * FROM {node} WHERE type = 'Exhibit' and status = 1");
+
+  while ($item = db_fetch_object($db_query)) {
+    $options[$item->nid] = $item->title;
+  }
+
+  return $options;
+}
+
+function artmob_exhibit_build_exhibits_for_item_array($nid) {
+  $options = array();
+  $db_query = db_query("SELECT * FROM {term_node} WHERE nid = %d", $nid);
+  
+  $ua_all = user_access('Edit All Exhibits');
+  
+  global $user;
+
+  while ($item = db_fetch_object($db_query)) {
+  	$db_query_2 = db_query("SELECT * from {am_exhibit} e LEFT JOIN {node} n ON e.nid = n.nid WHERE exhibit_tid = %d", $item->tid);
+    while ($exhibit = db_fetch_object($db_query_2)) {
+    
+    	$curators = unserialize($exhibit->curators);
+    	if ($ua_all || in_array($user->uid,$curators)) {
+	    	$options[$exhibit->nid] = $exhibit->title;
+	    } 
+    }
+  }
+
+  return $options;
+}
+
+function artmob_exhibit_display_notes($item_nid, $exhibit_nid, $curator_uid = 0) {
+  $content_array = array();
+  $sql = sprintf("SELECT note, curator_uid FROM {am_exhibit_items_note}
+                    WHERE item_nid = %d
+                    AND exhibit_nid = %d",
+                    $item_nid,
+                    $exhibit_nid);
+  if ($curator_nid) {
+    $sql .= sprintf(" AND curator_uid = %d", $curator_uid);
+  }
+
+  $sql .= ' order by weight';
+  $result = db_query($sql);
+  while ($row = db_fetch_object($result)) {
+    $content_array[$row->curator_uid] = $row->note;
+  }
+  return $content_array;
+}
+
+function artmob_exhibit_add_node_to_exhibit($nid, $exhibit_nid) {
+  if (!artmob_exhibit_is_node_in_exhibit($nid, $exhibit_nid)) {
+    $node = node_load($exhibit_nid);
+    $qry = sprintf("INSERT INTO {term_node}(nid, tid)
+                     VALUES (%d, %d)", $nid, $node->exhibit_tid);
+    $result = db_query($qry);
+  }
+
+  $count = db_result( db_query( "select count(*) from {am_exhibit_items_weight}
+                                 where item_nid = %d and exhibit_nid = %d",
+                                 $nid, $exhibit_nid ));
+  if ( $count == 0 ) {
+    //Also insert a default weight
+    db_query("insert into {am_exhibit_items_weight} set item_nid = %d, exhibit_nid = %d, weight = %d",
+                 $nid, $exhibit_nid, 0);
+  }
+
+}
+
+function artmob_exhibit_remove_node_from_exhibit($nid, $exhibit_nid) {
+  $exhibit_node = node_load($exhibit_nid);
+  if (isset($exhibit_node)) {
+    db_query("DELETE FROM {term_node} WHERE nid = %d AND tid = %d ", $nid, $exhibit_node->exhibit_tid);
+  }
+}
+
+function artmob_exhibit_is_node_in_exhibit($nid, $exhibit_nid) {
+  $node = node_load($exhibit_nid);
+  if ($nid and $exhibit_nid) {
+    $count = db_result(db_query("SELECT COUNT(nid) FROM {term_node} WHERE nid = %d AND tid = %d", $nid, $node->exhibit_tid));
+    return ($count);
+  }
+  else {
+    return FALSE;
+  }
+}
+
+function artmob_exhibit_curator_note_delete() {
+  $form = array();
+  $form['#attributes'] = array('enctype' => "multipart/form-data");
+
+  $form['exhibit_nid'] = array(
+    '#type' => 'hidden',
+    '#value' => arg(2)
+  );
+
+  $form['item_nid'] = array(
+    '#type' => 'hidden',
+    '#value' => arg(3)
+  );
+
+  $form['curator_uid'] = array(
+    '#type' => 'hidden',
+    '#value' => arg(4)
+  );
+
+  $form['current_nid'] = array(
+    '#type' => 'hidden',
+    '#value' => arg(5)
+  );
+
+
+  $form['delete_display'] = array(
+    '#value' => 'Are you sure that you want to delete this curator note?',
+    '#weight' => -5,
+  );
+
+  $form['resolve_cancel'] = array(
+    '#type'          => 'submit',
+    '#value'         => t('Submit'),
+    '#weight' => 0,
+  );
+
+  $form['resolve_submit'] = array(
+    '#type'          => 'submit',
+    '#value'         => t('Cancel'),
+    '#weight' => 4,
+  );
+
+
+  $form['#submit'] = array(
+    'artmob_exhibit_curator_note_delete_submit' => array()
+  );
+
+  return $form;
+
+}
+
+function artmob_exhibit_curator_note_delete_submit($form_id, $form_values) {
+  if ( $form_values['op'] == 'Submit' ) {
+    artmob_exhibit_delete_note($form_values['exhibit_nid'], $form_values['item_nid'], $form_values['curator_uid'] );
+    drupal_set_message('The note has been deleted');
+  } 
+  else {
+   //drupal_set_message('cancelled');
+  }
+
+  return 'node/'. $form_values['current_nid'] .'/curator';
+}
+
+function artmob_exhibit_delete_note( $exhibit_nid = 0, $item_nid = 0, $curator_uid = 0 ) {
+  if (($exhibit_nid == 0) || ( $item_nid == 0 ) || ( $curator_uid == 0 ) ) {
+    return;
+  } 
+  else {
+    db_query('DELETE FROM {am_exhibit_items_note}
+              WHERE exhibit_nid = %d
+              AND item_nid = %d
+              AND curator_uid = %d',
+              $exhibit_nid,
+              $item_nid,
+              $curator_uid );
+  }
+}
+
+//----------------------------------------------
+// Implementation of hook_views_tables()
+/*
+function artmob_exhibit_views_tables() {
+  $tables['Exhibit'] = array(
+    "name" => "am_exhibit",
+    "join" => array(
+      "left" => array(
+        "table" => "node",
+        "field" => "nid"
+     ),
+      "right" => array(
+        "field" => "nid"
+     ),
+   ),
+    "fields" => array(
+      "StartDate" => array(
+        'name' => "Exhibit: Start Date",
+        'handler' => views_handler_field_dates(),
+        'sortable' => TRUE
+     ),
+      "StopDate" => array(
+        'name' => "Exhibit: End Date",
+        'handler' => views_handler_field_dates(),
+        'sortable' => TRUE
+     ),
+   ),
+
+    "sorts" => array(
+      'StartDate' => array(
+        'name' => t('Exhibit: Start Date'),
+        'handler' => 'views_handler_sort_date',
+        'option' => views_handler_sort_date_options(),
+        'help' => t('Sort by the start date of the exhibit.'),
+      ),
+      'StopDate' => array(
+        'name' => t('Exhibit: End Date'),
+        'handler' => 'views_handler_sort_date',
+        'option' => views_handler_sort_date_options(),
+        'help' => t('Sort by the end date of the exhibit.'),
+      ),
+
+   ),
+    "filters" => array(
+      'StartDate' => array(
+        'name' => t('Exhibit: Start Date'),
+        'operator' => 'views_handler_operator_gtlt',
+        'value' => views_handler_filter_date_value_form(),
+        'handler' => 'views_handler_filter_timestamp',
+        'option' => 'string',
+        'help' => t('This filter allows exhibits to be filtered by their start date.')
+          .' '. views_t_strings('filter date'),
+     ),
+      'StopDate' => array(
+        'name' => t('Exhibit: End Date'),
+        'operator' => 'views_handler_operator_gtlt',
+        'value' => views_handler_filter_date_value_form(),
+        'handler' => 'views_handler_filter_timestamp',
+        'option' => 'string',
+        'help' => t('This filter allows exhibits to be filtered by their end date.')
+          .' '. views_t_strings('filter date'),
+     ),
+   )
+ );
+  return $tables;
+}
+*/
+
+function artmob_exhibit_get_exhibit_item_nodes() {
+  return array('Articles', 'audio', 'DigitizedWorks', 'image', 'video', 'amPicture');
+}
+
+function artmob_exhibit_get_current_exhibit() {
+  global $user;
+  $first_option =  $_SESSION["current_exhibit"] ?  $_SESSION["current_exhibit"] : variable_get('exhibit_first_option_'.$user->uid, 0);
+  $current_exhibit = variable_get('current_exhibit'.$user->uid, $first_option);
+  if (($current_exhibit == 0) || ( $current_exhibit == '' )) {
+    $current_exhibit = $first_option;
+    variable_set('current_exhibit'.$user->uid, $current_exhibit);
+  }
+  
+  return $current_exhibit;
+}
+
+
+function artmob_exhibit_list_curators(&$exhibit_node) {
+        
+    $unserialized_value = array();
+    
+    if (is_string($exhibit_node->curators)) {  // $exhibit_node->curators is coming in as an array for some reason.  
+    	$unserialized_value = unserialize($exhibit_node->curators);
+    }
+
+    $curators = array();
+    if ( is_array( $unserialized_value ) ) {
+      foreach ($unserialized_value as $key) {
+        $curator_user = user_load(array('uid' => $key));
+        $curators[] = $curator_user->screen_name ? $curator_user->screen_name : $curator_user->name;
+      }
+    }
+
+    return $curators;
+
+}
+
+function _artmob_exhibit_taxonomy_get_types_in_vocabulary_as_array($vname) {
+  $vid = db_result(db_query("SELECT vid FROM {vocabulary} WHERE name = '%s'", $vname));
+  $results = array();
+
+  if ($vid) {
+    $result = db_query("SELECT t.type FROM {vocabulary} v LEFT JOIN vocabulary_node_types t ON v.vid = t.vid WHERE v.vid = %d", $vid);
+
+    while ($row = db_fetch_object($result)) {
+      $results[] = $row->type;
+    }
+  }
+
+  return $results;
+
+}
+
+function _artmob_exhibit_taxonomy_is_type_in_vocabulary($vname, $node_type) {
+  $vid = db_result(db_query("SELECT vid FROM {vocabulary} WHERE name = '%s'", $vname));
+  $results = 0;
+  if ($vid) {
+    $results = db_result( db_query("SELECT count(*) from {vocabulary_node_types} WHERE vid = %d and type = '%s'", $vid, $node_type));
+  }
+
+  return $results;
+}
+
+function _artmob_exhibit_taxonomy_update_type_in_vocabulary($vname, $node_type, $is_update = True) {
+  $vid = db_result(db_query("SELECT vid FROM {vocabulary} WHERE name = '%s'", $vname));
+  $results = False;
+  if ($vid) {
+    //First delete out the type
+    db_query("delete from {vocabulary_node_types} WHERE vid = %d and type = '%s'", $vid, $node_type);
+    //if $is_update then add it back in.
+    if ( $is_update ) {
+      db_query("insert into {vocabulary_node_types} set vid = %d, type = '%s'", $vid, $node_type);
+     $results = True;
+    }
+  }
+  return $results;
+}
+
+
+function _artmob_exhibit_jump_to_exhibit_item($exhibit_nid, $item_nid) {
+  artmob_exhibit_artmob_exhibit_set_current_session_exhibit($exhibit_nid);
+  drupal_goto('node/'. $item_nid);
+}
+
+/* 
+	This function returns TRUE when the supplied exhibits do not have notes.
+	It returns FALSE if all supplied exhibits have notes.
+*/
+
+function artmob_exhibit_add_note_visibility(&$exhibits,$notes=array()) {
+	if (!is_array($exhibits)) { 
+		drupal_set_message('not array');
+		return FALSE; 
+	} else {
+		return count($exhibits) > count($notes) ? TRUE : FALSE;
+	}
+	
+}
+
+
+function theme_artmob_exhibit_landing_page($content_array = array()) {
+  $blocks = array();
+  if (count($content_array) == 0) {
+    $content .= '<p>No exhibits are currently available.</p>';
+  } 
+  else {
+    foreach ($content_array as $node) {
+        $content .= node_view($node, TRUE, FALSE);
+    }
+  }
+  return $content;
+}
+
+
+function theme_artmob_exhibit_curator_form_list($nid, $content_array = array()) {
+  //The content_array is an array of objects each object contains all of the fields in the node table and the am_exhibit_items_note table.
+  $content = '<fieldset><legend>Edit your existing notes for this item</legend>';
+  $content .= '<p>Click the link below to edit your note for the listed exhibit:</p>';
+  $content .= '<ul>';
+  foreach ($content_array as $row) {
+         $note = $row->note <> '' ? 'My note: '. strip_tags(addslashes($row->note)) : '';
+
+     $content .= '<li>'. l($row->title, 'node/'. $nid .'/curator/note/'. $row->exhibit_nid, array('title' => $note));
+  }
+  $content .= '</ul>';
+  
+  $content .= '</fieldset>';
+
+  return $content;
+}
+
+function theme_artmob_exhibit_basic_view($nodes, $exhibit_node, $page) {
+  drupal_set_title('');
+  $content_array = array();
+  $content = '';
+  $content .= theme('artmob_exhibit_list_curators', artmob_exhibit_list_curators($exhibit_node));
+  $content .= theme('theme_artmob_exhibit_show_exhibit_date', $exhibit_node);
+  $content .= $exhibit_node->body;
+  
+  if (count($nodes) > 0) {
+    $content .= "<ul>";
+    foreach ($nodes as $nid) {      
+      $itemnode = node_load($nid);
+      $content .= '<li>'. l($itemnode->title,"node/" . $itemnode->nid) .'</li>';
+      //$content .= node_view($itemnode, TRUE, FALSE, FALSE);
+    }
+    $content .= "</ul>";
+  }
+
+  return $content;
+}
+
+function theme_artmob_exhibit_teaser_view($nodes, $exhibit_node, $page) {
+	$content = '';
+  $content .= theme('artmob_exhibit_list_curators', artmob_exhibit_list_curators($exhibit_node));
+  $content .= theme('theme_artmob_exhibit_show_exhibit_date', $exhibit_node);
+  $content .= $exhibit_node->teaser;
+  
+  return $content;
+}
+
+function theme_artmob_exhibit_list_curators($curators) {
+  if (count($curators)>0) {
+    $last_curator = array_pop($curators);
+    $content .= '<div class="exhibit-curated-by"><span class="exhibit-curators-label">Curated by </span>'. (count($curators) >0 ? join(', ', $curators) .' and ' : '')  ."{$last_curator}.</div>";
+    return $content;
+  }
+}
+
+
+function theme_artmob_exhibit_list_items($list = array()) {
+  $content = '<ul>';
+  foreach ($list as $list_item) {
+    $content .= '<li>'. $list_item .'</li>';
+  }
+  $content .= '</ul>';
+  return $content;
+}
+
+function theme_artmob_exhibit_current_item_notes_block($node, $exhibit_node) {
+  if ($node->notes) {
+  $path = drupal_get_path('module', 'artmob_exhibit');
+  $content .= "\n\n<div class='curator-note'>\n";
+  
+  foreach ($node->notes as $curator_uid => $note) {
+    $curator = user_load(array('uid' => $curator_uid));
+    $content .= "<div class='curator-individual-note'>\n";
+    $content .= "<div class='exhibit-begin-quote'><img src='". ARTMOB_EXHIBIT_IMAGE_PATH ."/curator-begin_quote.png' /></div>\n";
+    $content .= "<div class='exhibit-end-quote'><img src='". ARTMOB_EXHIBIT_IMAGE_PATH ."/curator-end_quote.png' /></div>\n";
+    $content .= "<div class='curator-note-content'>\n";
+    $content .= check_markup($note, 1, FALSE);
+    $content .= "<div class='curator-byline'>— ". $curator->name ."</div>\n";
+    $content .= "</div>\n";
+    $content .= "</div>\n";
+  }
+  $content .= "</div>\n\n";
+  }
+  return $content;
+}
+
+function theme_artmob_exhibit_featured_exhibit_block($nodes, $exhibit_node) {
+  $curators = theme('artmob_exhibit_list_curators', artmob_exhibit_list_curators($exhibit_node));
+  $dates = theme('theme_artmob_exhibit_show_exhibit_date', $exhibit_node);
+  $content .= "<h3>". l($exhibit_node->title, "node/". $exhibit_node->nid) ."</h3>";
+  $content .= "<div class='featured-curators'>\n";
+  $content .= $curators;
+  $content .= "</div>";
+
+  $content .= $exhibit_node->teaser;
+  $content .='<div class=exhibitList">';
+  $content .= '<h4>Items in Exhibit</h4>';
+  if (count($nodes) > 0) {
+  $content .='<ul>';
+  foreach ($nodes as $item) {
+    $nobj = db_fetch_object(db_query("SELECT title from {node} WHERE nid=%d", $item));
+    //$content .= '<li>'.l($nobj->title, 'node/'.$item).'</li>';
+    $content .= '<li>'. l($nobj->title, 'exhibit/item/'. $exhibit_node->nid .'/'. $item) .'</li>';
+  }
+  $content .='</ul>';
+  }
+
+  $content .='<div class="ctrContent">';
+
+  if ($exhibit_node->nid > 0) {
+    $content .= sprintf('<input id="view-exhibit-button" onclick="window.location=\'%s\'" class="form-button" type="button" value="View Exhibit" />', check_plain(url('node/'. $exhibit_node->nid, NULL, NULL, TRUE)));
+  }
+  
+  $content .='</div>';
+  $content .='</div>';
+
+  return $content;
+}
+
+	function theme_artmob_exhibit_exhibit_browser_block(&$node, &$exhibit_node) {
+  
+  $is_exhibit_node =($node->type == 'Exhibit');
+
+  if ($node->node_prior != NULL) {
+    $prior_node = node_load($node->node_prior);
+    $prior_node_title = $prior_node->title;
+    $prior_node_class = 'active';
+  } 
+  else {
+    //$node->node_prior = $node->nid;
+    $prior_node = node_load($node->nid); //If we are at the beginning then previous keeps us here
+    $prior_node_title = 'This is the first item in the exhibit';
+    $prior_node_class = 'inactive';
+  }
+
+  if ($node->node_next != NULL) {
+    $next_node = node_load($node->node_next);
+    $next_node_title = $next_node->title;
+    $next_node_class = 'active';
+  } 
+  else {
+    //$node->node_next = $node->nid;
+    $next_node = node_load($node->nid); //If we are at the end then next keeps us here
+    $next_node_title = 'This is the last item in the exhibit';
+    $next_node_class = 'inactive';
+
+  }
+
+  $content .= "<div class='exhibitContainer'>";
+  $content .= "<div class='exhibitHeader'>";
+  $content .= "<div class='closeBtn'>";
+
+  //Exhibit nodes don't need the close button.
+  if (!$is_exhibit_node) {
+    $content .= "<a href='javascript:clear_exhibit_browser()'>Close <img src='". ARTMOB_EXHIBIT_IMAGE_PATH ."/close_btn_icon.jpg' alt='Close this exhibit' /></a>";
+  }
+
+  $content .= "</div>";
+  if (arg(1) != $node->nid) {
+    $content .= "<div class='exhibit-surtitle'>This item is part of the exhibit</div>";
+  } else {
+    $content .= "<div class='exhibit-surtitle'>Select “View Exhibit” to begin</div>";
+  }
+  $content .= "<h2>{$exhibit_node->title}</h2>";
+  $content .= "</div>";
+
+
+  $content .= "<div class='exhibitBody'>";
+  $content .= "<div class='exhibitTools'>";
+  $content .= "<ul class='status'>";
+  if ($is_exhibit_node) {
+        $plural = $node->total_items > 1 ? 's' : '';
+    $content .= "<li>This exhibit contains ". $node->total_items ." item{$plural}</li>";
+  } 
+  else {
+    $content .= "<li>Showing ". $node->current_item ." of ". $node->total_items ." items</li>";
+  }
+    $content .= "</ul>";
+    $content .= "<ul class='tools'>";
+    $content .= "<li>". l("<img src='". ARTMOB_EXHIBIT_IMAGE_PATH ."/exhibit-tool-left.gif' /> Back To Exhibits", "exhibits", array(), NULL, NULL, FALSE, TRUE) ."</li>";
+
+  //Do not show a previous link if it is an exhibit node
+  if (!$is_exhibit_node) {
+  	if ($node->node_prior != NULL) {
+	    $content .= "<li>&nbsp;&nbsp;|&nbsp;&nbsp;</li>";
+	    $content .= "<li>". l("<img src='". ARTMOB_EXHIBIT_IMAGE_PATH ."/exhibit-tool-previous.gif' /> Previous", 'node/'. $node->node_prior, array('title' => $prior_node_title, 'class' => $prior_node_class), NULL, NULL, FALSE, TRUE) ."</li>";
+    }
+  }
+  
+  if ($is_exhibit_node) {
+    if ($node->node_next > 0) {
+      $content .= "<li>&nbsp;&nbsp;|&nbsp;&nbsp;</li>";
+      $content .= "<li>". l("<img src='". ARTMOB_EXHIBIT_IMAGE_PATH ."/exhibit-tool-right.gif' /> View Exhibit", 'node/'. $node->node_next, array('title' => $next_node_title, 'class' => $next_node_class), NULL, NULL, FALSE, TRUE) ."</li>";
+    }
+  } 
+  else if ($node->node_next != NULL) {
+    $content .= "<li>&nbsp;&nbsp;|&nbsp;&nbsp;</li>";
+    $content .= "<li>". l("<img src='". ARTMOB_EXHIBIT_IMAGE_PATH ."/exhibit-tool-next.gif' /> Next", 'node/'. $node->node_next, array('title' => $next_node_title, 'class' => $next_node_class), NULL, NULL, FALSE, TRUE) ."</li>";
+  }
+  
+  $content .= "</ul>";
+  $content .= "</div>";      
+  $content .= "</div>";
+
+  $content .= variable_get('curatorial_notes', 'browser') == 'browser' ? theme('artmob_exhibit_current_item_notes_block', $node, $exhibit_node) : '';
+  $content .= "</div>   ";
+   
+  return $content;
+}
+
+function theme_artmob_exhibit_related_exhibits_block($content_array = array()) {
+  $content = '';
+  $content .= '<div class="related-exhibit-surtitle">This item is in the following exhibits:</div>';
+  $content .= '<ul>';
+  foreach ($content_array as $node) {
+    $content .= '<li>'. l($node->title, 'node/'. $node->nid) .'</h2>';
+  }
+  $content .= '</ul>';
+
+  return $content;
+}
+
+function theme_artmob_exhibit_current_selector_block($form) {
+  global $user;
+
+  if (count(artmob_exhibit_build_exhibits_for_curator_array($user->uid)) == 0) {
+    if (user_access('Add Exhibit')) {
+      $content = '<h3>Welcome '. $user->name .'</h3>';
+      $content .= "<p>". l("Add your first exhibit", "node/add/Exhibit") ."!</p>";
+      return $content;
+    }
+    else {
+      return $content;
+    }
+
+  } 
+  else {
+    $content = '<h3>Welcome '. $user->name .'</h3>';
+    $content .= $form;
+  }
+
+  if (arg(0) == 'node' and is_numeric(arg(1))) {
+    $node = node_load(arg(1));
+    $taxonomy_types = artmob_exhibit_taxonomy_get_types_in_vocabulary_as_array(EXHIBIT_VOCABULARY);
+    if (in_array($node->type, $taxonomy_types, TRUE)) {
+
+      if (artmob_exhibit_is_node_in_exhibit($node->nid, artmob_exhibit_get_current_exhibit())) {
+        $unmark = "inline";
+        $mark = "none";
+      }
+      else {
+        $unmark = "none";
+        $mark = "inline";
+      }
+      $content .= l(artmob_exhibit_get_remove_item_text(), 'exhibit/unmark/'. $node->nid,
+      array('class' => 'am-bookmark-unmark', 'style' => 'display:'. $unmark));
+      $content .= l(artmob_exhibit_get_add_item_text(), 'exhibit/mark/'. $node->nid,
+      array('class' => 'am-bookmark-mark', 'style' => 'display:'. $mark));
+      $content .= '<br />';
+      $content .= '<br />';
+      $content .= l(t('Add/edit curatorial note'), 'node/'. $node->nid .'/curator/note/'. artmob_exhibit_get_current_exhibit(),
+      array('class' => 'am-curator'));
+
+    }
+  }
+
+  return $content;
+}
+
+function theme_artmob_exhibit_admin_table_no_notes() {
+  $content = "<p>This item has no notes to administrate.</p>";
+  return $content;
+}
+
+function theme_artmob_exhibit_curator_panel_no_exhibits() {
+  $content = "<p>You are not currently curating any exhibits. Create a new exhibit using the form below.</p>";
+  return $content;
+}
+?>

@@ -1,0 +1,33 @@
+$content[type]  = array (
+  'name' => 'Video',
+  'type' => 'amVideo',
+  'description' => 'Add a Video to your Artmob Archive.',
+  'title_label' => 'Title',
+  'body_label' => 'Description',
+);
+$content[fields]  = array (
+  0 =>
+  array (
+    'widget_type' => 'image',
+    'label' => 'Illustration',
+    'weight' => '-2',
+    'max_resolution' => 0,
+    'max_filesize' => 0,
+    'max_number_images' => 0,
+    'image_path' => 'images',
+    'file_extensions' => 'jpg jpeg png gif',
+    'custom_alt' => 1,
+    'custom_title' => 0,
+    'description' => 'Add an illustration to your content.  Illustrations should be at least 250px wide, and preferably cropped to 250px x 140px for best results.',
+    'group' => false,
+    'required' => '0',
+    'multiple' => '0',
+    'use_default_image' => 0,
+    'default_image_upload' => '',
+    'default_image' => NULL,
+    'field_name' => 'field_illustration',
+    'field_type' => 'image',
+    'module' => 'imagefield',
+  ),
+);
+

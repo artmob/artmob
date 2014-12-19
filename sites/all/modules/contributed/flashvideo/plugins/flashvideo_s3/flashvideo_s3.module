@@ -1,0 +1,256 @@
+<?php
+
+// $Id: flashvideo_s3.module,v 1.1.2.10 2007/08/16 22:44:48 arthuregg Exp $
+
+/**
+ *  This plugin uses code from the Drupal Media Mover Module.  Although, most of the code in this file
+ *  is original, I used the S3 plugin for the Media Mover Module as a base to write the funcitonality
+ *  of this plugin.  Please show your appreciation for this plugin by giving your support to the 
+ *  author of the Media Mover Module at www.tunaspecial.com.
+ */
+
+/**
+ * Please note, to use this module, you need to download drivers (pear libraries and s3 driver) from
+ * http://www.travistidwell.com/files/Storage3.tar.gz
+ */
+
+/**
+ * check and see if the drivers are installed
+ */
+function _flashvideo_s3_drivers_check() {
+  $storage3_driver = getcwd() .'/'. drupal_get_path('module', 'flashvideo') .'/drivers/Storage3/Storage3.php';
+  if (file_exists($storage3_driver)) {
+    require_once($storage3_driver);
+    return TRUE;
+  }
+  else {
+    drupal_set_message('Error: Could not load the S3 drivers.  You must download and extract the drivers from http://www.travistidwell.com/files/Storage3.tar.gz, and then place the Storage3 folder in the drivers directory of the flashvideo folder to use this plugin.', 'error');
+    return FALSE;
+  }
+}
+
+function _flashvideo_s3_getS3() {
+  static $access_key, $secret_key, $url;
+
+  // If they do not have this enabled, then we will just return false.
+  if (!variable_get('flashvideo_s3_enable', 0)) {
+    return FALSE;
+  }
+
+  // Get s3 library. if it can't be loaded, exit
+  if (! _flashvideo_s3_drivers_check()) {
+     return FALSE;
+  }  
+  
+  // Set up the S3 URL
+  $url = variable_get('flashvideo_s3_url', 'https://s3.amazonaws.com/');
+  
+  // Get the access key.
+  if (! $access_key = variable_get('flashvideo_s3_key', NULL)) {
+    drupal_set_message('Error: Access Key is not Set', 'error');
+    return FALSE; 
+  }
+  
+  // Get the secret key
+  if (! $secret_key = variable_get('flashvideo_s3_skey', NULL)) {
+    drupal_set_message('Error: Secret Key is not set', 'error');
+    return FALSE;
+  }
+
+  // Create a new S3 storage object
+  $s3 = new Storage3($access_key, $secret_key, $url);
+  return $s3;
+}
+
+/**
+ * Implementation of hook_form_alter()
+ */
+function flashvideo_s3_form_alter($form_id, &$form)  {
+   global $conf;
+   
+   if ( $form_id == 'flashvideo_settings_form' ) {
+     _flashvideo_s3_drivers_check();
+   
+     $form['flashvideo_s3'] = array(
+       '#type' => 'fieldset',
+       '#title' => t("Amazon S3 Configuration"),
+       '#collapsed' => TRUE,
+       '#collapsible' => TRUE,
+       '#weight' => -1
+       );
+   
+     $form['flashvideo_s3']['flashvideo_s3_enable'] = array(
+       '#type' => 'checkbox',
+       '#title' => t('Enable FlashVideo S3 support'),
+       '#default_value' => variable_get('flashvideo_s3_enable', 0),
+       '#description' => t("Enables S3 support for the FlashVideo module."),
+     );
+   
+     $form['flashvideo_s3']['flashvideo_s3_delete'] = array(
+       '#type' => 'checkbox',
+       '#title' => t('Delete Local files after move.'),
+       '#default_value' => variable_get('flashvideo_s3_delete', 0),
+       '#description' => t("Checking this check box will delete the files from the local file system after they have been moved to the Amazon S3 servers."),
+     );
+   
+     $form['flashvideo_s3']['flashvideo_s3_bucket'] = array(
+       '#type' => 'textfield',
+       '#title' => t('S3 Bucket'),
+       '#default_value' => variable_get('flashvideo_s3_bucket', str_replace(" ", "_", $conf['site_name'])),
+       '#description' => t("Name of the S3 bucket, note this has to be unique."),
+     );
+   
+     $form['flashvideo_s3']['flashvideo_s3_url'] = array(
+       '#type' => 'textfield',
+       '#title' => t('S3 URL'),
+       '#default_value' => variable_get('flashvideo_s3_url', "https://s3.amazonaws.com/"),
+       '#description' => t("URL to send to amazon. You probably do not need to change this."),
+     );
+   
+     $form['flashvideo_s3']['flashvideo_s3_key'] = array(
+       '#type' => 'textfield',
+       '#title' => t('S3 Key'),
+       '#default_value' => variable_get('flashvideo_s3_key', ""),
+       '#description' => t("S3 key."),
+     );
+   
+     $form['flashvideo_s3']['flashvideo_s3_skey'] = array(
+       '#type' => 'textfield',
+       '#title' => t('S3 Secret Key'),
+       '#default_value' => variable_get('flashvideo_s3_skey', ""),
+       '#description' => t("S3 secret key."),
+     );
+   }
+}
+
+/**
+ * flashvideo_s3_flashvideo_delete_file - deletes a file from s3
+ *
+ * @file Standard Drupal file object
+ *
+ * @returns a url to the amazon file
+ */
+function flashvideo_s3_flashvideo_delete_file($file) {
+
+   // Get the Amazon S3 object...
+   if ( !variable_get('flashvideo_s3_enable', 0) || !($s3 = _flashvideo_s3_getS3()) ) {
+     return array();
+   }
+   
+   // Get the path from the database and return it... if it does not exist, then just return false.
+   if ($bucket = db_result(db_query("SELECT bucket FROM {flashvideo_s3} WHERE fid=%d", $file->fid)) ) {
+      
+      // Get the filename for the file on the Amazon S3 server.
+      $filename = basename($file->filepath);
+      
+      // Delete the file from Amazon S3
+      if ( $s3->rmFile($bucket, $filename) ) {
+         drupal_set_message($file->filename .' has been deleted from the Amazon S3 server');
+      
+         // Delete the file from the Amazon S3 database table.
+         db_query("DELETE FROM {flashvideo_s3} WHERE fid = %d", $file->fid);
+         
+         return TRUE;         
+      }
+      else {
+         drupal_set_message('Could not delete file on Amazon S3 server:<br/><pre>'. var_export($s3->why(), TRUE) .'</pre>', 'error');
+      }
+   }  
+
+   return array();
+}
+
+/**
+ * flashvideo_s3_flashvideo_get_file - retrieves a file from s3
+ *
+ * @file Standard Drupal file object
+ *
+ * @returns a url to the amazon file
+ */
+
+function flashvideo_s3_flashvideo_get_file($file) {
+
+   // Get the Amazon S3 object...
+   if ( !variable_get('flashvideo_s3_enable', 0) || !($s3 = _flashvideo_s3_getS3()) ) {
+     return array();
+   }
+
+   // Get the path from the database and return it... if it does not exist, then just return false.
+   if ($bucket = db_result(db_query("SELECT bucket FROM {flashvideo_s3} WHERE fid=%d", $file->fid)) ) {
+      
+      // Get the filename for the file on the Amazon S3 server.
+      $filename = basename($file->filepath);
+      
+      // Check to make sure this file exists on the Amazon S3 server.
+      if ($s3->fileExists($bucket, $filename)) {
+      
+         // If they wish to delete the local files, then we need to do this here...
+         if ( variable_get('flashvideo_s3_delete', 0) && file_exists(getcwd() .'/'. $file->filepath) ) {
+            // Delete the file
+            file_delete($file->filepath); 
+         }
+      
+         $filepath['file'] = "http://s3.amazonaws.com/". $bucket ."/". $filename;
+         return $filepath;
+      }
+      else {
+         drupal_set_message('File Not found on S3 server:<br/><pre>'. var_export($s3->why(), TRUE) .'</pre>', 'error');
+      }
+   } 
+
+   return array();
+}
+
+/**
+ * flashvideo_s3_flashvideo_save_file - sends a file to s3
+ *
+ * @file Standard Drupal file object
+ *
+ * @returns a url to the amazon file
+ */
+
+function flashvideo_s3_flashvideo_save_file($file) {
+  global $conf;
+
+  // Get the Amazon S3 object...
+  if ( !variable_get('flashvideo_s3_enable', 0) || !($s3 = _flashvideo_s3_getS3()) ) {
+    return array();
+  }
+
+  // Assign the Amazon S3 bucket name based off of the site name and the local path to the video file.
+  $bucket = variable_get('flashvideo_s3_bucket', str_replace(" ", "_", $conf['site_name']));
+  $bucket .= ($bucket == '') ? '' : '_';  
+  $filepath = substr( $file->filepath, 0, (strrpos($file->filepath, '/')) );
+  $bucket .= str_replace("/", "_", $filepath);
+
+  // Retrieve a list of all the buckets for this account.
+  $buckets = $s3->lsBuckets();
+
+  // If this bucket is not in the list, then we will want to add this bucket.
+  if (!$buckets || !(in_array($bucket, $buckets))) {
+    // Create the bucket.
+    if (!($s3->mkBucket($bucket) )) {
+      drupal_set_message('Failed to make Bucket:<br/><pre>'. var_export($s3->why(), TRUE) .'</pre>', 'error');
+      return array();
+    }
+  }
+   
+  // Set the filename of this file.
+  $filename = basename($file->filepath);
+   
+  // Now place the file on the server.
+  if ( $s3->putFile(getcwd() .'/'. $file->filepath, $bucket, $filename) ) {
+    if (!($s3->setACL($bucket, $filename))) {
+      drupal_set_message('Failed setACL:<br/><pre>'. var_export($s3->why(), TRUE) .'</pre>', 'error');
+      return array();
+    }
+  } 
+  else {
+      drupal_set_message('Failed to place file on S3 server:<br/><pre>'. var_export($s3->why(), TRUE) .'</pre>', 'error');
+      return array();
+  }
+   
+  db_query("INSERT INTO {flashvideo_s3} (fid, bucket) VALUES (%d, '%s')", $file->fid, $bucket); 
+  drupal_set_message($file->filename .' has been added to the Amazon S3 server');
+  return TRUE;
+}

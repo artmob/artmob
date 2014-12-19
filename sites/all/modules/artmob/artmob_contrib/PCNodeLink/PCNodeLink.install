@@ -1,0 +1,47 @@
+<?php
+// $Id: PCNodeLink install,v 1.0 2007/08/12 01:30:00 drumm Exp $
+
+function PCNodeLink_update_1() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+    	$items = array();
+      	$items[] = update_sql("ALTER TABLE {PC_NodeLink}
+              			           ADD COLUMN is_merged smallint default 0");
+      break;
+    case 'pgsql':
+      break;
+  }
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function PCNodeLink_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      db_query("CREATE TABLE {PC_NodeLink} (
+        FromNode int unsigned NOT NULL default '0',
+        ToNode int unsigned NOT NULL default '0',
+	      FromType text,
+	      ToType text,
+        LinkIndex int unsigned NOT NULL default '0',
+        LinkBlob longblob
+	) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+      break;
+    case 'pgsql':
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function PCNodeLink_uninstall() {
+  db_query('DROP TABLE {PC_NodeLink}');
+}
+?>

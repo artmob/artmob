@@ -1,0 +1,9 @@
+; $Id: mollom.info,v 1.1.2.3 2008/04/01 14:16:25 dries Exp $
+name = Mollom
+description = Protects against comment and contact form spam.
+
+; Information added by drupal.org packaging script on 2010-09-16
+version = "5.x-1.9"
+project = "mollom"
+datestamp = "1284657061"
+

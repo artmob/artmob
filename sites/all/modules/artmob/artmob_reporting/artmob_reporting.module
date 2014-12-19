@@ -1,0 +1,203 @@
+<?php
+// $Id: artmob_reporting.info,v 1.0 2008/03/07 20:55:33 stop14 Exp $
+
+/* @file
+ * ADDDOCUMENTATION
+ **/
+
+//----------------------------------------------
+/**
+ * Implementation of hook_help().
+ */
+function artmob_reporting_help($section) {
+  switch ($section) {
+    case 'admin/help#artmob_reporting':
+      $output = '<p>'. t('The artmob_reporting module contains general global functions') .'</p>';
+      return $output;
+    case 'admin/modules#description':
+    case 'admin/settings/amMain':
+      return (t('Contains general global functions.'));
+  }
+}
+
+//----------------------------------------------
+/**
+ * Implementation of hook_menu().
+ */
+function artmob_reporting_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+  } 
+  else {
+    $items[] = array(
+      'path'          => 'admin/artmob/report_settings',
+      'title'         => t('Artmob Report Settings'),
+      'description'   => t('Configure the Artmob Reporting module'),
+      'position'      => 'right',
+      'weight'        => -7,
+      'callback'      => 'system_admin_menu_block_page',
+      'access'        => user_access('Generate reports')
+    );
+
+    $items[] = array(
+      'path'          => 'admin/artmob/reports',
+      'title'         => t('Artmob Reports'),
+      'description'   => t('View statistical reports for Artmob-related information.'),
+      'position'      => 'right',
+      'weight'        => -6,
+      'callback'      => 'artmob_reporting_reports_page',
+      'access'        => user_access('Generate reports')
+    );
+
+  }
+  return $items;
+}
+
+function artmob_reporting_init() {
+   define('ARTMOB_REPORTING_MODULE_PATH', drupal_get_path('module', 'artmob_reporting'));
+   define('ARTMOB_REPORTING_JS_PATH', ARTMOB_REPORTING_MODULE_PATH .'/js');
+   define('ARTMOB_REPORTING_CSS_PATH', ARTMOB_REPORTING_MODULE_PATH .'/css');
+   
+   drupal_add_js(drupal_get_path('module', 'artmob_fair_dealing') .'/js/fairdealing_var.js');
+   drupal_add_css(ARTMOB_REPORTING_CSS_PATH ."/artmob_reporting.css");
+
+   $reporting_settings = array(
+   );
+
+   drupal_add_js(array('artmobreport' => $reporting_settings), "setting");
+
+}
+
+function artmob_reporting_perm() {
+  return array('Generate reports');
+}
+
+
+function artmob_reporting_reports_page() {
+  $content = '';
+  drupal_set_title('Artmob Reporting');
+  
+  $content = artmob_reporting_generate_report('work_distribution');
+  
+  return $content;
+
+}
+
+function artmob_reporting_generate_report($report, $param=array()) {
+  $function = '_artmob_reporting_generate_'. $report;
+  
+  if (function_exists($function)) {
+    
+    /* Add Graphing Libraries */
+       drupal_add_js(ARTMOB_REPORTING_JS_PATH ."/artmob_reporting.js");
+    drupal_add_js(ARTMOB_REPORTING_JS_PATH .'/tuftegraph/jquery.enumerable.js');
+    drupal_add_js(ARTMOB_REPORTING_JS_PATH .'/tuftegraph/jquery.tufte-graph.js');
+    drupal_add_js(ARTMOB_REPORTING_JS_PATH .'/tuftegraph/raphael.js');
+
+    return call_user_func($function, $param);
+  } 
+  else {
+    return ("<p>The requested report does not exist</p>");
+  }
+}  
+
+function _artmob_reporting_generate_work_distribution($param=array()) {
+  
+  $db_query = db_query("SELECT c.work_type FROM {am_citation} AS c, {node} AS n WHERE c.link_nid=n.nid AND n.status=1 ORDER BY c.work_type ASC;");
+  
+  $values = array();
+  
+  while ($row = db_fetch_object($db_query)) {
+    
+    if ($row->work_type <> '') {
+      $worktype = substr($row->work_type, 0, 1);
+      $workval = substr($row->work_type, 1, 1);
+      
+      if (!$values[$worktype]) {
+        $values[$worktype]['type'] = $worktype;
+        $values[$worktype]['count'] = 0;
+        $values[$worktype]['distribution'] = NULL;
+      }
+      
+      $values[$worktype]['count']++;    
+      
+      if (!$values[$worktype]['distribution'][$workval]) {
+        $values[$worktype]['distribution'][$workval] = 1;
+      } 
+      else {
+        $values[$worktype]['distribution'][$workval]++;
+      }
+    } 
+  }
+  
+  //drupal_set_message(devtools_dump($values));
+  
+  $reporting_settings = array(
+    'workdistribution' => drupal_to_js($values)
+  );
+   drupal_add_js(array('artmobreport' => $reporting_settings), "setting");
+
+  
+
+  return theme('artmob_reporting_work_distribution');
+}
+
+function theme_artmob_reporting_work_distribution() {
+  $content = '';
+  $content .= '<div id="reporting-work-distribution">';
+  $content .= '<div class="report-set" >';
+  $content .= "<h2>Distribution of works in archive by artistic type</h2>";
+  $content .= "<div id='reporting-work-distribution-graph'  class='graph' style='width:100%; height: 400px'></div>";
+  $content .= "</div>";
+  $content .= "</div>";
+  
+  return $content;
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ *
+*/
+function artmob_reporting_nodeapi(&$node, $op, $teaser=NULL, $page=NULL) {
+  switch ($op) {
+    case 'update':
+      $update = TRUE;
+
+      //Fall through, with flag.  Therefore with every update we delete
+      //the old associated records and then resave the new ones
+
+    case 'delete':
+      if (!$update) {
+        break;
+      }
+
+    case 'insert':
+      break;
+    case 'load':
+      break;
+    case 'prepare':
+      break;
+    case 'view':      
+     break;
+    case 'delete revision':
+      break;
+    case 'submit':
+      break;
+  }
+}
+
+//----------------------------------------------
+function artmob_reporting_user($op, &$edit, &$account) {
+  global $user;
+  switch ($op) {
+    case 'load':
+    case 'view':
+    case 'form':
+  };
+}
+
+
+
+
+

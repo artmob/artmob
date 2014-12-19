@@ -1,0 +1,10 @@
+name = Widget
+description = Drop-in widget built with AHAH Forms.
+package = AHAH
+dependencies = ahah_forms
+
+; Information added by drupal.org packaging script on 2010-07-11
+version = "5.x-1.x-dev"
+project = "ahah_forms"
+datestamp = "1278833372"
+

@@ -1,0 +1,54 @@
+<?php
+// $Id: activeedit_theme_assist.module,v 1.1 2007/05/14 23:18:28 nedjo Exp $
+
+/**
+ * Implementation of hook_menu().
+ */
+function activeedit_theme_assist_menu($may_cache) {
+  $items = array();
+  if ($may_cache) {
+    $items[] = array(
+      'path' => 'admin/settings/activeedit_theme_assist',
+      'title' => t('Activeedit theme assist'),
+      'description' => t('Helper page for theming Active Edit'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('activeedit_theme_assist_form')
+    );
+  }
+  return $items;
+}
+
+/**
+ * Menu callback. Render a form with sample theme overrides.
+ */
+function activeedit_theme_assist_form() {
+  $form = array();
+
+  $text = "function activeedit_theme_data() {\n";
+  $text .= '  $selectors = array();'."\n";
+  $text .= "\n";
+
+  $elements = activeedit_get_targets('elements', FALSE, TRUE);
+
+  foreach ($elements as $id => $element) {
+    if (isset($element['#title']) && $element['#title']) {
+      $text .= '  // '. t('Selector for @title', array('@title' => $element['#title'])) .".\n";
+    }
+    $text .= '  $selectors[\''. $id .'\'] = \''. $element['#selector'] .'\';'."\n";
+  }
+
+  $text .= "\n";
+  $text .= '  return $selectors;'."\n";
+  $text .= "}\n";
+
+  $form['activeedit_theme_assist_tabs_mode'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Sample theme override'),
+    '#default_value' => $text,
+    '#rows' => 25,
+    '#description' => t('This is a sample theme override, showing all the available elements and their default selectors. To convert this into theme override file, save it as themename.inc, where themename is the name of your theme, in the Active Edit module\'s theme directory. Then edit the file to reflect the selectors for your theme. If the selectors are the same as the defaults, you can delete their lines.'),
+  );
+
+  return $form;
+}
+

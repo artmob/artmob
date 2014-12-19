@@ -1,0 +1,356 @@
+<?php
+/**
+ * @file
+ * ADDDOCUMENTATION
+ */
+ 
+// $Id: taxonomy_block.module,v 1.18 2007/06/01 16:10:12 drewish Exp $
+
+/**
+ * Implementation of hook_help.
+ */
+function taxonomy_block_help($section) {
+  switch ($section) {
+    case 'admin/build/taxonomy-block' :
+      return t("This page is used to administer your site's taxonomy blocks. Once you've created a block here, you'll need to enable it on the <a href='@blocks'>blocks configuration page</a>.", array('@blocks' => url('admin/build/block')));
+  }
+}
+
+/**
+ * Implementation of hook_perm.
+ */
+function taxonomy_block_perm() {
+  return array('administer taxonomy blocks');
+}
+
+/**
+ * Implementation of hook_menu.
+ */
+function taxonomy_block_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+    $items[] = array(
+      'path' => 'admin/build/taxonomy-block',
+      'title' => t('Taxonomy Blocks'),
+      'description' => t('Configure how taxonomy blocks are displayed.'),
+      'callback' => 'taxonomy_block_overview',
+      'access' => user_access('administer taxonomy blocks'),
+    );
+    $items[] = array(
+      'path' => 'admin/build/taxonomy-block/list',
+      'title' => t('List'),
+      'callback' => 'taxonomy_block_overview',
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+      'weight' => -10,
+    );
+    $items[] = array(
+      'path' => 'admin/build/taxonomy-block/add',
+      'title' => t('Add'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('taxonomy_block_form'),
+      'type' => MENU_LOCAL_TASK,
+    );
+    $items[] = array(
+      'path' => 'admin/build/taxonomy-block/edit',
+      'title' => t('Edit Taxonomy Block'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('taxonomy_block_form'),
+      'type' => MENU_CALLBACK,
+    );
+    $items[] = array(
+      'path' => 'admin/build/taxonomy-block/delete',
+      'title' => t('Delete Taxonomy Block'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('taxonomy_block_delete_form'),
+      'type' => MENU_CALLBACK,
+    );
+  }
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_block.
+ */
+function taxonomy_block_block($op = 'list', $delta = 0) {
+  switch ($op) {
+    case 'list':
+      return taxonomy_block_get_blocks();
+      break;
+    case 'view':
+      return taxonomy_block_get_block($delta);
+      break;
+  }
+}
+
+/**
+ * Displays block delete confirmation form.
+ */
+function taxonomy_block_delete_form($bid) {
+  $form['bid'] = array(
+    '#type' => 'value',
+    '#value' => $bid,
+  );
+  return confirm_form(
+    $form,
+    t('Are you sure you want to delete the taxonomy block?'),
+    'admin/build/taxonomy-block',
+    t('This action cannot be undone.'),
+    t('Delete'),
+    t('Cancel')
+  );
+}
+
+
+/**
+ * Inserts a block into the database.
+ */
+function taxonomy_block_insert($edit) {
+  $sql = 'INSERT INTO {taxonomy_block} (tid, name, description, length, type, teaser) VALUES (%d, \'%s\', \'%s\', %d, \'%s\', %d)';
+  db_query($sql, $edit['tid'], $edit['name'], $edit['description'], $edit['length'], $edit['type'], $edit['teaser']);
+  drupal_set_message(t('Created taxonomy block'));
+}
+
+/**
+ * Updates a block in the database.
+ */
+function taxonomy_block_update($edit) {
+  $sql = 'UPDATE {taxonomy_block} SET tid = %d, name = \'%s\', description = \'%s\', length = %d, type = \'%s\', teaser = %d WHERE bid = %d';
+  db_query($sql, $edit['tid'], $edit['name'], $edit['description'], $edit['length'], $edit['type'], $edit['teaser'], $edit['bid']);
+  drupal_set_message(t('Updated taxonomy block'));
+}
+
+/**
+ * Deletes a block from the database.
+ */
+function taxonomy_block_delete($bid) {
+  db_query('DELETE FROM {taxonomy_block} WHERE bid = %d', $bid);
+}
+
+
+/**
+ * Generates the block creation form.
+ */
+function taxonomy_block_form($bid = NULL) {
+  if ($bid) {
+    $block = db_fetch_object(db_query('SELECT * FROM {taxonomy_block} WHERE bid = %d', $bid));
+  }
+
+  $form['bid'] = array(
+    '#type' => 'value',
+    '#value' => $bid,
+  );
+  $form['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Block Name'),
+    '#default_value' => $block->name,
+    '#description' => t('This is the name of your block.'),
+  );
+  $form['description'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Block Description'),
+    '#default_value' => $block->description,
+    '#description' => t('This is the description of your block. It is not displayed to users.'),
+    '#required' => TRUE,
+  );
+  $form['teaser'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Teaser Length'),
+    '#default_value' => $block->teaser,
+    '#description' => t('This is the length of node body content to display under each title in characters. Leave blank for none.'),
+  );
+  $form['length'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Node Count'),
+    '#default_value' => $block->length,
+    '#description' => t('This is the number of nodes to display.'),
+    '#required' => TRUE,
+  );
+
+  $form['tid'] = _taxonomy_block_get_taxonomy_dropdown($block->type == 'vocabulary' ? 'v'. $block->tid : $block->tid);
+
+  $form[] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+  );
+  $form[] = array(
+    '#type' => 'submit', 
+    '#value' => t('Cancel'),
+  );
+
+  return $form;
+}
+
+/**
+ * taxonomy_block_form form validate callback function.
+ */
+function taxonomy_block_form_validate($form_id, $edit) {
+  if (!$edit['description']) {
+    form_set_error('description', t('Please provide a description for your block. It will be used in administration screens only.'));
+  }
+  if ($edit['length'] <= 0) {
+    form_set_error('length', t('Please provide a node count greater than 0.'));
+  }
+  if (!$edit['tid']) {
+    form_set_error('tid', t('Please select a category for your block to display.'));
+  }
+}
+
+function taxonomy_block_form_submit($form_id, $edit) {
+  if (substr($edit['tid'], 0, 1) == 'v') {
+    $edit['type'] = 'vocabulary';
+    $edit['tid'] = substr($edit['tid'], 1);
+  }
+  else {
+    $edit['type'] = 'term';
+  }
+
+  if (isset($edit['bid'])) {
+    taxonomy_block_update($edit);
+  }
+  else {
+    taxonomy_block_insert($edit);
+  }
+  return 'admin/build/taxonomy-block';
+}
+
+/**
+ * Confirm deletion of a block.
+ */
+function taxonomy_block_delete_form_submit($form_id, $edit) {
+  taxonomy_block_delete($edit['bid']);
+  // Not sure if it is really needed - maybe it is too drastic!
+  cache_clear_all();
+  drupal_set_message(t('The block has been deleted.'));
+  return 'admin/build/taxonomy-block';
+}
+
+/**
+* Displays a list of the blocks.
+*/
+function taxonomy_block_overview() {
+  $result = db_query('SELECT * FROM {taxonomy_block}');
+
+  $rows = array();
+  while ($block = db_fetch_object($result)) {
+    $links = array(
+      'edit' => array(
+        'title' => t('edit'),
+        'href' => 'admin/build/taxonomy-block/edit/'. $block->bid,
+      ),
+      'delete' => array(
+        'title' => t('delete'),
+        'href' => 'admin/build/taxonomy-block/delete/'. $block->bid,
+      ),
+    );
+    $rows[] = array($block->description, theme('links', $links));
+  }
+
+  if ($rows) {
+    $header = array(t('Block'), t('Operations'));
+    return theme('table', $header, $rows);
+  }
+  else {
+    return t("Currently, there are no taxonomy blocks. You can <a href='@url'>create a new one</a>.", array('@url' => url('admin/build/taxonomy-block/add')));
+  }
+}
+
+/**
+* Returns the requested block by $bid.
+*/
+function taxonomy_block_get_block($bid) {
+  $tids = array();
+  $result = db_fetch_object(db_query('SELECT * FROM {taxonomy_block} WHERE bid = %d', $bid));
+  if ($result) {
+    if ($result->type == 'term') {
+      $tids = taxonomy_get_children($result->tid);
+      $tids[$result->tid] = $result->tid;
+    }
+    else {
+      $tids = taxonomy_get_children(0, $result->tid);
+    }
+
+    $nodes = db_query(db_rewrite_sql('SELECT DISTINCT(n.nid), n.title, r.body, n.sticky, n.created FROM {term_node} t INNER JOIN {node} n ON t.nid = n.nid INNER JOIN {node_revisions} r ON r.vid = n.vid WHERE t.tid IN (\'%s\') AND n.status = 1 ORDER BY n.sticky DESC, n.created DESC LIMIT %d'), implode(array_keys($tids), ','), $result->length);
+
+    $block['subject'] = $result->name;
+
+    while ($node = db_fetch_object($nodes)) {
+      if ($result->teaser) {
+        $teaser = strip_tags(substr($node->body, 0, $result->teaser) . (strlen($node->body) > $result->teaser ? '...' : ''));
+      }
+      $items .= theme('taxonomy_block_list_item', $node, $teaser);
+    }
+    $content = theme('taxonomy_block_list', $items);
+
+    $content .= '<div class="more-link '. (($x % 2 == 1) ? 'even': 'odd') .'">';
+    $content .= l(t("more"), 'taxonomy/term/'. implode(array_keys($tids), '+'), array("title" => t("View all."))) .'</div>';
+    $block['content'] = $content;
+    return $block;
+  }
+  else {
+    return NULL;
+  }
+}
+
+/**
+* Returns an array of block descriptions for the block config page.
+*/
+function taxonomy_block_get_blocks() {
+  $results = db_query('SELECT * FROM {taxonomy_block}');
+  while ($block = db_fetch_object($results)) {
+    $blocks[$block->bid]['info'] = $block->description;
+  }
+  return $blocks;
+}
+
+/**
+* Returns a dropdown event taxonomy term input control.
+*/
+function _taxonomy_block_get_taxonomy_dropdown($tid = NULL) {
+  $vocabs = taxonomy_get_vocabularies();
+
+  $links[] = '';
+  foreach ($vocabs as $vocab) {
+    $links['v'. $vocab->vid] = $vocab->name;
+    $tree = taxonomy_get_tree($vocab->vid);
+    foreach ($tree as $term) {
+      $links[$term->tid] = $vocab->name .' - '. $term->name;
+    }
+  }
+
+  return array(
+    '#type' => 'select',
+    '#title' => t('Category'),
+    '#default_value' => $tid,
+    '#options' => $links,
+    '#description' => t('Select taxonomy type to display'),
+    '#required' => TRUE,
+  );
+}
+
+/**
+ * Format a single item for a list.
+ *
+ * @ingroup themeable
+ */
+function theme_taxonomy_block_list_item($node, $teaser) {
+  $output = '<li>'. l($node->title, 'node/'. $node->nid, array('title' => t('view %title in full', array('%title' => $node->title))));
+  if ($teaser) {
+    $output .= '<br/>'. $teaser;
+  }
+  $output .= '</li>';
+
+  return $output;
+}
+
+/**
+ * Format the item list.
+ *
+ * @ingroup themeable
+ */
+function theme_taxonomy_block_list($items) {
+  $output = '<div class="item-list"><ul>'. $items .'</ul></div>';
+
+  return $output;
+}

@@ -1,0 +1,18 @@
+<?php
+// $Id: artmob_discuss install,v 1.0 2010/04/26 01:30:00 stop14 Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function artmob_discuss_install() {
+	  
+  variable_set('comment_form_location',1);
+  variable_set('discuss_intro','Please share your thoughts and news on this item, as well as links to reviews and pertinent material on the web.');
+  variable_set('discuss_intro_format',FILTER_FORMAT_DEFAULT);
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function artmob_discuss_uninstall() {
+}

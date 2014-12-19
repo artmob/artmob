@@ -1,0 +1,24 @@
+<?php
+
+function test_node_info() {
+  return array(
+    'test' => array(
+      'name' => t('Test Node'),
+      'module' => 'test',
+      'description' => t('Test Node Type.'),
+    )
+  );	
+}
+
+
+function test_form(&$node) {
+	$form = array();
+	$form['widget1'] = array( '#type' => 'widget', '#title' => 'Widget One', 
+		'#process' => array('widget_expand' => array($node) ) );
+	$form['tf'] = array( '#type' => 'textfield', '#title' => 'TextField', '#value' => 'Hello World' );
+//	$form['widget2'] = array( '#type' => 'widget', '#title' => 'Widget Two', 
+//		'#process' => array('widget_expand' => array($node) ) );
+	return $form;	
+}
+
+

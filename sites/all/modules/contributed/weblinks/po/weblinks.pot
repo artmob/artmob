@@ -1,0 +1,1383 @@
+# $Id: weblinks.pot,v 1.1.2.1.2.28 2009/02/14 16:47:42 nancyw Exp $
+#
+# LANGUAGE translation of Drupal (general)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  token_weblinks.inc,v 1.1.4.7 2008/10/03 15:22:23 nancyw
+#  weblinks_errors.inc,v 1.1.4.2 2008/08/21 13:39:00 nancyw
+#  weblinks_views.inc,v 1.1.2.3 2008/08/21 01:04:26 nancyw
+#  weblinks.module,v 1.1.4.58.2.120 2009/02/13 23:36:10 nancyw
+#  weblinks.module,v 1.1.4.58.2.113 2008/12/08 14:27:05 rmiddle
+#  weblinks_filter.module,v 1.1.2.6 2008/10/22 18:06:09 nancyw
+#  weblinks.info,v 1.1.2.3 2008/07/01 17:20:03 rmiddle
+#  weblinks_collector.module,v 1.1.2.5 2008/08/27 13:10:07 nancyw
+#  weblinks_convert_links.module,v 1.1.2.6 2008/09/15 14:40:22 nancyw
+#  weblinks_collector.info,v 1.1.2.2 2008/07/28 17:29:15 nancyw
+#  weblinks_convert_links.info,v 1.1.2.1 2008/08/08 00:33:17 rmiddle
+#  weblinks_filter.info,v 1.1.2.2 2008/07/28 17:29:15 nancyw
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2009-02-13 18:43-0500\n"
+"PO-Revision-Date: YYYY-mm-DD HH:MM+ZZZZ\n"
+"Last-Translator: NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <EMAIL@ADDRESS>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: token_weblinks.inc:14
+msgid "The weight of the node."
+msgstr ""
+
+#: token_weblinks.inc:15
+msgid "The URL of the Web Link."
+msgstr ""
+
+#: token_weblinks.inc:16
+msgid "Unfiltered URL of the Web Link.  WARNING - raw user input."
+msgstr ""
+
+#: token_weblinks.inc:17
+msgid "The title of the Web Link."
+msgstr ""
+
+#: token_weblinks.inc:18
+msgid "Unfiltered title of the Web Link.  WARNING - raw user input."
+msgstr ""
+
+#: token_weblinks.inc:19
+msgid "How many times the Web Link has been clicked."
+msgstr ""
+
+#: token_weblinks.inc:20
+msgid "When the Web Link was last clicked on."
+msgstr ""
+
+#: token_weblinks.inc:21
+msgid "The status of the Web Link when it was last checked."
+msgstr ""
+
+#: token_weblinks.inc:22
+msgid "The date/time when the Web Link was last checked."
+msgstr ""
+
+#: token_weblinks.inc:67
+msgid "Never"
+msgstr ""
+
+#: weblinks_errors.inc:10
+msgid "100 - Continue"
+msgstr ""
+
+#: weblinks_errors.inc:11
+msgid "101 - Switching Protocols"
+msgstr ""
+
+#: weblinks_errors.inc:12
+msgid "200 - OK"
+msgstr ""
+
+#: weblinks_errors.inc:13
+msgid "201 - Created"
+msgstr ""
+
+#: weblinks_errors.inc:14
+msgid "202 - Accepted"
+msgstr ""
+
+#: weblinks_errors.inc:15
+msgid "203 - Non-Authoritative Information"
+msgstr ""
+
+#: weblinks_errors.inc:16
+msgid "204 - No Content"
+msgstr ""
+
+#: weblinks_errors.inc:17
+msgid "205 - Reset Content"
+msgstr ""
+
+#: weblinks_errors.inc:18
+msgid "206 - Partial Content"
+msgstr ""
+
+#: weblinks_errors.inc:19
+msgid "300 - Multiple Choices"
+msgstr ""
+
+#: weblinks_errors.inc:20
+msgid "301 - Moved Permanently"
+msgstr ""
+
+#: weblinks_errors.inc:21
+msgid "302 - Found"
+msgstr ""
+
+#: weblinks_errors.inc:22
+msgid "303 - See Other"
+msgstr ""
+
+#: weblinks_errors.inc:23
+msgid "304 - Not Modified"
+msgstr ""
+
+#: weblinks_errors.inc:24
+msgid "305 - Use Proxy"
+msgstr ""
+
+#: weblinks_errors.inc:25
+msgid "306 - (Unused)"
+msgstr ""
+
+#: weblinks_errors.inc:26
+msgid "307 - Temporary Redirect"
+msgstr ""
+
+#: weblinks_errors.inc:27
+msgid "400 - Bad Request"
+msgstr ""
+
+#: weblinks_errors.inc:28
+msgid "401 - Unauthorized"
+msgstr ""
+
+#: weblinks_errors.inc:29
+msgid "402 - Payment Required"
+msgstr ""
+
+#: weblinks_errors.inc:30
+msgid "403 - Forbidden"
+msgstr ""
+
+#: weblinks_errors.inc:31
+msgid "404 - Not Found"
+msgstr ""
+
+#: weblinks_errors.inc:32
+msgid "405 - Method Not Allowed"
+msgstr ""
+
+#: weblinks_errors.inc:33
+msgid "406 - Not Acceptable"
+msgstr ""
+
+#: weblinks_errors.inc:34
+msgid "407 - Proxy Authentication Required"
+msgstr ""
+
+#: weblinks_errors.inc:35
+msgid "408 - Request Timeout"
+msgstr ""
+
+#: weblinks_errors.inc:36
+msgid "409 - Conflict"
+msgstr ""
+
+#: weblinks_errors.inc:37
+msgid "410 - Gone"
+msgstr ""
+
+#: weblinks_errors.inc:38
+msgid "411 - Length Required"
+msgstr ""
+
+#: weblinks_errors.inc:39
+msgid "412 - Precondition Failed"
+msgstr ""
+
+#: weblinks_errors.inc:40
+msgid "413 - Request Entity Too Large"
+msgstr ""
+
+#: weblinks_errors.inc:41
+msgid "414 - Request-URI Too Long"
+msgstr ""
+
+#: weblinks_errors.inc:42
+msgid "415 - Unsupported Media Type"
+msgstr ""
+
+#: weblinks_errors.inc:43
+msgid "416 - Requested Range Not Satisfiable"
+msgstr ""
+
+#: weblinks_errors.inc:44
+msgid "417 - Expectation Failed"
+msgstr ""
+
+#: weblinks_errors.inc:45
+msgid "500 - Internal Server Error"
+msgstr ""
+
+#: weblinks_errors.inc:46
+msgid "501 - Not Implemented"
+msgstr ""
+
+#: weblinks_errors.inc:47
+msgid "502 - Bad Gateway"
+msgstr ""
+
+#: weblinks_errors.inc:48
+msgid "503 - Service Unavailable"
+msgstr ""
+
+#: weblinks_errors.inc:49
+msgid "504 - Gateway Timeout"
+msgstr ""
+
+#: weblinks_errors.inc:50
+msgid "505 - HTTP Version Not Supported"
+msgstr ""
+
+#: weblinks_views.inc:25
+msgid "Webinks: Link title"
+msgstr ""
+
+#: weblinks_views.inc:26
+msgid "The title of the Weblink."
+msgstr ""
+
+#: weblinks_views.inc:34
+msgid "Weblinks: URL"
+msgstr ""
+
+#: weblinks_views.inc:35
+msgid "The URL for the link."
+msgstr ""
+
+#: weblinks_views.inc:40
+msgid "Weblinks: weight"
+msgstr ""
+
+#: weblinks_views.inc:41
+msgid "The weight for the link."
+msgstr ""
+
+#: weblinks_views.inc:44
+msgid "Weblinks: link status"
+msgstr ""
+
+#: weblinks_views.inc:45
+msgid "The last status returned from vailidity checking."
+msgstr ""
+
+#: weblinks_views.inc:49
+msgid "Weblinks: last checked"
+msgstr ""
+
+#: weblinks_views.inc:50
+msgid "The date/time of the last vailidity checking."
+msgstr ""
+
+#: weblinks_views.inc:56
+msgid "Weblinks: click count"
+msgstr ""
+
+#: weblinks_views.inc:57
+msgid "The number of times a user has clicked on the link."
+msgstr ""
+
+#: weblinks_views.inc:61
+msgid "Weblinks: last click"
+msgstr ""
+
+#: weblinks_views.inc:62
+msgid "The date/time the link was last clicked."
+msgstr ""
+
+#: weblinks.module:30 weblinks_hook_view.module:30
+msgid "Enables the submission and display of categorized links to other web sites."
+msgstr ""
+
+#: weblinks.module:41 weblinks_hook_view.module:41
+msgid "Weblinks Overview"
+msgstr ""
+
+#: weblinks.module:54 weblinks_hook_view.module:54
+msgid "Add a new link"
+msgstr ""
+
+#: weblinks.module:60 weblinks_hook_view.module:60
+msgid "Add a group"
+msgstr ""
+
+#: weblinks.module:67 weblinks_filter.module:115 weblinks_hook_view.module:67
+msgid "Weblinks settings"
+msgstr ""
+
+#: weblinks.module:110;130;136;153;2225 weblinks_hook_view.module:110;130;136;153;2217 weblinks.info:0
+msgid "Web Links"
+msgstr ""
+
+#: weblinks.module:111 weblinks_hook_view.module:111
+msgid "Create a new web link."
+msgstr ""
+
+#: weblinks.module:113 weblinks_hook_view.module:113
+msgid "Link Name"
+msgstr ""
+
+#: weblinks.module:115 weblinks_hook_view.module:115
+msgid "Link Description"
+msgstr ""
+
+#: weblinks.module:144 weblinks_hook_view.module:144
+msgid "Web Links Overview"
+msgstr ""
+
+#: weblinks.module:145 weblinks_hook_view.module:145
+msgid "Overview and maintenance of weblinks groups."
+msgstr ""
+
+#: weblinks.module:154 weblinks_hook_view.module:154
+msgid "Set a variety of options for web link display and categorization."
+msgstr ""
+
+#: weblinks.module:162 weblinks_hook_view.module:162
+msgid "General"
+msgstr ""
+
+#: weblinks.module:172;418 weblinks_hook_view.module:172;418
+msgid "Group settings"
+msgstr ""
+
+#: weblinks.module:195 weblinks_hook_view.module:195
+msgid "My Web Links"
+msgstr ""
+
+#: weblinks.module:272 weblinks_hook_view.module:272
+msgid "!url reports !status !extra."
+msgstr ""
+
+#: weblinks.module:277 weblinks_hook_view.module:277
+msgid "!url updated to !new."
+msgstr ""
+
+#: weblinks.module:284 weblinks_hook_view.module:284
+msgid "!url unpublished."
+msgstr ""
+
+#: weblinks.module:297 weblinks_hook_view.module:297
+msgid "Weblinks_cron checked !count links."
+msgstr ""
+
+#: weblinks.module:323 weblinks_hook_view.module:323
+msgid "Vocabulary to use for Weblinks"
+msgstr ""
+
+#: weblinks.module:335 weblinks_hook_view.module:335
+msgid "No vocabulary for the weblinks content type was found. A new vocabulary was created."
+msgstr ""
+
+#: weblinks.module:344 weblinks_hook_view.module:344
+msgid "Maximum block title length"
+msgstr ""
+
+#: weblinks.module:346 weblinks_hook_view.module:346
+msgid "This controls how much of a node title will be shown in a block to conserve space. Zero (0) means unlimited."
+msgstr ""
+
+#: weblinks.module:351 weblinks_hook_view.module:351
+msgid "Links page settings"
+msgstr ""
+
+#: weblinks.module:352 weblinks_hook_view.module:352
+msgid "These settings control the main links page display."
+msgstr ""
+
+#: weblinks.module:363 weblinks_hook_view.module:363
+msgid "Make groups collapsible"
+msgstr ""
+
+#: weblinks.module:365 weblinks_hook_view.module:365
+msgid "Enable this if you want the groups to be collapsible on the main links page."
+msgstr ""
+
+#: weblinks.module:370 weblinks_hook_view.module:370
+msgid "Collapse all groups"
+msgstr ""
+
+#: weblinks.module:372 weblinks_hook_view.module:372
+msgid "Enable this if you want all the groups to be collapsed on the main links page."
+msgstr ""
+
+#: weblinks.module:385 weblinks_hook_view.module:385
+msgid "Page Sort order"
+msgstr ""
+
+#: weblinks.module:387;718 weblinks_hook_view.module:387;710
+msgid "This determines how the links page will sort the links."
+msgstr ""
+
+#: weblinks.module:394 weblinks_hook_view.module:394
+msgid "Page information"
+msgstr ""
+
+#: weblinks.module:397 weblinks_hook_view.module:397
+msgid "This description will appear at the top of the links page.  It will be filtered by your default input format."
+msgstr ""
+
+#: weblinks.module:407 weblinks_hook_view.module:407
+msgid "Maximum group depth (main links page)"
+msgstr ""
+
+#: weblinks.module:409 weblinks_hook_view.module:409
+msgid "This controls how many subgroups, if any, will display on the main links page. Blank, zero (0), and one (1) will all show only the top level."
+msgstr ""
+
+#: weblinks.module:419 weblinks_hook_view.module:419
+msgid "These settings control the way the groups display on the main links page."
+msgstr ""
+
+#: weblinks.module:427 weblinks_hook_view.module:427
+msgid "Display group descriptions"
+msgstr ""
+
+#: weblinks.module:429 weblinks_hook_view.module:429
+msgid "Generally recommended."
+msgstr ""
+
+#: weblinks.module:434 weblinks_hook_view.module:434
+msgid "Empty container text"
+msgstr ""
+
+#: weblinks.module:437 weblinks_hook_view.module:437
+msgid "This text will appear when a container is empty. Leave it blank to not show the group at all. It will be filtered by your default input format."
+msgstr ""
+
+#: weblinks.module:442 weblinks_hook_view.module:442
+msgid "Title for unclassified links"
+msgstr ""
+
+#: weblinks.module:443;1244 weblinks_hook_view.module:443;1312
+msgid "Unclassified"
+msgstr ""
+
+#: weblinks.module:444 weblinks_hook_view.module:444
+msgid "This will be used to describe the unclassified links. You may leave it blank for no title."
+msgstr ""
+
+#: weblinks.module:449 weblinks_hook_view.module:449
+msgid "Description for unclassified links"
+msgstr ""
+
+#: weblinks.module:450;1245 weblinks_hook_view.module:450;1313
+msgid "These links have not been assigned a group."
+msgstr ""
+
+#: weblinks.module:451 weblinks_hook_view.module:451
+msgid "This will be used as the description for the unclassified links group. If this group has no title, this will not be shown either. It will not be translated."
+msgstr ""
+
+#: weblinks.module:461 weblinks_hook_view.module:461
+msgid "Link settings"
+msgstr ""
+
+#: weblinks.module:462 weblinks_hook_view.module:462
+msgid "These settings control the way individual links display on the main links page."
+msgstr ""
+
+#: weblinks.module:470;2272 weblinks_filter.module:122 weblinks_hook_view.module:470;2264
+msgid "Links lead to URL or Web Link node"
+msgstr ""
+
+#: weblinks.module:472;2274 weblinks_filter.module:124 weblinks_hook_view.module:472;2266
+msgid "Most people will want to leave this as URL. Specifying \"node\" makes it easier to edit the links, but requires an additional click to follow the link."
+msgstr ""
+
+#: weblinks.module:473;552;924;2275 weblinks_filter.module:125 weblinks_hook_view.module:473;552;909;2267
+msgid "URL"
+msgstr ""
+
+#: weblinks.module:473;2275 weblinks_filter.module:125 weblinks_hook_view.module:473;2267
+msgid "node"
+msgstr ""
+
+#: weblinks.module:480 weblinks_filter.module:132 weblinks_hook_view.module:480
+msgid "Open links in a new window"
+msgstr ""
+
+#: weblinks.module:482 weblinks_filter.module:134 weblinks_hook_view.module:482
+msgid "Recommended to keep your vistors on your site. Should not be used when the \"Links lead...\" option is \"node.\""
+msgstr ""
+
+#: weblinks.module:488 weblinks_hook_view.module:488
+msgid "No description"
+msgstr ""
+
+#: weblinks.module:489 weblinks_hook_view.module:489
+msgid "Teaser length"
+msgstr ""
+
+#: weblinks.module:490 weblinks_hook_view.module:490
+msgid "Full length"
+msgstr ""
+
+#: weblinks.module:495 weblinks_hook_view.module:495
+msgid "Link description display"
+msgstr ""
+
+#: weblinks.module:497 weblinks_hook_view.module:497
+msgid "This sets how the description will be displayed on the main links page."
+msgstr ""
+
+#: weblinks.module:504 weblinks_hook_view.module:504
+msgid "Display URL?"
+msgstr ""
+
+#: weblinks.module:506 weblinks_hook_view.module:506
+msgid "Do you want to include the actual URL on the links page?"
+msgstr ""
+
+#: weblinks.module:511 weblinks_hook_view.module:511
+msgid "Display comment information?"
+msgstr ""
+
+#: weblinks.module:513 weblinks_hook_view.module:513
+msgid "Shows links for adding and viewing comments."
+msgstr ""
+
+#: weblinks.module:518 weblinks_hook_view.module:518
+msgid "Display link information?"
+msgstr ""
+
+#: weblinks.module:520 weblinks_hook_view.module:520
+msgid "This displays link author, publish date, and revision date"
+msgstr ""
+
+#: weblinks.module:525 weblinks_hook_view.module:525
+msgid "Display a link to other users' links?"
+msgstr ""
+
+#: weblinks.module:527 weblinks_hook_view.module:527
+msgid "Shows a link to another user's links."
+msgstr ""
+
+#: weblinks.module:532 weblinks_hook_view.module:532
+msgid "Spam link deterrent?"
+msgstr ""
+
+#: weblinks.module:534 weblinks_filter.module:148 weblinks_hook_view.module:534
+msgid "If enabled, Drupal will add rel=\"nofollow\" to all links, as a measure to reduce the effectiveness of spam links. Note: this will also prevent valid links from being followed by search engines, therefore it is likely most effective when enabled for anonymous users."
+msgstr ""
+
+#: weblinks.module:542 weblinks_hook_view.module:542
+msgid "View settings"
+msgstr ""
+
+#: weblinks.module:543 weblinks_hook_view.module:543
+msgid "These settings control the way individual links display on the node view page."
+msgstr ""
+
+#: weblinks.module:551 weblinks_hook_view.module:551
+msgid "Link displays as"
+msgstr ""
+
+#: weblinks.module:552 weblinks_hook_view.module:552
+msgid "Visit"
+msgstr ""
+
+#: weblinks.module:554 weblinks_hook_view.module:554
+msgid "This option sets whether the URL itself will be displayed or will hide behind a \"Visit <em>title</em>\" link."
+msgstr ""
+
+#: weblinks.module:562 weblinks_hook_view.module:562
+msgid "\"Visit\" text"
+msgstr ""
+
+#: weblinks.module:563;2559 weblinks_hook_view.module:563;2548
+msgid "Visit [title]"
+msgstr ""
+
+#: weblinks.module:564 weblinks_hook_view.module:564
+msgid "This is the text that will be used with the node title (indicated by \"[title]\") to invite a click."
+msgstr ""
+
+#: weblinks.module:572 weblinks_hook_view.module:572
+msgid "Replacement patterns"
+msgstr ""
+
+#: weblinks.module:588 weblinks_hook_view.module:589
+msgid "Maximum link title length"
+msgstr ""
+
+#: weblinks.module:590 weblinks_hook_view.module:591
+msgid "This controls how much of long URLs will be shown in a link in full node view. Zero (0) means unlimited."
+msgstr ""
+
+#: weblinks.module:596 weblinks_hook_view.module:597
+msgid "Strip protocol and \"www\"?"
+msgstr ""
+
+#: weblinks.module:598 weblinks_hook_view.module:599
+msgid "If enabled, the protocol (e.g. \"http://\") and \"www\" (if present) will be removed before displaying the URL."
+msgstr ""
+
+#: weblinks.module:604 weblinks_hook_view.module:605
+msgid "Link position on view"
+msgstr ""
+
+#: weblinks.module:605 weblinks_hook_view.module:606
+msgid "above"
+msgstr ""
+
+#: weblinks.module:605 weblinks_hook_view.module:606
+msgid "below"
+msgstr ""
+
+#: weblinks.module:607 weblinks_hook_view.module:608
+msgid "This option sets whether the link itself will be displayed above or below the description when viewing the node."
+msgstr ""
+
+#: weblinks.module:617 weblinks_hook_view.module:618
+msgid "Field defaults"
+msgstr ""
+
+#: weblinks.module:618 weblinks_hook_view.module:619
+msgid "These settings provide various defaults for fields that may be entered. Be careful when changing these as they can interfere with a user's input."
+msgstr ""
+
+#: weblinks.module:625 weblinks_hook_view.module:626
+msgid "Default for URL"
+msgstr ""
+
+#: weblinks.module:627 weblinks_hook_view.module:628
+msgid "This will be used as a stub in the URL field."
+msgstr ""
+
+#: weblinks.module:632 weblinks_hook_view.module:633
+msgid "Default for description"
+msgstr ""
+
+#: weblinks.module:634 weblinks_hook_view.module:635
+msgid "This will be used as a stub in the \"Link description\" field."
+msgstr ""
+
+#: weblinks.module:645 weblinks_hook_view.module:646
+msgid "Default input format"
+msgstr ""
+
+#: weblinks.module:647 weblinks_hook_view.module:648
+msgid "This will be used as the default input format."
+msgstr ""
+
+#: weblinks.module:661 weblinks_hook_view.module:662
+msgid "Default."
+msgstr ""
+
+#: weblinks.module:662;2295 weblinks_hook_view.module:663;2287
+msgid "Normal Drupal - by weight, sticky, created date."
+msgstr ""
+
+#: weblinks.module:663;2296 weblinks_hook_view.module:664;2288
+msgid "Legacy - by weight and title."
+msgstr ""
+
+#: weblinks.module:674 weblinks_hook_view.module:675
+msgid "Show %name"
+msgstr ""
+
+#: weblinks.module:676
+msgid "Check to display this group on the main links page. It will always show on the overview page."
+msgstr ""
+
+#: weblinks.module:681 weblinks_hook_view.module:682
+msgid "Collapse by default"
+msgstr ""
+
+#: weblinks.module:683 weblinks_hook_view.module:684
+msgid "Check to collapse this group on the main links page by default."
+msgstr ""
+
+#: weblinks.module:691 weblinks_hook_view.module:692
+msgid "Maximum links to display"
+msgstr ""
+
+#: weblinks.module:694 weblinks_hook_view.module:695
+msgid "Leave blank if you would not like to limit the number of links displayed"
+msgstr ""
+
+#: weblinks.module:699 weblinks_hook_view.module:700
+msgid "Create block"
+msgstr ""
+
+#: weblinks.module:701 weblinks_hook_view.module:702
+msgid "Check to allow a block for this group to be created."
+msgstr ""
+
+#: weblinks.module:707
+msgid "Blocks by group"
+msgstr ""
+
+#: weblinks.module:709
+msgid "Create Random, Recent, and Popular blocks for this group. Requires \"Create block\" above"
+msgstr ""
+
+#: weblinks.module:716 weblinks_hook_view.module:708
+msgid "Group Sort order"
+msgstr ""
+
+#: weblinks.module:725 weblinks_hook_view.module:717
+msgid "Save"
+msgstr ""
+
+#: weblinks.module:743 weblinks_hook_view.module:735
+msgid "No groups available."
+msgstr ""
+
+#: weblinks.module:808 weblinks_hook_view.module:793
+msgid "Allow duplicate URLs"
+msgstr ""
+
+#: weblinks.module:810 weblinks_hook_view.module:795
+msgid "yes"
+msgstr ""
+
+#: weblinks.module:810 weblinks_hook_view.module:795
+msgid "no"
+msgstr ""
+
+#: weblinks.module:810 weblinks_hook_view.module:795
+msgid "warn"
+msgstr ""
+
+#: weblinks.module:811 weblinks_hook_view.module:796
+msgid "This check is performed at link creation time. Most users will not want to allow duplicate URLs."
+msgstr ""
+
+#: weblinks.module:818 weblinks_hook_view.module:803
+msgid "Check if link is valid when entered"
+msgstr ""
+
+#: weblinks.module:820 weblinks_hook_view.module:805
+msgid "If enabled, the module will attempt to use the URL to contact the site when the link is created or updated. If the link returns any error, the add/update will fail."
+msgstr ""
+
+#: weblinks.module:825 weblinks_hook_view.module:810
+msgid "Enable link validity checker?"
+msgstr ""
+
+#: weblinks.module:826 weblinks_hook_view.module:811
+msgid "Do you want to check the links on a schedule?"
+msgstr ""
+
+#: weblinks.module:834 weblinks_hook_view.module:819
+msgid "Links to include"
+msgstr ""
+
+#: weblinks.module:835 weblinks_hook_view.module:820
+msgid "This sets the number of links to be checked on each Cron run. If there are too many, the Cron run may time out."
+msgstr ""
+
+#: weblinks.module:843 weblinks_hook_view.module:828
+msgid "Unpublish link on second error?"
+msgstr ""
+
+#: weblinks.module:844 weblinks_hook_view.module:829
+msgid "If a previous error has been detected, do you want the link unpublished?"
+msgstr ""
+
+#: weblinks.module:850 weblinks_hook_view.module:835
+msgid "Update link on permanent redirect?"
+msgstr ""
+
+#: weblinks.module:851 weblinks_hook_view.module:836
+msgid "If a link is marked as a permanent redirect (\"301\"), do you want the link updated?"
+msgstr ""
+
+#: weblinks.module:859 weblinks_hook_view.module:844
+msgid "Cron interval"
+msgstr ""
+
+#: weblinks.module:860 weblinks_hook_view.module:845
+msgid "This sets the frequency of checking. If you run Cron frequently, you may wish to set this higher than your Cron frequency so that you don't overload the linked site. The check will be run at the next scheduled Cron run after this interval expires. An interval of 0 means every cron run."
+msgstr ""
+
+#: weblinks.module:880 weblinks_hook_view.module:865
+msgid "Ignore error codes"
+msgstr ""
+
+#: weblinks.module:882 weblinks_hook_view.module:867
+msgid "The validity checker will treat all the selected codes as OK."
+msgstr ""
+
+#: weblinks.module:916 weblinks_hook_view.module:901
+msgid "This is the name that will be hyperlinked."
+msgstr ""
+
+#: weblinks.module:926;1031 weblinks_hook_view.module:911;1016
+msgid "Enter the site's complete URL here. Usually begins with http:// as in http://www.example.com."
+msgstr ""
+
+#: weblinks.module:933;1038 weblinks_hook_view.module:918;1023
+msgid "Weight"
+msgstr ""
+
+#: weblinks.module:936;1041 weblinks_hook_view.module:921;1026
+msgid "In listings, the heavier terms (with a larger weight) will sink and the lighter terms will be positioned nearer the top."
+msgstr ""
+
+#: weblinks.module:958;1048;1057;1076 weblinks_hook_view.module:943;1033;1042;1061
+msgid "Delete"
+msgstr ""
+
+#: weblinks.module:969 weblinks_hook_view.module:954
+msgid "\"@url\" does not look like a valid URL."
+msgstr ""
+
+#: weblinks.module:978;981 weblinks_hook_view.module:963;966
+msgid "A link with that URL already exists."
+msgstr ""
+
+#: weblinks.module:998 weblinks_hook_view.module:983
+msgid "This link is returning an error code of @err (@text)."
+msgstr ""
+
+#: weblinks.module:1020 weblinks_hook_view.module:1005
+msgid "Group Name"
+msgstr ""
+
+#: weblinks.module:1022 weblinks_hook_view.module:1007
+msgid "This Groups the links and allows you to sort them."
+msgstr ""
+
+#: weblinks.module:1027 weblinks_hook_view.module:1012
+msgid "Group Description"
+msgstr ""
+
+#: weblinks.module:1033 weblinks_hook_view.module:1018
+msgid "Synonyms"
+msgstr ""
+
+#: weblinks.module:1033 weblinks_hook_view.module:1018
+msgid "<a href=\"%help-url\">Synonyms</a> of this term, one synonym per line."
+msgstr ""
+
+#: weblinks.module:1046 weblinks_hook_view.module:1031
+msgid "Submit"
+msgstr ""
+
+#: weblinks.module:1075 weblinks_hook_view.module:1060
+msgid "weblinks container"
+msgstr ""
+
+#: weblinks.module:1088 weblinks_hook_view.module:1073
+msgid "Created new %type %term."
+msgstr ""
+
+#: weblinks.module:1091 weblinks_hook_view.module:1076
+msgid "The %type %term has been updated."
+msgstr ""
+
+#: weblinks.module:1094 weblinks_hook_view.module:1079
+msgid "The %type %term has been deleted."
+msgstr ""
+
+#: weblinks.module:1260 weblinks_hook_view.module:1328
+msgid "Unpublished"
+msgstr ""
+
+#: weblinks.module:1261 weblinks_hook_view.module:1329
+msgid "These links are not published and need to be reviewed."
+msgstr ""
+
+#: weblinks.module:1280;1472 weblinks_hook_view.module:1348;1534
+msgid "There are no weblinks to display yet."
+msgstr ""
+
+#: weblinks.module:1302 weblinks_hook_view.module:1370
+msgid "Edit group"
+msgstr ""
+
+#: weblinks.module:1441 weblinks_hook_view.module:1505
+msgid "Invalid group requested."
+msgstr ""
+
+#: weblinks.module:1491 weblinks_hook_view.module:1553
+msgid "Group !op"
+msgstr ""
+
+#: weblinks.module:1515 weblinks_hook_view.module:1577
+msgid "Group name"
+msgstr ""
+
+#: weblinks.module:1516 weblinks_hook_view.module:1578
+msgid "The name of this group."
+msgstr ""
+
+#: weblinks.module:1517 weblinks_hook_view.module:1579
+msgid "Group description"
+msgstr ""
+
+#: weblinks.module:1518 weblinks_hook_view.module:1580
+msgid "A description of the group, to be displayed on web links pages and forms."
+msgstr ""
+
+#: weblinks.module:1520 weblinks_hook_view.module:1582
+msgid "Parent groups."
+msgstr ""
+
+#: weblinks.module:1521 weblinks_hook_view.module:1583
+msgid "Groups are displayed in ascending order by weight."
+msgstr ""
+
+#: weblinks.module:1526 weblinks_hook_view.module:1588
+msgid "Group image"
+msgstr ""
+
+#: weblinks.module:1527 weblinks_hook_view.module:1589
+msgid "The image file you wish to associate this group."
+msgstr ""
+
+#: weblinks.module:1562;1573 weblinks_hook_view.module:1622
+msgid "published"
+msgstr ""
+
+#: weblinks.module:1562;1573 weblinks_hook_view.module:1622
+msgid "not published"
+msgstr ""
+
+#: weblinks.module:1564
+msgid "promoted"
+msgstr ""
+
+#: weblinks.module:1567
+msgid "sticky"
+msgstr ""
+
+#: weblinks.module:1570
+msgid "moderated"
+msgstr ""
+
+#: weblinks.module:1585 weblinks_hook_view.module:1632
+msgid "edit"
+msgstr ""
+
+#: weblinks.module:1586 weblinks_hook_view.module:1633
+msgid "delete"
+msgstr ""
+
+#: weblinks.module:1599 weblinks_hook_view.module:1646
+msgid "Title"
+msgstr ""
+
+#: weblinks.module:1599 weblinks_hook_view.module:1646
+msgid "Status"
+msgstr ""
+
+#: weblinks.module:1599 weblinks_hook_view.module:1646
+msgid "Group"
+msgstr ""
+
+#: weblinks.module:1599
+msgid "Last updated"
+msgstr ""
+
+#: weblinks.module:1599 weblinks_hook_view.module:1646
+msgid "Operations"
+msgstr ""
+
+#: weblinks.module:1615 weblinks_hook_view.module:1661
+msgid "No posts available."
+msgstr ""
+
+#: weblinks.module:1763 weblinks_hook_view.module:1231;1805
+msgid "edit link"
+msgstr ""
+
+#: weblinks.module:1764 weblinks_hook_view.module:1232;1806
+msgid "delete link"
+msgstr ""
+
+#: weblinks.module:1802;1962;2023 weblinks_hook_view.module:1845;1985;2037
+msgid "more&#8230;"
+msgstr ""
+
+#: weblinks.module:2029 weblinks_hook_view.module:2043
+msgid "Most Popular Web Links"
+msgstr ""
+
+#: weblinks.module:2030 weblinks_hook_view.module:2044
+msgid "No links have been visited since statistics were enabled or the \"Count content views\" option was not enabled."
+msgstr ""
+
+#: weblinks.module:2161 weblinks_hook_view.module:2157
+msgid "Recent Web Links"
+msgstr ""
+
+#: weblinks.module:2172;2185 weblinks_hook_view.module:2176;2189
+msgid "Random Web Links"
+msgstr ""
+
+#: weblinks.module:2193 weblinks_hook_view.module:2164
+msgid "Unpublished Web Links"
+msgstr ""
+
+#: weblinks.module:2234 weblinks_hook_view.module:2226
+msgid "Maximum weblinks to display"
+msgstr ""
+
+#: weblinks.module:2237 weblinks_hook_view.module:2229
+msgid "The number of links to show in this block."
+msgstr ""
+
+#: weblinks.module:2246 weblinks_hook_view.module:2238
+msgid "\"More...\" link?"
+msgstr ""
+
+#: weblinks.module:2248 weblinks_hook_view.module:2240
+msgid "If there are more links than the limit above, do you want a \"more...\" link?."
+msgstr ""
+
+#: weblinks.module:2254 weblinks_hook_view.module:2246
+msgid "Show description?"
+msgstr ""
+
+#: weblinks.module:2256 weblinks_hook_view.module:2248
+msgid "If checked, the link's description will be shown."
+msgstr ""
+
+#: weblinks.module:2261 weblinks_hook_view.module:2253
+msgid "Show image?"
+msgstr ""
+
+#: weblinks.module:2263 weblinks_hook_view.module:2255
+msgid "If checked, the link's attached image will be shown."
+msgstr ""
+
+#: weblinks.module:2284 weblinks_hook_view.module:2276
+msgid "List type"
+msgstr ""
+
+#: weblinks.module:2285 weblinks_hook_view.module:2277
+msgid "Simple list"
+msgstr ""
+
+#: weblinks.module:2285 weblinks_hook_view.module:2277
+msgid "Numbered list"
+msgstr ""
+
+#: weblinks.module:2287 weblinks_hook_view.module:2279
+msgid "This sets the way the list will be displayed."
+msgstr ""
+
+#: weblinks.module:2301 weblinks_hook_view.module:2293
+msgid "Block Sort order"
+msgstr ""
+
+#: weblinks.module:2303 weblinks_hook_view.module:2295
+msgid "This determines how the links block will sort the links."
+msgstr ""
+
+#: weblinks.module:2315 weblinks_hook_view.module:2307
+msgid "Update every"
+msgstr ""
+
+#: weblinks.module:2323 weblinks_hook_view.module:2315
+msgid "seconds"
+msgstr ""
+
+#: weblinks.module:2324 weblinks_hook_view.module:2316
+msgid "minutes"
+msgstr ""
+
+#: weblinks.module:2325 weblinks_hook_view.module:2317
+msgid "hours"
+msgstr ""
+
+#: weblinks.module:2326 weblinks_hook_view.module:2318
+msgid "days"
+msgstr ""
+
+#: weblinks.module:2327 weblinks_hook_view.module:2319
+msgid "weeks"
+msgstr ""
+
+#: weblinks.module:2334 weblinks_hook_view.module:2326
+msgid "If set, the link displayed in this block will get updated based on the interval specified (requires cron if page cache is enabled). Leave this value blank to have the link updated every time the block is viewed."
+msgstr ""
+
+#: weblinks.module:2422 weblinks_hook_view.module:2411
+msgid "Add comment"
+msgstr ""
+
+#: weblinks.module:2429 weblinks_hook_view.module:2418
+msgid "View comments"
+msgstr ""
+
+#: weblinks.module:2472 weblinks_hook_view.module:2461
+msgid "created: !created by @name"
+msgstr ""
+
+#: weblinks.module:2480 weblinks_hook_view.module:2469
+msgid "created: !created by @name &nbsp; - &nbsp; updated: !updated"
+msgstr ""
+
+#: weblinks.module:2518 weblinks_hook_view.module:2507
+msgid "As of !date, this link is reporting \"!status.\""
+msgstr ""
+
+#: weblinks.module:2525 weblinks_hook_view.module:2514
+msgid "As of !date, this link is reporting errors."
+msgstr ""
+
+#: weblinks.module:272;277;284;297 weblinks_hook_view.module:272;277;284;297
+msgid "Weblinks"
+msgstr ""
+
+#: weblinks.module:81
+msgid "access web links"
+msgstr ""
+
+#: weblinks.module:81
+msgid "create weblinks"
+msgstr ""
+
+#: weblinks.module:81
+msgid "edit own weblinks"
+msgstr ""
+
+#: weblinks.module:81
+msgid "view my weblinks"
+msgstr ""
+
+#: weblinks.module:81
+msgid "edit group weblinks"
+msgstr ""
+
+#: weblinks.module:81
+msgid "administer weblinks"
+msgstr ""
+
+#: weblinks.module:0
+msgid "weblinks"
+msgstr ""
+
+#: weblinks_collector.module:41;177
+msgid "Weblinks collector"
+msgstr ""
+
+#: weblinks_collector.module:50
+msgid "Extracts links from content and makes a Web Links node."
+msgstr ""
+
+#: weblinks_collector.module:53 weblinks_filter.module:53
+msgid "Unknown filter description requested from Weblinks."
+msgstr ""
+
+#: weblinks_collector.module:69
+msgid "Link collected on !date."
+msgstr ""
+
+#: weblinks_collector.module:151
+msgid "Anonymous"
+msgstr ""
+
+#: weblinks_collector.module:165
+msgid "Created Web Links: %link."
+msgstr ""
+
+#: weblinks_collector.module:184
+msgid "Mark new Web Links as unpublished?"
+msgstr ""
+
+#: weblinks_collector.module:186
+msgid "If checked, the new Web Links node will be marked as unpublished for moderation."
+msgstr ""
+
+#: weblinks_collector.module:191
+msgid "Convert to Web Links filter request?"
+msgstr ""
+
+#: weblinks_collector.module:193
+msgid "If checked, the link will be replaced with a Web Links filter request."
+msgstr ""
+
+#: weblinks_collector.module:205
+msgid "The content will be scanned for links and those links will be submitted as Web Links nodes. The URL filter must run before this one. The Weblinks module may insert a filter request at that spot in the content."
+msgstr ""
+
+#: weblinks_collector.module:208
+msgid "The content will be scanned for links and those links will be submitted as Web Links nodes."
+msgstr ""
+
+#: weblinks_collector.module:0
+msgid "weblinks_collector"
+msgstr ""
+
+#: weblinks_convert_links.module:35
+msgid "<strong>Warning</strong>: This is a <strong>DESTRUCTIVE</strong> process. The Links package nodes will be changed to Web Links nodes and any taxonomy vocabularies will be updated to be used on the \"weblinks\" content type."
+msgstr ""
+
+#: weblinks_convert_links.module:41
+msgid "I have done a back up of my database."
+msgstr ""
+
+#: weblinks_convert_links.module:46
+msgid "Number of Links to convert at a time"
+msgstr ""
+
+#: weblinks_convert_links.module:49
+msgid "This minimizes the risk of timing out if you have a lot of links to convert."
+msgstr ""
+
+#: weblinks_convert_links.module:54
+msgid "Convert"
+msgstr ""
+
+#: weblinks_convert_links.module:65
+msgid "You must check the box that says you backed up your database."
+msgstr ""
+
+#: weblinks_convert_links.module:75
+msgid "nid"
+msgstr ""
+
+#: weblinks_convert_links.module:75
+msgid "url"
+msgstr ""
+
+#: weblinks_convert_links.module:75
+msgid "weight"
+msgstr ""
+
+#: weblinks_convert_links.module:75
+msgid "tids"
+msgstr ""
+
+#: weblinks_convert_links.module:75
+msgid "last check"
+msgstr ""
+
+#: weblinks_convert_links.module:84
+msgid "Improper URL set by Links package in node #!nid."
+msgstr ""
+
+#: weblinks_convert_links.module:103
+msgid "!count links converted."
+msgstr ""
+
+#: weblinks_convert_links.module:103
+msgid "No"
+msgstr ""
+
+#: weblinks_convert_links.module:106
+msgid "Found !count vocabularies: (!vocs)"
+msgstr ""
+
+#: weblinks_convert_links.module:119
+msgid "Added \"Web Links\" content to the !voc vocabulary."
+msgstr ""
+
+#: weblinks_convert_links.module:122
+msgid "Failed adding \"Web Links\" content to the !voc vocabulary."
+msgstr ""
+
+#: weblinks_convert_links.module:0
+msgid "weblinks_convert_links"
+msgstr ""
+
+#: weblinks_filter.module:41
+msgid "Weblinks filter"
+msgstr ""
+
+#: weblinks_filter.module:50
+msgid "Allows users to include links with [link: <em>title</em>]."
+msgstr ""
+
+#: weblinks_filter.module:99
+msgid "No link found for @title."
+msgstr ""
+
+#: weblinks_filter.module:139
+msgid "Use link descriptions as title attribute"
+msgstr ""
+
+#: weblinks_filter.module:141
+msgid "If checked the link description will be added as a \"title\" attribute for a hover tip."
+msgstr ""
+
+#: weblinks_filter.module:146
+msgid "Spam link deterrent"
+msgstr ""
+
+#: weblinks_filter.module:153
+msgid "No image"
+msgstr ""
+
+#: weblinks_filter.module:154
+msgid "Before the title"
+msgstr ""
+
+#: weblinks_filter.module:155
+msgid "After the title"
+msgstr ""
+
+#: weblinks_filter.module:160
+msgid "Use image in the link"
+msgstr ""
+
+#: weblinks_filter.module:162
+msgid "If checked the link will include an image attached to the link, if there is one."
+msgstr ""
+
+#: weblinks_filter.module:172
+msgid "Image size"
+msgstr ""
+
+#: weblinks_filter.module:174
+msgid "Which size image to use in the link. Requires \"Use image...\" above to be checked."
+msgstr ""
+
+#: weblinks_filter.module:186
+msgid "To insert a link to a site known to the Weblinks module, you may insert in your content the pseudo-tag: [link: <em>title</em>]. The Weblinks module will insert the appropriate link at that spot in the content."
+msgstr ""
+
+#: weblinks_filter.module:189
+msgid "You may insert a link to a defined site with [link: <em>title</em>]."
+msgstr ""
+
+#: weblinks_filter.module:0
+msgid "weblinks_filter"
+msgstr ""
+
+#: weblinks_hook_view.module:677
+msgid "Check to display this group on the main links page."
+msgstr ""
+
+#: weblinks_hook_view.module:0
+msgid "weblinks_hook_view"
+msgstr ""
+
+#: weblinks.info:0
+msgid "Web Links provides a comprehensive way to post weblinks to your site. All links are nodes, which can be put into taxonomies/categories and administered."
+msgstr ""
+
+#: weblinks_collector.info:0
+msgid "Web Links Collector"
+msgstr ""
+
+#: weblinks_collector.info:0
+msgid "Extracts links from content."
+msgstr ""
+
+#: weblinks_convert_links.info:0
+msgid "Web Links Convert Links Package"
+msgstr ""
+
+#: weblinks_convert_links.info:0
+msgid "Allows users to convert Links package to Web Links."
+msgstr ""
+
+#: weblinks_filter.info:0
+msgid "Web Links Filter"
+msgstr ""
+
+#: weblinks_filter.info:0
+msgid "Allows users to include links with"
+msgstr ""
+

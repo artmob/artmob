@@ -1,0 +1,136 @@
+<?php
+// $Id: artmob_citation install,v 1.0 2008/03/07 01:30:00 drumm Exp $
+
+/**
+ * Implementation of hook_install().
+*/
+function artmob_citation_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      db_query("CREATE TABLE {am_citation} (
+        citation_id integer unsigned auto_increment primary key,
+        work_type text,
+        copyright_date int(11) NOT NULL,
+        nid int unsigned NOT NULL default '0',
+        link_nid int unsigned NOT NULL default '0',
+        uid int unsigned NOT NULL default '0',
+        citation_title text,
+        title_without_prefix text,
+        subtitle text,
+        series_title text,
+        series_number text,
+        series_year text,
+        series_description text,
+        edition text,
+        set_title text,
+        set_title_without_prefix text,
+        set_item_number text,
+        number_of_pages text,
+        publication_publisher_name text,
+        publication_imprint_name text,
+        publication_print_run text,
+        genre text,
+        citation_style text,
+        citation_text text,
+        catalogue_description text,
+        catalogue_description_format int unsigned NOT NULL default '0',
+        features_and_distinctions text,
+        features_and_distinctions_format int unsigned NOT NULL default '0',
+        publication_notes text,
+        publication_notes_format int unsigned NOT NULL default '0',
+        publication_date int(11) NOT NULL,
+        archival_date int(11) NOT NULL,
+        first_publication_date int(11) NOT NULL,
+        identifier_type_code_1 text,
+        identifier_type_name_1 text,
+        identifier_type_value_1 text,
+        identifier_type_code_2 text,
+        identifier_type_name_2 text,
+        identifier_type_value_2 text,
+        corporate_contributor text,
+        running_time text,
+        link_eid varchar(20) NOT NULL default '',
+        is_merged smallint default 0,
+        created_date int(11) NOT NULL,
+        updated_date int(11) NOT NULL,
+        language text,
+        medium text,
+        sequence_type text,
+        sequence_value text,
+        sequence_description text,
+        sequence_description_format int unsigned NOT NULL default '0',
+        subject text
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+      db_query("CREATE TABLE {am_citation_roles} (
+        cid integer unsigned auto_increment primary key,
+        citation_id int unsigned NOT NULL default '0',
+        contributor_id int unsigned NOT NULL default '0',
+        role_id varchar(3) NOT NULL default '',
+        widget_name text,
+        sequence int unsigned NOT NULL default '0'
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+      db_query("CREATE TABLE {am_citation_roles_unknown} (
+        cid integer unsigned auto_increment primary key,
+        citation_id int unsigned NOT NULL default '0',
+        contributor_id int NOT NULL default '0',
+        role_id varchar(3) NOT NULL default '',
+        widget_name text,
+        sequence int unsigned NOT NULL default '0'
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+      db_query("CREATE TABLE {am_license_roles} (
+        cid integer unsigned auto_increment primary key,
+        citation_id int unsigned NOT NULL default '0',
+        license_id int unsigned NOT NULL default '0',
+        contributor_id int unsigned NOT NULL default '0',
+        role_id varchar(3) NOT NULL default '',
+        widget_name text,
+        sequence int unsigned NOT NULL default '0'
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+      db_query("CREATE TABLE {am_encapsulated_works} (
+        eid varchar(20) NOT NULL default '',
+        unique_id integer unsigned auto_increment primary key,
+        nid int unsigned NOT NULL default '0',
+        citation_id int unsigned NOT NULL default '0',
+        parent_eid varchar(20) NOT NULL default '',
+        sequence int unsigned NOT NULL default '0',
+        tree_level int unsigned NOT NULL default '0',
+        weight smallint(4) default 0,
+        KEY eid (`eid`)
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+      
+      db_query("CREATE TABLE {am_date_type} (
+        cid integer unsigned auto_increment primary key,
+        date_type_id int unsigned NOT NULL default '0',
+        date_name varchar(100) NOT NULL default ''
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+      // These are defined in the artmob_fair_dealing.install
+      // ----------------------------------------------------
+      
+      //db_query("CREATE TABLE {am_key_dates} (
+      //  cid integer unsigned auto_increment primary key,
+      //  work_type_id varchar(2) NOT NULL default ''
+      //  date_type_id int unsigned NOT NULL default '0'
+      //) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+
+       break;
+    case 'pgsql':
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function artmob_citation_uninstall() {
+  db_query('DROP TABLE {am_citation}');
+  db_query('DROP TABLE {am_citation_roles}');
+  db_query('DROP TABLE {am_license_roles}');
+  db_query('DROP TABLE {am_encapsulated_works}');
+  db_query('DROP TABLE {am_date_type}');
+}

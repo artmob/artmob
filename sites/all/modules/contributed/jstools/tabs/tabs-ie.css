@@ -1,0 +1,14 @@
+.anchors { /* auto clear */
+    display: inline-block; /* @ IE 7 */
+    _height: 1%; /* @ IE 6 */
+}
+.anchors a {
+    float: left;
+}
+.anchors .tabs-disabled a {
+    filter: alpha(opacity=40);
+    zoom: 1; /* trigger filter */
+}
+.fragment {
+    margin-top:5px;
+}

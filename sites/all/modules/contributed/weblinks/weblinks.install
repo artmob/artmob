@@ -1,0 +1,73 @@
+<?php
+// $Id: weblinks.install,v 1.1.4.5 2007/10/13 00:54:42 bdragon Exp $
+
+/**
+ * @file
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+function weblinks_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      db_query("CREATE TABLE {weblinks} (
+        nid int(9) NOT NULL default '0',
+        tid int(11) NOT NULL default '0',
+        vid int(11) NOT NULL default '0',
+        url varchar(255) NOT NULL default '',
+        weight smallint(6) NOT NULL default '0',
+        KEY tid (tid,vid),
+        KEY nid (nid)
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */");
+      break;
+    case 'pgsql':
+      db_query("CREATE TABLE {weblinks} (
+        nid int_unsigned NOT NULL default '0',
+        vid int_unsigned NOT NULL default '0',
+        tid int_unsigned NOT NULL default '0',
+        url varchar(255) NOT NULL default '',
+        weight smallint NOT NULL default '0'
+      )");
+      db_query("CREATE INDEX {weblinks}_nid_idx ON {weblinks} (nid)");
+      db_query("CREATE INDEX {weblinks}_tid_idx ON {weblinks} (tid)");
+      break;
+  }
+}
+
+function weblinks_update_1() {
+  return _system_update_utf8(array('weblinks'));
+}
+
+/**
+ * Expand url length to 255.
+ */
+function weblinks_update_2() {
+  $ret = array();
+  $ret[] = update_sql('ALTER TABLE {weblinks} MODIFY url varchar(255)');
+  return $ret;
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function weblinks_uninstall() {
+  db_query('DROP TABLE {weblinks}');
+  // @@@ Bdragon: No! Don't do this.
+  // @@@ Need to use the proper apis so any associated content
+  // @@@ gets deleted too!
+  db_query("DELETE FROM {node} WHERE type = 'weblinks'");
+  variable_del('weblinks_pagedesc');
+  variable_del('weblinks_simplelinks');
+  variable_del('weblinks_urlnode');
+  variable_del('weblinks_block_urlnode');
+  variable_del('weblinks_catdesc');
+  variable_del('weblinks_subcatdesc');
+  variable_del('weblinks_linkdesc');
+  variable_del('weblinks_linkinfo');
+  variable_del('weblinks_maxfrontdepth');
+  variable_del('weblinks_maxdepth');
+  variable_del('weblinks_clickthru');
+  variable_del('weblinks_maxdisp_block_recent');
+}

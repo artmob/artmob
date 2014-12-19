@@ -1,0 +1,7 @@
+; $Id: artmob_audio.info,v 3.1 2011/04/26 20:55:33 stop14 Exp $
+name = Artmob Audio
+description = Module shell for CKK’s filefield.  Note that the SWF Tools input filter must be selected for all input content types.
+package = Artmob Media
+version = 3.1
+dependencies = content filefield swftools onepixelout
+

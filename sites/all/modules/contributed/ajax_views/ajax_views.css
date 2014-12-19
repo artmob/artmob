@@ -1,0 +1,39 @@
+/* $Id: ajax_views.css,v 1.1 2008/01/16 23:39:47 febbraro Exp $ */
+
+.ajax_views_headers .title {
+	float:left;
+}
+.ajax_views_headers .title a {
+	font-weight:bold;
+	text-decoration:none;
+}
+.ajax_views_headers .title a:hover {
+	text-decoration:underline;
+}
+.ajax_views_headers .rss {
+	float:right;
+}
+.ajax_views_body {
+	padding:5px;
+}
+.ajax_views_footers .ajax_pager_link a {
+	text-decoration:none;
+}
+.ajax_views_footers .ajax_pager_link a:hover {
+	text-decoration:underline;
+}
+.ajax_views_footers .ajax_prev {
+	float:left;
+	width:25%;
+	text-align:left;
+}
+.ajax_views_footers .ajax_pages {
+	float:left;
+	width:50%;
+	text-align:center;
+}
+.ajax_views_footers .ajax_next {
+	float:right;
+	width:25%;
+	text-align:right;
+}

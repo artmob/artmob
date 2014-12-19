@@ -1,0 +1,260 @@
+.afd-icon, .afd-icon .afd-link {
+	height:33px;
+	}
+.afd-icon {
+	float:left;
+	width: 180px;
+	margin-right:0px;
+	padding-top: 10px;
+	}
+
+.afd-icon .afd-link {
+	position:relative;
+	display:block;
+	margin: 0 auto;
+	overflow:hidden;
+	z-index:1;
+	}
+.afd-icon .afd-btn:hover {
+	margin-top: -33px;
+	cursor:pointer;
+	}
+.afd-icon .afd-panel {
+	position:relative;
+	width:330px;
+	margin-top:-20px;
+	left:-100px;
+	background:transparent url(../images/button-hover_top.png) no-repeat center top;
+	}
+	#learn-more-panel {
+		background-position: left top;
+		}
+	#know-more-panel {
+		background-position: center top;
+		}
+	#do-more-panel {
+		background-position: right top;
+		}
+.afd-icon .afd-panel ul {
+	position:relative;
+	top:35px;
+	padding: 0 16px 25px;
+	list-style:none;
+	background:transparent url(../images/button-hover.png) no-repeat center bottom;
+	}
+	#learn-more-panel ul {
+		background-position: left bottom;
+		}
+	#know-more-panel ul {
+		background-position: center bottom;
+		}
+	#do-more-panel ul {
+		background-position: right bottom;
+		}
+.afd-icon .afd-panel li {
+	border-top:1px solid #ccc;
+	padding: 5px;
+	}	
+	.afd-icon .afd-panel li:first-child {
+		border-top:none;
+		}
+.afd-icon .afd-panel a {
+	color:#333;
+	display:block;
+ 	margin: auto 5px;
+ 	}
+	.afd-icon .afd-panel li:hover, .afd-icon .afd-panel li:hover a {
+		text-decoration: none;
+		background-color:#ddd;
+		}
+
+#tabs-tabbed_content .tabs{
+	padding:0;
+}
+#tabs-tabbed_content .tabs li{
+	margin-right:2px;
+}
+#tabs-tabbed_content .fragment{
+	overflow:hidden;
+	padding:10px 15px;
+	background-color:#FFF;
+}
+.license-module #tabs-tabbed_content .fragment{
+	background-color:#EF7647;
+}
+.citation-module #tabs-tabbed_content .fragment{
+	background-color:#DE3558;
+}
+.license-module #tabs-tabbed_content ul.primary li,
+.citation-module #tabs-tabbed_content ul.primary li{
+	height:25px;
+	padding-top:6px;
+	vertical-align:top;
+	border-width:1px 0 0 0;
+	border-color:#6C6C6C;
+	color:#FFF;
+	background-position:0 -31px;
+	background-repeat:repeat-x;
+}
+.license-module #tabs-tabbed_content ul.primary li{
+	background-image:url('../images/comments-copyright_bkgd.jpg');
+}
+.citation-module #tabs-tabbed_content ul.primary li{
+	background-image:url('../images/comments-citation_bkgd.jpg');
+}
+.license-module #tabs-tabbed_content ul.primary li a,
+.citation-module #tabs-tabbed_content ul.primary li a{
+	padding-right:35px;
+	height:13px;
+	background-position:97% 0;
+	background-repeat:no-repeat;
+}
+.license-module #tabs-tabbed_content ul.primary li a:hover,
+.citation-module #tabs-tabbed_content ul.primary li a:hover,
+.citation-module #tabs-tabbed_content ul.primary li.active a{
+	background-position:97% -19px;
+}
+.license-module #tabs-tabbed_content ul.primary #tc-1 a{
+	height:7px;
+	background-image:url('../images/question.png');
+}
+.license-module #tabs-tabbed_content ul.primary #tc-2 a{
+	height:7px;
+	background-image:url('../images/exclamation-orange.png');
+}
+.citation-module #tabs-tabbed_content ul.primary li a{
+	background-image:url('../images/exclamation-pink.png');
+}
+#tabs-tabbed_content ul.primary li:hover,
+#tabs-tabbed_content ul.primary li.active{
+	background-position:0 0;
+}
+#tabs-tabbed_content ul.primary li a,
+#tabs-tabbed_content ul.primary li a:hover
+#tabs-tabbed_content ul.primary li.active a{
+	display:block;
+	padding:6px;
+	border:0;
+	background-color:transparent;
+	font-weight:bold;
+	color:#FFF;
+}
+.license-module #tabs-tabbed_content .fragment form,
+.citation-module #tabs-tabbed_content .fragment form{
+	color:#FFF;
+}
+.license-module #tabs-tabbed_content h2,
+.citation-module #tabs-tabbed_content h2,
+.license-module #tabs-tabbed_content h3,
+.citation-module #tabs-tabbed_content h3{
+	color:#FFF;
+}
+.license-module #tabs-tabbed_content .comment-note{
+	font-weight:bold;
+	color:#333333;
+}
+.license-module #tabs-tabbed_content .comment-note,
+.license-module #tabs-tabbed_content .comment-note-2,
+.license-module #tabs-tabbed_content .comment-note-3,
+.license-module #tabs-tabbed_content .comment-note-4,
+.license-module #tabs-tabbed_content .comment-note-4{
+	color:#333333;
+}
+#tabs-tabbed_content textarea{
+	border:0;
+	background-repeat:repeat-x;
+	background-image:url('../images/comments-form_field_bkgd.jpg');
+}
+#tabs-tabbed_content input.form-submit{
+	float:right;
+	width:87px;
+	height:30px;
+	margin-right:8px;
+	background-color:transparent;
+	background-position:0 0;
+	background-repeat:no-repeat;
+	background-image:url('../images/comment-submit_btn.png');
+	border:0;
+	font-size:12px;
+	color: white;
+	text-transform: uppercase;
+}
+#tabs-tabbed_content input.form-submit:hover{
+	background-position:0 -30px;
+	cursor:pointer;
+}
+#comments #edit-preview, #comments #edit-submit{
+	float:right;
+	margin-left:8px;
+	width:117px;
+	height:30px;
+	background-color:transparent;
+	background-position:0 0;
+	background-repeat:no-repeat;
+	background-image:url('../images/comment-preview_btn.png');
+	border:0;
+	font-size:10px;
+}
+#comments #edit-preview:hover, #comments #edit-submit:hover{
+	background-position:0 -30px;
+	cursor:pointer;
+}
+
+/*   Comments ---------------------------------------------*/
+.comment, #comment-form{
+	overflow:hidden;
+	padding:12px 11px;
+	background-color:#4D4D4D;
+	color:#FFF;
+}
+.comment .new{
+	float:right;
+	font-weight:bold;
+	color:yellow;
+}
+.comment h3.title,
+.comment h3.title a{
+	margin-top:0;
+	padding:0;
+	font-weight:bold;
+	font-size:14px;
+}
+#copyright-threaded-discussion .comment h3.title,
+#copyright-threaded-discussion .comment h3.title a{
+	color:#ef7647;
+}
+#citation-threaded-discussion .comment h3.title,
+#citation-threaded-discussion .comment h3.title a{
+	color:#DE3558;
+}
+#copyright-threaded-discussion .comment h3.title a:hover,
+#citation-threaded-discussion .comment h3.title a:hover{
+	color:#FFF;	
+}
+.comment .content{
+	margin-top:12px;
+	padding:0 11px;
+	background-color:#333333;
+	color:#FFF;
+}
+.comment .content p{
+	padding:12px 0;
+	color:#FFF;
+}
+.comment a, #comment-form a{
+	color:#ef7647;
+}
+.comment a:hover, #comment-form a:hover{
+	color:#FFF;
+}
+.comment .links a, #comment-form .links a{
+	color:#FFF;
+}
+.comment .links a:hover, #comment-form .links a:hover{
+	color:#ef7647;
+}
+#comment-form textarea, #comment-form .form-text{
+	border:0;
+	background-repeat:repeat-x;
+	background-image:url('../images/comments-form_field_bkgd.jpg');
+}

@@ -1,0 +1,538 @@
+<?php
+// $Id: date.install,v 1.13.2.16 2007/10/26 01:31:05 karens Exp $
+/**
+ * Implementation of hook_install().
+ */
+
+/**
+ * Implementation of hook_install().
+ * Reset the date caches.
+ */
+function date_install() {
+  $ret = array();
+  include_once(drupal_get_path('module', 'date') .'/date.module');
+  include_once(drupal_get_path('module', 'date') .'/date_views.inc');
+  date_clear_all();
+  return $ret;
+}
+
+/**
+ * Implementation of hook_uninstall().
+ *
+ */
+function date_uninstall() {
+  $ret = array();
+  include_once(drupal_get_path('module', 'date') .'/date.module');
+  include_once(drupal_get_path('module', 'date') .'/date_views.inc');
+  // Empty the date caches.
+  date_clear_all(TRUE);
+  return $ret;
+}
+
+/**
+ * Implementation of hook_enable().
+ * Reset the calendar caches.
+ */
+function date_enable() {
+  include_once(drupal_get_path('module', 'date') .'/date.module');
+  include_once(drupal_get_path('module', 'date') .'/date_views.inc');
+  date_clear_all();
+}
+
+/**
+ * Implementation of hook_disable().
+ * Empty the date caches.
+ */
+function date_disable() {
+  include_once(drupal_get_path('module', 'date') .'/date.module');
+  include_once(drupal_get_path('module', 'date') .'/date_views.inc');
+  date_clear_all(TRUE);
+}
+
+function date_update_1() {
+  $ret = array();
+  if (!db_table_exists('node_field_date_data')) {
+    return $ret;
+  }
+  switch ($GLOBALS['db_type']) {
+    case 'pgsql':
+      db_add_column($ret, 'node_field_date_data', 'nid', 'integer', array('not null' => TRUE, 'default' => 0));
+      break;
+
+    case 'mysql':
+    case 'mysqli':
+      $ret[] = update_sql("ALTER TABLE {node_field_date_data} ADD COLUMN nid int(10) NOT NULL DEFAULT 0");
+      break;
+  }
+
+  return $ret;
+}
+
+function date_update_2() {
+  $ret = array();
+  if (!db_table_exists('node_field_date_data')) {
+    return $ret;
+  }
+  // Multi-part update
+  if (!isset($_SESSION['date_update_2'])) {
+    $_SESSION['date_update_2'] = 0;
+    $_SESSION['date_update_2_max'] = db_result(db_query("SELECT COUNT(*) FROM {node_field_date_data}"));;
+  }
+
+  $limit = 20;
+  $result = db_query_range("SELECT nr.nid, nfdd.vid, nfdd.field_name, nfdd.delta FROM {node_field_date_data} nfdd LEFT JOIN {node_revisions} nr ON nr.vid = nfdd.vid", $_SESSION['date_update_2'], $limit);
+  if (db_num_rows($result) == 0) {
+    unset($_SESSION['date_update_2']);
+    unset($_SESSION['date_update_2_max']);
+    return array();
+  }
+  while ($data = db_fetch_object($result)) {
+    $_SESSION['date_update_2']++;
+    db_query("UPDATE {node_field_date_data} SET nid = %d WHERE vid = %d AND field_name = '%s' AND delta = %d", $data->nid, $data->vid, $data->field_name, $data->delta);
+  }
+
+  return array('#finished' => $_SESSION['date_update_2'] / $_SESSION['date_update_2_max']);
+}
+
+/**
+ * Data is now stored in per-field tables.
+ */
+function date_update_3() {
+  $ret = array();
+  if (!db_table_exists('node_field_date_data')) {
+    return $ret;
+  }
+  include_once(drupal_get_path('module', 'content') .'/content.module');
+  include_once(drupal_get_path('module', 'content') .'/content_admin.inc');
+
+  content_clear_type_cache();
+  $fields = content_fields();
+
+  foreach ($fields as $field) {
+    switch ($field['type']) {
+      case 'date':
+        $columns = array(
+          'value' => array('type' => 'varchar', 'length' => 17, 'not null' => TRUE, 'default' => "'00010101T00:00:00'"),
+        );
+        // the following line will trigger (negligible) warnings if content_update_3 was run before
+        // (column already exists)
+        @content_alter_db_field(array(), array(), $field, $columns);
+        $db_info = content_database_info($field);
+        $table = $db_info['table'];
+        if ($field['multiple']) {
+          $ret[] = update_sql('INSERT INTO {'. $table .'} (vid, delta, nid, '. $field['field_name'] ."_value) SELECT vid, delta, nid, field_date FROM {node_field_date_data} WHERE field_name = '". $field['field_name'] ."'");
+        }
+        else {
+          $ret[] = update_sql('INSERT INTO {'. $table .'} (vid, nid, '. $field['field_name'] ."_value) SELECT vid, nid, field_date FROM {node_field_date_data} WHERE field_name = '". $field['field_name'] ."'");
+        }
+        break;
+    }
+  }
+
+  $ret[] = update_sql('DROP TABLE {node_field_date_data}');
+
+  db_query('DELETE FROM {cache}');
+  return $ret;
+}
+
+/**
+ * Alter date field size and default value to comply with ISO standards, add timezone field.
+ */
+
+// a conditional update, can be rerun if changes didn't get made properly previously
+
+function date_update_4() {
+  $ret = array();
+
+  include_once(drupal_get_path('module', 'content') .'/content.module');
+  include_once(drupal_get_path('module', 'content') .'/content_admin.inc');
+
+  content_clear_type_cache();
+  $fields = content_fields();
+
+  foreach ($fields as $field) {
+    switch ($field['type']) {
+      case 'date':
+        $columns = array(
+          'value' => array('type' => 'varchar', 'length' => 20, 'not null' => TRUE, 'default' => "'0001-01-01T00:00:00'"),
+          'timezone' => array('type' => 'varchar', 'length' => 50, 'not null' => TRUE, 'default' => "'GMT'"),
+        );
+        $db_info = content_database_info($field);
+        if ($db_info['columns']['value']['default'] != "'0001-01-01T00:00:00'") {
+          content_alter_db_field(array(), array(), $field, $columns);
+        }
+        $id = $field['field_name']. '_value';
+        $ret[] = update_sql("UPDATE {". $db_info['table'] ."} SET $id = CONCAT(SUBSTRING($id,1,4), '-', SUBSTRING($id,5,2), '-', SUBSTRING($id,7)) WHERE SUBSTRING($id, 5, 1) <> '-'");
+    }
+  }
+  db_query('DELETE FROM {cache}');
+  return $ret;
+}
+
+// adds in potential for empty dates by allowing date and timezone values to be null
+// add column for timezone offset -- needed for views integration with dates that have date-specific zones
+// Superceded by update 5102, so skip this step and do it then.
+
+function date_update_5() {
+  $ret = array();
+  return $ret;
+}
+
+/**
+ * Update existing date-specific timezone fields with their offset values
+ * Superceded by update 5103, so just skip this step and do it then.
+ */
+function date_update_6() {
+  $ret = array();
+  return $ret;
+}
+
+/**
+ *  Update 7
+ *
+ *  Force all columns to allow NULL values to simplify the module.
+ *  Previously only non-required fields allowed NULL values.
+ *  Superceded by update 5102, so skipt this step and do it them.
+ */
+function date_update_7() {
+  $ret = array();
+  return $ret;
+}
+
+/**
+ * Prepare for Version 5.2 updates, make changes to field and widget settings.
+ */
+function date_update_5100() {
+  $ret = array();
+  include_once(drupal_get_path('module', 'content') .'/content.module');
+  $fields = content_fields();
+  foreach ($fields as $field) {
+    if (strstr($field['type'], 'date')) {
+
+      $field_settings = unserialize(db_result(db_query("SELECT global_settings from {node_field} where field_name = '%s'", $field['field_name'])));
+      $widget_settings = unserialize(db_result(db_query("SELECT widget_settings from {node_field_instance} where field_name = '%s'", $field['field_name'])));
+
+      // Move input format from field settings to widget settings, where it should have been all along.
+      $input_format = $field_settings['input_format'];
+      $input_format_custom = $field_settings['input_format_custom'];
+      $widget_settings['input_format'] = $input_format;
+      $widget_settings['input_format_custom'] = $input_format_custom;
+
+      // New PHP 5 date handling will handle timezone formats correctly, so
+      // add timezone formats to format string and drop old setting for tracking zones.
+      $replace = array(
+        '0000' => 'O',
+        '00:00' => 'P',
+        'name' => 'e',
+        '' => '',
+        );
+      if (!empty($field_settings['output_format_zone'])) {
+        $field_settings['output_format_date'] .= ' '. $replace[$field_settings['output_format_zone']];
+        if (!empty($field_settings['output_format_custom'])) {
+          $field_settings['output_format_custom'] .= ' '. $replace[$field_settings['output_format_zone']];
+        }
+      }
+      if (!empty($field_settings['output_format_zone_short'])) {
+        $field_settings['output_format_date_short'] .= ' '. $replace[$field_settings['output_format_zone_short']];
+        if (!empty($field_settings['output_format_custom_short'])) {
+          $field_settings['output_format_custom_short'] .= ' '. $replace[$field_settings['output_format_zone_short']];
+        }
+      }
+      if (!empty($field_settings['output_format_zone_medium'])) {
+        $field_settings['output_format_date_medium'] .= ' '. $replace[$field_settings['output_format_zone_medium']];
+        if (!empty($field_settings['output_format_custom_medium'])) {
+          $field_settings['output_format_custom_medium'] .= ' '. $replace[$field_settings['output_format_zone_medium']];
+        }
+      }
+      if (!empty($field_settings['output_format_zone_long'])) {
+        $field_settings['output_format_date_long'] .= ' '. $replace[$field_settings['output_format_zone_long']];
+        if (!empty($field_settings['output_format_custom_long'])) {
+          $field_settings['output_format_custom_long'] .= ' '. $replace[$field_settings['output_format_zone_long']];
+        }
+      }
+
+      // Add new timezone_db setting.
+      // For now this is fixed at 'UTC', but it provides a method to store a different timezone in the future.
+      $field_settings['timezone_db'] = 'UTC';
+
+      // Change select_year, select_month, select_day to array of text_parts and add to widget settings.
+      $text_parts = array();
+      if (isset($widget_settings['select_year']) && empty($widget_settings['select_year'])) {
+        $text_parts[] = 'year';
+      }
+      if (isset($widget_settings['select_month']) && empty($widget_settings['select_month'])) {
+        $text_parts[] = 'mon';
+      }
+      if (isset($widget_settings['select_day']) && empty($widget_settings['select_day'])) {
+        $text_parts[] = 'mday';
+      }
+      $widget_settings['text_parts'] = $text_parts;
+
+      // Combine years_back and years_forward into single year_range
+      $widget_settings['year_range'] = '-'. intval(isset($widget_settings['years_back']) ? $widget_settings['years_back'] : 3) .':+'. intval(isset($widget_settings['years_forward']) ? $widget_settings['years_forward'] : 3);
+
+      // Clean up settings by removing all that are not valid.
+      $fields = array('granularity', 'field_timezone', 'timezone_db', 'tz_handling', 'todate',
+        'output_format_date', 'output_format_date_short', 'output_format_date_medium', 'output_format_date_long',
+        'output_format_custom', 'output_format_custom_short', 'output_format_custom_medium', 'output_format_custom_long');
+      foreach (array_keys($field_settings) as $setting) {
+        if (!in_array($setting, $fields)) {
+          unset($field_settings[$setting]);
+        }
+      }
+      $widgets = array('default_value', 'default_value_custom', 'default_value2', 'default_value_custom2',
+        'input_format', 'input_format_custom', 'increment', 'text_parts', 'year_range');
+      foreach (array_keys($widget_settings) as $setting) {
+        if (!in_array($setting, $widgets)) {
+          unset($widget_settings[$setting]);
+        }
+      }
+      // Save the new settings. Use db_query instead of update_sql to get proper handling for serialized array and
+      // because the query must be run immediately so we can rebuild the cache.
+      db_query("UPDATE {node_field} SET global_settings = '%s' WHERE field_name='%s'", serialize($field_settings), $field['field_name']);
+      db_query("UPDATE {node_field_instance} SET widget_settings = '%s' WHERE field_name='%s'", serialize($widget_settings), $field['field_name']);
+      $ret[] = array('success' => TRUE, 'query' => 'field settings updated to '. serialize($field_settings) .'<br>widget settings updated to '. serialize($widget_settings));
+    }
+  }
+  // Rebuild the cache.
+  content_clear_type_cache();
+  return $ret;
+}
+
+/**
+ * Date offsets were not getting saved. Need to repair the database.
+ * Superceded by update 5103().
+ */
+function date_update_5101() {
+  $ret = array();
+  return $ret;
+}
+
+/**
+ * DB integrity update, supercedes most previous db integrity updates.
+ */
+function date_update_5102() {
+  variable_del('date_version');
+  // Make sure date module loads after date_api.
+  $ret[] = update_sql("UPDATE {system} SET weight = 1 WHERE name = 'date'");
+  return date_db_integrity('5103');
+}
+
+/**
+ * Data integrity update, moved to Version 2 because it can make
+ * lots of db changes and we want people to be prepared for a
+ * significant change.
+ */
+function date_update_5103() {
+  $ret = array();
+  return $ret;
+}
+
+/**
+ * Move these caches from 'cache' to 'cache_views' so they get cleared
+ * automatically whenever views_invalidate_cache() is called.
+ */
+function date_update_5104() {
+  $ret = array();
+  cache_clear_all('date_browser_views', 'cache');
+  return $ret;
+}
+
+function date_db_integrity($name) {
+  $ret = array();
+  include_once(drupal_get_path('module', 'content') .'/content.module');
+  include_once(drupal_get_path('module', 'content') .'/content_admin.inc');
+  include_once(drupal_get_path('module', 'date') .'/date.module');
+  $fields = content_fields();
+  foreach ($fields as $field) {
+    $db_info = content_database_info($field);
+    if ($field['type'] == 'date' || $field['type'] == 'datestamp') {
+      $table = $db_info['table'];
+
+      // start with the new column patterns.
+      $columns_start = date_columns($field);
+      $columns_end = date_columns($field);
+
+      // alter the start column values to invalid values to force the new columns to be reset.
+      $columns_start['value']['length'] = 90;
+      if ($field['todate']) {
+        $columns_start['value2']['length'] = 80;
+      }
+      if ($field['tz_handling'] == 'date') {
+        $columns_start['timezone']['length'] = 80;
+        $columns_start['offset']['length'] = 80;
+      }
+      content_alter_db_field($field, $columns_start, $field, $columns_end);
+      $message = 'Date database integrity check. Updated table '. $table .' to set all columns to accept NULL values.';
+      $ret[] = array('success' => TRUE, 'query' => $message);
+    }
+  }
+  drupal_set_message(t('All date module fields were updated to allow empty (NULL) values.'));
+  content_clear_type_cache();
+  return $ret;
+}
+
+/**
+ *  Progressive update of date information, integrity checking of all date values.
+ *
+ * @param name - name of the update
+ */
+function date_data_integrity($name, $force_recalc = FALSE) {
+  // Use this to turn extra debugging on or off.
+  $debug = TRUE;
+  // The number of nodes to process in each pass.
+  $limit = 5;
+  $ret = array();
+  $update_name = 'date_update_'. $name;
+  // Make sure Date API module is installed before proceeding.
+  if (!module_exists('date_api')) {
+    drupal_install_modules(array('date_api'));
+  }
+  include_once(drupal_get_path('module', 'content') .'/content.module');
+  include_once(drupal_get_path('module', 'content') .'/content_admin.inc');
+  include_once(drupal_get_path('module', 'date_api') .'/date.inc');
+  include_once(drupal_get_path('module', 'date') .'/date.module');
+  include_once(drupal_get_path('module', 'date') .'/date_timezones.inc');
+  $fields = content_fields();
+  // See if being called for the first time
+  if (!isset($_SESSION[$update_name]) || empty($_SESSION[$update_name]['tables'])) {
+    // Find all tables that have date fields and store them in an array.
+    // There could be more than one date field in each table,
+    // so store fields as sub-array.
+    $update = array();
+    foreach ($fields as $field) {
+      $db_info = content_database_info($field);
+      if ($field['type'] == 'date' || $field['type'] == 'datestamp') {
+        $update[$db_info['table']][$field['field_name']] = $field;
+      }
+    }
+    // keep track of progress
+    $_SESSION[$update_name]['tables'] = $update;
+    $_SESSION[$update_name]['counted'] = 0;
+    foreach ($update as $table => $field) {
+      $_SESSION[$update_name][$table]['nid']   = 0;
+      $_SESSION[$update_name][$table]['to_count'] = db_result(db_query("SELECT COUNT(nid) FROM {". $table ."}"));
+      $_SESSION[$update_name]['count_total'] += $_SESSION[$update_name][$table]['to_count'];
+    }
+  }
+  $update = $_SESSION[$update_name]['tables'];
+  if ($debug) {
+    $_SESSION[$update_name]['nids'] = array();
+    $_SESSION[$update_name]['nids_ok'] = array();
+    $_SESSION[$update_name]['dates'] = array();
+  }
+  // Fetch the next $limit nodes
+  $i = 0;
+  foreach ($update as $table => $fields) {
+    $results = db_query_range("SELECT nid FROM {". $table ."} WHERE nid > %d ORDER BY nid", $_SESSION[$update_name][$table]['nid'], 0, $limit);
+    while ($arr = db_fetch_array($results)) {
+      $node = node_load($arr['nid']);
+      // Iterate through all the date fields in this node and re-compute
+      // values to make sure they are correct.
+      $needs_fix = FALSE;
+      foreach ($fields as $field_name => $field) {
+        foreach ((array) $node->$field['field_name'] as $delta => $item) {
+          $add = array();
+          // Check for non-required fields that still have the old default values and make them NULL.
+          if ($field['type'] == 'date' && !$field['required'] && (substr($item['value'], 0, 10) == '0000-00-00' || substr($item['value'], 0, 10) == '0001-00-00')) {
+            $item['value'] = NULL;
+            $needs_fix = TRUE;
+          }
+          if ($field['type'] == 'datestamp' && !$field['required'] && empty($item['value'])) {
+            $item['value'] = NULL;
+            $needs_fix = TRUE;
+          }
+          $add[$delta]['value'] = $item['value'];
+          // Check for missing todates.
+          if ($field['todate']) {
+            if ((empty($item['value2']) && !empty($item['value'])) || $force_recalc) $needs_fix = TRUE;
+            $add[$delta]['value2']   = !empty($item['value2']) ? $item['value2'] : $item['value'];
+          }
+          // Check for missing timezone and offset information.
+          if ($field['tz_handling'] == 'date') {
+            if (empty($item['offset']) || empty($item['timezone']) || $force_recalc) {
+              $needs_fix = TRUE;
+              $timezone = date_get_timezone($field['tz_handling'], $item['timezone']);
+              $date = date_make_date($item['value'], 'GMT', 'db', ($field['type'] == 'date' ? DATE_ISO : DATE_UNIX));
+              date_convert_timezone($date, 'GMT', $timezone, 'local');
+              $add[$delta]['timezone'] = $field['required'] || $item['value'] ? $timezone : NULL;
+              $add[$delta]['offset']   = $field['required'] || $item['value'] ? $date->local->offset : NULL;
+            }
+          }
+        }
+        $node->$field['field_name'] = $add;
+        // Debugging information.
+        if ($debug) {
+          $_SESSION[$update_name]['dates'][$i] = $node->nid .' > Value: '. (!empty($add[$delta]['value']) ? $add[$delta]['value'] : 'set to NULL');
+          if (!empty($add[$delta]['value2'])) {
+            $_SESSION[$update_name]['dates'][$i] .= ' > Value2: '. (!empty($add[$delta]['value2']) ? $add[$delta]['value2'] : 'set to NULL');
+          }
+          if ($field['tz_handling'] == 'date' && isset($date)) {
+            $_SESSION[$update_name]['dates'][$i] .= ' > Computed timezone: '.$date->local->timezone.
+            ' > Computed offset: '.$date->local->offset;
+          }
+        }
+        $i++;
+      }
+      // More debugging information.
+      if ($debug) {
+        if ($needs_fix) {
+          $_SESSION[$update_name]['nids'][] = $node->nid;
+        }
+        else {
+          $_SESSION[$update_name]['nids_ok'][] = $node->nid;
+        }
+      }
+      if ($needs_fix) {
+        node_submit($node);
+        node_save($node);
+      }
+      // reset nid
+      $_SESSION[$update_name][$table]['nid'] = $node->nid;
+      // add to count total
+      $_SESSION[$update_name]['counted']++;
+      // reduce the number of items in this table left to count
+      $_SESSION[$update_name][$table]['to_count']--;
+    }
+
+    // if everything in this table has been done, move to next table
+    if ($_SESSION[$update_name][$table]['to_count'] < 1) {
+      array_shift($_SESSION[$update_name]['tables']);
+    }
+
+    // See if we are done
+    if ($_SESSION[$update_name]['counted'] && $_SESSION[$update_name]['counted'] < $_SESSION[$update_name]['count_total']) {
+      // Not done yet. Return the progress and a progress debug message.
+      $progress = floatval($_SESSION[$update_name]['counted'] / $_SESSION[$update_name]['count_total']);
+      if ($debug) {
+        $message = 'Date data integrity check. Total nodes checked: '. $_SESSION[$update_name]['counted'].
+          '<br>Updated nodes: '. implode(', ', $_SESSION[$update_name]['nids']) .
+          '<br>Unchanged nodes: '. implode(', ', $_SESSION[$update_name]['nids_ok']) .
+          '<br>Date Computations:<br>'. implode('<br>', $_SESSION[$update_name]['dates']);
+        unset($_SESSION[$update_name]['nids']);
+        unset($_SESSION[$update_name]['nids_ok']);
+        unset($_SESSION[$update_name]['dates']);
+      }
+      if ($debug) {
+        return array('#finished' => $progress, array('success' => TRUE, 'query' => $message));
+      }
+      else {
+        return array('#finished' => $progress);
+      }
+    }
+    else {
+      // Done. Clean up and indicate we're finished.
+      drupal_set_message(t('All nodes with date fields have been checked.'));
+      $message = 'Date data integrity check. Total nodes checked: '. $_SESSION[$update_name]['counted'];
+      if ($debug) {
+        $message .= '<br>Updated nodes: '. implode(', ', $_SESSION[$update_name]['nids']) .
+          '<br>Unchanged nodes: '. implode(', ', $_SESSION[$update_name]['nids_ok']) .
+          '<br>Date Computations:<br>'. implode('<br>', $_SESSION[$update_name]['dates']);
+      }
+      unset($_SESSION[$update_name]);
+      content_clear_type_cache();
+      db_query('DELETE FROM {cache_content}');
+      return array('#finished' => 1, array('success' => TRUE, 'query' => $message));
+    }
+  }
+}

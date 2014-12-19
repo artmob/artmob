@@ -1,0 +1,263 @@
+<?php
+// $Id: activesearch.module,v 1.1.2.11 2008/11/07 01:04:51 nedjo Exp $
+
+/**
+ * Implementation of hook_menu().
+ */
+function activesearch_menu($may_cache) {
+  $items = array();
+  if ($may_cache) {
+    $items[] = array(
+      'path' => 'admin/settings/activesearch',
+      'title' => t('Active search'),
+      'description' => t('Configuration for active searching'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('activesearch_admin_settings')
+    );
+  }
+
+  elseif (user_access('search via ajax') && activesearch_supported_browser()) {
+    if (arg(0) == 'search' && arg(1) == 'node' && arg(2)) {
+      $q = $_GET;
+      $querystring = array();
+      unset($q['q']);
+      foreach ($q as $key => $value) {
+        if ($key != 'q') {
+          $querystring[] = $key .'='. $value;
+        }
+      }
+      drupal_goto('search/node', !empty($querystring) ? implode('&', $querystring) : NULL, 'keys='. arg(2));
+    }
+    activesearch_load();
+  }
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function activesearch_perm() {
+  return array('search via ajax');
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function activesearch_form_alter($form_id, &$form) {
+  if (activesearch_supported_browser()) {
+    if (isset($_POST['activesearch']) && in_array($form_id, array('search_form', 'search_theme_form', 'search_block_form'))) {
+      $form['#submit']['activesearch_submit'] = array();
+      $form['#validate']['activesearch_validate'] = array();
+    }
+    if ($form_id == 'search_form') {
+      $form['#suffix'] .= '<dl class="search-results"></dl>';
+      $form['page'] = array(
+        '#type' => 'hidden',
+        '#value' => '',
+      );
+    }
+  }
+}
+
+function activesearch_admin_settings() {
+  $form = array();
+  $form['jstools_history_remote'] = array(
+    '#type' => 'radios',
+    '#title' => t('History plugin'),
+    '#description' => t('Load the history_remote plugin, which ties search submission to browser history. Active Search will be missing some functionality if this is disabled. However, the plugin can cause errors in combination with certain other Javascript functionality. Disable to avoid such errors. Note that disabling this setting will affect other modules if you enable them: Tabs and Dynamicload.'),
+    '#default_value' => variable_get('jstools_history_remote', 0),
+    '#options' => array(t('disabled'), t('enabled')),
+  );
+  $form['activesearch_tabs_mode'] = array(
+    '#type' => 'radios',
+    '#title' => t('Tabs'),
+    '#default_value' => variable_get('activesearch_tabs_mode', 'node'),
+    '#options' => array(0 => t('none'), 'term' => t('categories'), 'node' => t('content types')),
+    '#description' => t('Select the types of tabs you would like for displaying search results.'),
+  );
+  $form['activesearch_nodes'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Content types'),
+    '#default_value' => variable_get('activesearch_nodes', array()),
+    '#options' => node_get_types('names'),
+    '#description' => t('If you wish to present ajax search results by content type, select the content types to use here.'),
+  );
+  $form = system_settings_form($form);
+  return $form;
+}
+
+function activesearch_validate($form_id, $form_values, $form) {
+  form_set_value(array('#parents' => array('page')), isset($_POST['page']) ? $_POST['page'] : '');
+}
+
+function activesearch_submit($form_id, $form_values) {
+  $type = $form_values['module'] ? $form_values['module'] : 'node';
+  if (in_array($form_id, array('search_theme_form', 'search_block_form'))) {
+    $keys = $form_values[$form_id .'_keys'];
+    // We can't return a string that includes the keys. Instead
+    // we set the destination directly.
+    $_REQUEST['destination'] = 'search/'. $type .'#keys='. $keys;
+    return;
+  }
+  $keys = $form_values['processed_keys'];
+  $_GET['q'] = 'search/'. $type .'/'. $keys;
+  $_GET['page'] = $form_values['page'];
+  print drupal_to_js(array('status' => TRUE, 'data' => array('keys' => $keys, 'results' => activesearch_results($keys, $type))));
+  exit();
+}
+
+function activesearch_results($keys, $type, $create = TRUE) {
+  // We need to call search_data even if we're overriding the results
+  // in order to seed the results temporary table.
+  $results = $create ? search_data($keys, $type) : array();
+
+  if (($results || !$create) && $type == 'node') {
+    switch (variable_get('activesearch_tabs_mode', 'node')) {
+      case 'node':
+        // If user has entered type information, use it.
+        if ($node_types = search_query_extract($keys, 'type')) {
+          $node_types = explode(',', $node_types);
+        }
+        // Otherwise look for registered types.
+        else {
+          $node_types = array_filter(variable_get('activesearch_nodes', array()));
+          unset($node_types[0]);
+        }
+        // If neither, use the types of the found items.
+        if (!count($node_types)) {
+          $result = db_query_range("SELECT DISTINCT(n.type) FROM temp_search_results r INNER JOIN {node} n ON r.sid = n.nid", 0, 10);
+          while ($row = db_fetch_array($result)) {
+            $node_types[] = $row['type'];
+          }
+        }
+        if (count($node_types)) {
+          return theme('activesearch_results', 'node', $keys, $node_types, $results);
+        }
+        break;
+      case 'term':
+        // If user has entered type information, use it.
+        if ($tids = search_query_extract($keys, 'category')) {
+          $tids = explode(',', $tids);
+        }
+        // Otherwise look for registered types.
+        else {
+          $tids = array_filter(variable_get('activesearch_activesearch_terms', array()));
+          unset($tids[0]);
+        }
+        // If neither, use the tids of the found items.
+        if (!count($tids)) {
+          $result = db_query_range("SELECT DISTINCT(tn.tid) FROM temp_search_results r INNER JOIN {term_node} tn ON r.sid = tn.nid", 0, 10);
+          while ($row = db_fetch_array($result)) {
+            $tids[] = $row['tid'];
+          }
+        }
+        if (count($tids)) {
+          return theme('activesearch_results', 'term', $keys, $tids, $results);
+        }
+        break;
+    }
+  }
+  return $results ? $results : (form_get_errors() ? theme('status_messages') : t('No matches found.'));
+}
+
+/**
+ * Load/set the required files and javascript for activesearch.
+ */
+function activesearch_load() {
+  drupal_add_js('misc/progress.js');
+  $path = drupal_get_path('module', 'activesearch');
+  jstools_add_js($path . '/activesearch.js');
+  if (variable_get('jstools_history_remote', 0)) {
+    drupal_add_js(drupal_get_path('module', 'jstools') . '/jquery.history_remote.pack.js');
+  }
+  module_invoke('tabs', 'load');
+}
+
+function activesearch_results_node($type, $keys) {
+  // Do actual search query
+  $result = db_query_range("SELECT * FROM temp_search_results r INNER JOIN {node} n ON r.sid = n.nid WHERE n.type = '%s'", $type, 0, 10);
+  return activesearch_results_items($result, $keys);
+}
+
+function activesearch_results_term($tid, $keys) {
+  // Do actual search query
+  $result = db_query_range("SELECT * FROM temp_search_results r INNER JOIN {node} n ON r.sid = n.nid INNER JOIN {term_node} tn ON tn.nid = n.nid WHERE tn.tid = %d", $tid, 0, 10);
+  return activesearch_results_items($result, $keys);
+}
+
+function activesearch_results_items($result, $keys) {
+  $find = array();
+  while ($item = db_fetch_object($result)) {
+    $find[] = $item;
+  }
+  // Load results
+  $results = array();
+  // From node_search().
+  foreach ($find as $item) {
+    // Build the node body.
+    $node = node_load($item->sid);
+    $node = node_build_content($node, FALSE, FALSE);
+    $node->body = drupal_render($node->content);
+
+    // Fetch comments for snippet
+    $node->body .= module_invoke('comment', 'nodeapi', $node, 'update index');
+    // Fetch terms for snippet
+    $node->body .= module_invoke('taxonomy', 'nodeapi', $node, 'update index');
+
+    $extra = node_invoke_nodeapi($node, 'search result');
+    $results[] = array('link' => url('node/'. $item->sid, NULL, NULL, TRUE),
+                       'type' => node_get_types('name', $node),
+                       'title' => $node->title,
+                       'user' => theme('username', $node),
+                       'date' => $node->changed,
+                       'node' => $node,
+                       'extra' => $extra,
+                       'snippet' => search_excerpt($keys, $node->body));
+  }
+  foreach ($results as $entry) {
+    $output .= theme('search_item', $entry, 'node');
+  }
+  return $output;
+}
+
+function theme_activesearch_results($object_type, $keys, $items, $results) {
+  $tabs = array();
+  $tabs['activesearch'] = array(
+    '#type' => 'tabset',
+  );
+  $tabs['activesearch']['all'] = array(
+    '#type' => 'tabpage',
+    '#title' => t('All'),
+    '#content' => $results,
+  );
+  switch ($object_type) {
+    case 'node':
+      foreach ($items as $node_type) {
+        if ($result = activesearch_results_node($node_type, $keys)) {
+          $tabs['activesearch'][$node_type] = array(
+            '#type' => 'tabpage',
+            '#title' => node_get_types('name', $node_type) ? node_get_types('name', $node_type) : $node_type,
+            '#content' => $result,
+          );
+        }
+      }
+      break;
+    case 'term':
+      foreach ($items as $tid) {
+        if ($result = activesearch_results_term($tid, $keys)) {
+          $term = taxonomy_get_term($tid);
+          $tabs['activesearch'][$tid] = array(
+            '#type' => 'tabpage',
+            '#title' => $term->name,
+            '#content' => $result,
+          );
+        }
+      }
+      break;
+  }
+  return tabs_render($tabs);
+}
+
+function activesearch_supported_browser() {
+  return !strstr($_SERVER['HTTP_USER_AGENT'], 'Safari');
+}

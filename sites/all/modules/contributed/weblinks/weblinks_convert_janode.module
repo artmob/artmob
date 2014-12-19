@@ -1,0 +1,148 @@
+<?php
+// $Id: weblinks_convert_janode.module,v 1.1.2.2 2009/05/10 00:10:46 nancyw Exp $
+
+/**
+ * @file
+ * Convert Janode package to Web Links.
+ * Drupal 5 Version - Janode has no 6 version.
+ */
+
+/**
+ * Implementation of hook_menu().
+ */
+function weblinks_convert_janode_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+    $items[] = array(
+      'path' => 'admin/settings/weblinks/janode',
+      'title' => 'Convert Janode package',
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('weblinks_convert_janode_form'),
+      'access' => user_access('administer weblinks'),
+      'type' => MENU_LOCAL_TASK,
+      'weight' => 10,
+      );
+  }
+  else {
+    drupal_add_css(drupal_get_path('module', 'weblinks') .'/weblinks.css');
+  }
+  return $items;
+}
+
+function weblinks_convert_janode_form() {
+  drupal_set_message(t('The Janode package nodes will be used to create duplicate Web Links nodes and any taxonomy vocabularies will be updated to be used on the "weblinks" content type.'), 'warning');
+
+  $form = array();
+
+  $form['backup'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('I have done a back up of my database.'),
+    );
+
+  $form['limit'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Number of Links to convert at a time'),
+    '#size' => 5,
+    '#default_value' => 0,
+    '#description' => t('This minimizes the risk of timing out if you have a lot of links to convert.'),
+    );
+
+  $form['convert'] = array(
+    '#type' => 'submit',
+    '#value' => t('Convert'),
+    );
+
+  $form['#validate']['weblinks_convert_janode_form_validate'] = array();
+  $form['#submit']['weblinks_convert_janode_form_submit'] = array();
+  
+  return $form;
+}
+
+function weblinks_convert_janode_form_validate($form_id, $form_values) {
+  if (!$form_values['backup']) {
+    form_set_error('backup', t('You must check the box that says you backed up your database.'));
+  }
+}
+
+function weblinks_convert_janode_form_submit($form_id, $form_values) {
+  weblinks_convert_janode($form_values['limit']);
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ * This is needed because janode_load does not include all columns from the janode table.
+ */
+function weblinks_convert_janode_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  if ($op == 'load' && $node->type == 'janode') {
+    $result = db_query("SELECT http_recip, http_click, last_checked FROM {janode} WHERE vid=%d AND nid=%d", $node->vid, $node->nid);
+    return db_fetch_array($result);
+  }
+}
+
+function weblinks_convert_janode($limit = 10) {
+  $rows = $vids = array();
+  $how_many = 0;
+
+  $result = db_query_range("SELECT n.nid, n.vid FROM {node} n WHERE n.type='janode'", 0, $limit);
+
+  while ($data = db_fetch_array($result)) {
+    // This causes all load and nodeapi hooks to fire.
+    $node = node_load($data);
+
+    $node->url = $node->http_link;
+    if (!$node->url) {
+      drupal_set_message(t('Improper URL set by Links package in node #!nid.', array('!nid' => $node->nid), 'error'));
+      // Skip the conversion.
+      continue;
+    }
+    $tids = array();
+
+    foreach ($node->taxonomy as $tid => $term) {
+      $vids[] = $term->vid;
+      $tids[] = $tid; 
+    }
+
+//    $node->title .= ' [janode]';
+    $node->last_status = $node->janode_status;
+    $node->last_checked = strtotime($node->last_checked);
+    $node->click_count = $node->http_click;
+    $node->reciprocal = $node->http_recip;
+    $node->last_click = 0;
+    $node->weight = 0;
+    $node->type = 'weblinks';
+    $node->nid = $node->vid = NULL;
+    $node->is_converted = TRUE;
+
+    node_save($node);
+    ++$how_many; /* */
+  }
+  drupal_set_message(t('!count links converted.', array('!count' => ($how_many ? $how_many : t('No')))), 'status');
+
+  if ($vids) {
+    $vids = array_unique($vids);
+    drupal_set_message(t('Found !count vocabularies: (!vocs)', array('!count' => count($vids), '!vocs' => implode(', ', $vids))));
+
+    foreach ($vids as $vid) {
+      $vocabulary = (array) taxonomy_get_vocabulary($vid);
+      if (!in_array('weblinks', $vocabulary['nodes'])) {
+        $types = $vocabulary['nodes'];
+        $types[] = 'weblinks';
+        $vocabulary['nodes'] = array();
+        foreach ($types as $type) {
+          $vocabulary['nodes'][$type] = 1;
+        }
+        $status = taxonomy_save_vocabulary($vocabulary);
+        if ($status) {
+          drupal_set_message(t('Added "Web Links" content to the !voc vocabulary.', array('!voc' => $vocabulary['name'])), 'status');
+        }
+        else {
+          drupal_set_message(t('Failed adding "Web Links" content to the !voc vocabulary.', array('!voc' => $vocabulary['name'])), 'error');
+        }
+      }
+    }
+  }
+  else {
+    drupal_set_message(t('No vocabularies were used, so these links will be marked as "%noclass."', array('%noclass' => variable_get('weblinks_unclassified_title', t('Unclassified')))));
+  }
+}

@@ -1,0 +1,21 @@
+<?php
+// $Id: artmob_reporting install,v 1.0 2008/03/07 01:30:00 drumm Exp $
+
+/**
+ * Implementation of hook_install().
+ */
+function artmob_reporting_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      break;
+    case 'pgsql':
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function artmob_reporting_uninstall() {
+}

@@ -1,0 +1,10 @@
+; $Id: dynamic_views.info,v 1.1.2.1 2007/07/26 00:06:42 sarvab Exp $
+description = "Create dynamic updating views using jQuery"
+name = "Dynamic Views"
+dependencies = views
+package = Views
+; Information added by drupal.org packaging script on 2007-07-29
+version = "5.x-1.x-dev"
+project = "dynamic_views"
+datestamp = "1185667347"
+

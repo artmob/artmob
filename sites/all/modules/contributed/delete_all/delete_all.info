@@ -1,0 +1,10 @@
+; $Id: delete_all.info,v 1.1 2007/12/23 03:22:05 kbahey Exp $
+name = Delete content and users
+description = Allows deletion of all nodes, comments and users on a site. Useful for development or prior to launching a site.
+package = Development
+
+; Information added by drupal.org packaging script on 2010-07-11
+version = "5.x-1.x-dev"
+project = "delete_all"
+datestamp = "1278833922"
+

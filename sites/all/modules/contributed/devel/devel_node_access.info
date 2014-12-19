@@ -1,0 +1,10 @@
+; $Id: devel_node_access.info,v 1.1.4.5 2007/06/13 19:41:05 dww Exp $
+name = Devel Node Access
+description = Developer block and page illustrating relevant node_access records.
+package = Development
+
+; Information added by drupal.org packaging script on 2010-08-04
+version = "5.x-1.3"
+project = "devel"
+datestamp = "1280961673"
+

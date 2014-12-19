@@ -1,0 +1,23 @@
+CREATE TABLE relativity (
+  nid int(10) unsigned NOT NULL default '0',
+  parent_nid int(10) unsigned NOT NULL default '0',
+  KEY nid (nid),
+  KEY parent_nid (nid)
+) TYPE=MyISAM /*!40100 DEFAULT CHARACTER SET utf8 */;
+
+CREATE TABLE relativity_query (
+  nid int(10) unsigned NOT NULL default '0',
+  target_nid int(10) unsigned,
+  follow_parents int(10) unsigned,
+  follow_children int(10) unsigned,
+  recursion_depth int(10) unsigned,
+  unique_types int(10) unsigned,
+  max_results int(10) unsigned,
+  options longtext,
+  search_algorithm varchar(20) default 'dfs',
+  search_types longtext,
+  end_pts longtext,
+  avoid_pts longtext,
+  KEY nid (nid)
+) TYPE=MyISAM /*!40100 DEFAULT CHARACTER SET utf8 */;
+

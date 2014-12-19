@@ -1,0 +1,124 @@
+<?php
+// $Id: contact_forms.module,v 1.1.2.2 2008/01/13 06:15:13 gpdinoz Exp $
+
+/**
+ * @file
+ * Creates a unique Site Wide Contact form with out drop down menu for each of the Contact Categories.
+ */
+
+/**
+ * Implementation of hook_menu()
+ */
+function contact_forms_menu($may_cache) {
+  $items = array();
+  if ($may_cache) {
+    // instead of hijacking the path 'contact' we create a path for each contact category
+    $result = db_query('SELECT category FROM {contact}');
+
+    if (db_num_rows($result)) {
+      foreach (db_fetch_object($result) as $contact) {
+        $name = str_replace(' ', '_' , $contact->category);
+
+        $items[] = array(
+          'path' => 'contact/'. $name,
+          'access' => TRUE,
+          'type' => MENU_CALLBACK,
+        );
+      }
+    }
+  }
+  return $items;
+}
+
+/**
+ * Implementation of hook_form_alter()
+ */
+function contact_forms_form_alter($form_id, &$form) {
+  $path = $_GET['q'];
+
+  // check and disable contact_list.module
+  if ( module_exists('contact_forms') && module_exists('contact_list')) {
+     module_disable( array('contact_list'));
+  }
+
+  // redirect contact if another fall back page is defined
+  if ($path == 'contact' && variable_get('contactform_redirect', 'contact') != 'contact') {
+    drupal_goto(variable_get('contactform_redirect', 'contact'));
+  }
+
+  // Alter all contact forms except for /contact
+  if ($form_id == 'contact_mail_page' && $path != 'contact') {
+
+    $category = str_replace(  '_' , ' ' , arg(1));
+    $query =  db_query("SELECT * FROM {contact} WHERE category = '%s'", $category);
+    //if category doesn't exist redirect to 'contact' or User Defined Page
+    if (!db_num_rows($query)) {
+      drupal_goto(variable_get('contactform_redirect', 'contact'));
+    }
+    $categories_data =  db_fetch_array($query);
+
+    //$contact_form_var = variable_get('contactform_title', 'contact !category');
+
+    drupal_set_title(t(variable_get('contactform_title', 'Contact !category'), array('!category' => $categories_data['category'])));
+
+    $form['contact_information'] = array(
+      '#type' => 'markup',
+      '#value' => t(variable_get('contactforms_information' , 'You can send !category a message using the contact form below.') , array('!category' => $categories_data['category'])),
+    );
+
+    $form['cid'] = array(
+      '#type' => 'hidden',
+      '#value' => $categories_data['cid'],    
+      '#required' => TRUE,
+    );
+  }
+
+  // Alter contact settings form
+  if ($form_id == 'contact_admin_settings') {
+    if (drupal_get_path('module', 'contact_list') != '') {
+      $contact_list_path = drupal_get_path('module', 'contact_list');
+      drupal_set_message('WARNING: You have both the Contact Forms and Contact List modules installed. The Contact Forms module replaces the Contact List module and has disabled it. Please delete the following folder.<ul><li>'. $contact_list_path .'</li></ul> If you unable to delete this folder don\'t panic because everything will still work OK. You will just get this annoying message until you do.', $type = 'error');
+    }
+
+    // get example contact form path
+    $query =  db_fetch_object(db_query_range("SELECT * FROM {contact}", 0, 1));
+    $name = str_replace(' ',  '_' , $query->category);
+
+$form['contact_form_information'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Default Contact Form Additional information'),
+      '#weight' => -1,
+     '#default_value' => variable_get('contact_form_information', t('You can leave a message using the contact form below.')),
+    '#description' => t('Information to show on the standard <a href="@form">contact page</a>. Can be anything from submission guidelines to your postal address or telephone number.', array('@form' => url('contact'))),
+
+    );
+
+    $form['contactforms_information'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Contact Forms Additional information'),
+      '#weight' => 0,
+      '#default_value' => variable_get('contactforms_information', t('You can send !category a message using the contact form below.')),
+      '#description' => t('Information to show on the individual <a href="@form">contact pages</a>. Can be anything from submission guidelines to your postal address or telephone number. To place the category name in your message use the wildcard "@category" e.g. You can send !category a message using the contact form below.', array('@form' => url('contact/'. $name))),
+    );
+
+    $form['contactform_redirect'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Contact Form redirect'),
+      '#default_value' => variable_get('contactform_redirect', 'contact'),
+      '#weight' => -2,
+      '#maxlength' => 60,
+      '#description' => t('The page you would like to redirect to if a contact/category path is entered that doesn\'t exist.'),
+      '#required' => FALSE,
+    );
+
+    $form['contactform_title'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Contact Form Title'),
+      '#default_value' => variable_get('contactform_title', 'contact !category'),
+      '#weight' => -3,
+      '#maxlength' => 60,
+      '#description' => t('The title you would like displayed on the <a href="!form">contact page</a>. To place the category name in the title use the wildcard "!category".', array('!form' => url('contact/'. $name))),
+      '#required' => TRUE,
+    );
+  }
+}

@@ -1,0 +1,31 @@
+#main {
+	color:#333;
+	font-family: Helvetica, Arial, sans-serif;
+	}
+
+
+
+
+
+
+/* Audio */
+
+.content-amAudio .swftools-wrapper {
+	height:24px;
+}
+
+
+
+/*   ----------------------------------------------------------------------*/
+/*   License Page ---------------------------------------------------------*/
+/*   ----------------------------------------------------------------------*/
+.copyright-module .subtitle {
+	font-size: 1.25em;
+	font-weight: normal;
+	}
+#tabs-tabbed_content li {
+	-moz-border-radius-topleft:5px; -webkit-border-top-left-radius:3px; 
+	-moz-border-radius-topright:5px; -webkit-border-top-right-radius:3px;
+	text-shadow: #333 0px -1px 1px;
+	}
+
