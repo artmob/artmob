@@ -93,7 +93,10 @@ function artmob_fair_dealing_init() {
          'ffinfofields' => theme('afd_formfields_infofields'),
          'datewidget' => theme('afd_date_widget'),
          'ffaddnewcontributor' => theme('afd_add_new_contributor'),
-         'artmob_empty_title_placeholder' => ARTMOB_EMPTY_TITLE_PLACEHOLDER
+         'artmob_empty_title_placeholder' => ARTMOB_EMPTY_TITLE_PLACEHOLDER,
+         'savepath' => base_path() . "fair_dealing_save_report",
+         'contribpath' => base_path() . "get_contributors",
+         'addcontribpath' => base_path() . "artmob_contributor_add_contributor"
        );
 
        drupal_add_js(array('afd' => $artmob_fair_dealing_settings), "setting");

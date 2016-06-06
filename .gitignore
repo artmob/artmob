@@ -1,0 +1,6 @@
+.DS_Store
+*\.DS_Store
+sites/all/modules/.DS_Store
+sites/.DS_Store
+sites/all/modules/artmob/.DS_Store
+sites/all/modules/artmob/artmob_fair_dealing/.DS_Store

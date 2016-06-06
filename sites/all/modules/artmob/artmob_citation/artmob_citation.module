@@ -121,7 +121,9 @@ function artmob_citation_init() {
          'ffinfofields' => theme('afd_formfields_infofields'),
          'citationtable' => theme('afd_citation_table'),
          'infotable' => theme('afd_info_table'),
-         'edcit' => user_access('Edit Citation')
+         'edcit' => user_access('Edit Citation'),
+         'savepath' => base_path() . "fair_dealing_save_report",
+         'contribpath' => base_path() . "get_contributors"
        );
 
        drupal_add_js(array('afd' => $artmob_fair_dealing_settings), "setting");

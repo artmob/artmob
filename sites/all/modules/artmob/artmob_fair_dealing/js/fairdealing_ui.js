@@ -67,7 +67,7 @@ function afd_ui_bindings() {
 
 			 jQ14.ajax({
 					async: false, // forces the script to stop until ajax is complete. important when performing auto-selections
-					url: '/artmob_contributor_add_contributor',
+					url: Drupal.settings.afd.addcontribpath,
 					dataType: 'json',
 					type: 'POST',
 					data:  {contributor: JSON.stringify(contribdata)},
@@ -85,7 +85,7 @@ function afd_ui_bindings() {
 						
 						jQ14.ajax({
 							async: false,
-							url: '/fair_dealing/get_contributors',
+							url: Drupal.settings.afd.contribpath,
 							dataType: 'json',
 							success: function(data) {
 								contributors = data;

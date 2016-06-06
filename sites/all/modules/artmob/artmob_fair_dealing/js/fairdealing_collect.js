@@ -376,7 +376,7 @@ function createTier0Menu(ctarget,type) {
       
 				jQ14.ajax({
 					async: false, // forces the script to stop until ajax is complete. important when performing auto-selections
-					url: '/fair_dealing/get_contributors',
+					url: Drupal.settings.afd.contribpath,
 					dataType: 'json',
 					success: function(data) {
 						var contributors = data;
@@ -831,7 +831,7 @@ function store_report(in_memory,first_time)
 	  }
     
     ///!!! send report to artmob_fair_dealing.module
-  jQ14.post('/fair_dealing_save_report',
+  jQ14.post(Drupal.settings.afd.savepath,
     {report: JSON.stringify(report) },
      function (data) {
        var result = Drupal.parseJson(data);
