@@ -90,7 +90,7 @@
  *   $db_url = 'mysqli://username:password@localhost/databasename';
  *   $db_url = 'pgsql://username:password@localhost/databasename';
  */
-$db_url = 'mysql://root:pokc00ld%21@127.0.0.1/artmob';
+$db_url = 'mysql://user:pass@127.0.0.1/dbname';
 $db_prefix = '';
 
 /**
