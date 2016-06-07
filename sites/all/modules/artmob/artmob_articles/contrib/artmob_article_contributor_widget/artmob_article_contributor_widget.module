@@ -323,7 +323,7 @@ function artmob_article_contributor_widget_load_widgets( $node, &$widget_name ) 
 /**
  * hook_nodeapi
  */
-function artmob_article_contributor_widget_nodeapi( &$node, $op ) {
+function artmob_article_contributor_widget_nodeapi( $node, $op ) {
   if ( variable_get( 'artmob_article_contributor_widget_'. $node->type, FALSE ) ) {
     switch ($op) {
       // info flow db -> node -> form -> node -> db
@@ -446,7 +446,7 @@ function theme_artmob_article_contributor_widget_subwidgets(&$form) {
   return $output;
 }
 
-function theme_artmob_article_contributor_widget_build_contributors_as_list(&$node, $header_tag='h4', $truncate=NULL) {
+function theme_artmob_article_contributor_widget_build_contributors_as_list($node, $header_tag='h4', $truncate=NULL) {
   $output .= "<div class='am_contributors-contributors-by-name'>\n";
   $output .= "<ul>\n";
   foreach ($node->contributors_by_name as $contributor_nid => $contributors) {

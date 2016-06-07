@@ -283,7 +283,7 @@ function _artmob_copyrightholder_build_widget_js( $name, $edit ) {
 /**
  * hook_nodeapi
  */
-function artmob_copyrightholder_nodeapi( &$node, $op ) {
+function artmob_copyrightholder_nodeapi( $node, $op ) {
   if( variable_get( 'artmob_copyrightholder_'. $node->type, FALSE ) ) {
 //		drupal_set_message( "artmob_copyrightholder Widget_nodeapi: $op , $node->type" );//. dprint_r($node, TRUE) );
 		switch($op) {

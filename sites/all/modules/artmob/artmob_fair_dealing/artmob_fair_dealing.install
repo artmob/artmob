@@ -67,8 +67,8 @@ function artmob_fair_dealing_install() {
 				('Ab', 'Literary Compilation', NULL),
 				('Ba', 'Choreographed Work', NULL),
 				('Bb', 'Play/Script/Screenplay', NULL),
-				('Bc', 'Film (Cinema/Animation/Documentary/Found Footage)', NULL),,
-				('Bd', 'Dramatic Compilation', NULL)
+				('Bc', 'Film (Cinema/Animation/Documentary/Found Footage)', NULL),
+				('Bd', 'Dramatic Compilation', NULL),
 				('Ca', 'Musical Composition', NULL),
 				('Cb', 'Musical Recording', NULL),
 				('Cc', 'Musical Compilation', NULL),

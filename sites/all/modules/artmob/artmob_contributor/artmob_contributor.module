@@ -1,4 +1,4 @@
-<?php
+	<?php
 // $Id: artmob_contributor.module,v 3.1 2008/03/01 08:31:22 stop14 Exp $
 
 /**
@@ -138,20 +138,20 @@ function artmob_contributor_view($node, $teaser = FALSE, $page = FALSE) {
   return $node;
 }
 
-function theme_artmob_contributor_basic_view( &$node, $page ) {
+function theme_artmob_contributor_basic_view( $node, $page ) {
   $content = '';
   $content .= $node->body;
   return $content;
 }
 
-function theme_artmob_contributor_teaser_view( &$node, $page ) {
+function theme_artmob_contributor_teaser_view( $node, $page ) {
   $content = '';
   $content .= $node->teaser;
   return $content;
 }
 
 /*
-function theme_artmob_contributor_basic_view( &$node, $page ) {
+function theme_artmob_contributor_basic_view( $node, $page ) {
   if ($page) {
     //The node prepare has kind of done it all so just return blank for now
     $content = '<h1> First Name:  '.$node->first_name.'</h1>';
@@ -407,7 +407,7 @@ function artmob_contributor_load($node) {
 /**
  * Implementation of hook_submit().
  */
-function artmob_contributor_submit(&$node) {
+function artmob_contributor_submit($node) {
   global $user;
   if ($node->contributor_type == CONTRIBUTOR_TYPE_CORPORATION) {
     $node->title = $node->last_name;
@@ -424,7 +424,7 @@ function artmob_contributor_submit(&$node) {
 
 
 // Implementation of hook_form().
-function artmob_contributor_form(&$node) {
+function artmob_contributor_form($node) {
 
   $type = node_get_types('type', $node);
 
@@ -722,7 +722,7 @@ function artmob_contributor_form_alter($form_id, &$form) {
  * Implementation of hook_nodeapi().
  *
  */
-function artmob_contributor_nodeapi(&$node, $op, $teaser, $page) {
+function artmob_contributor_nodeapi($node, $op, $teaser, $page) {
   switch ($op) {
     case 'update':
       $bupdate = TRUE;

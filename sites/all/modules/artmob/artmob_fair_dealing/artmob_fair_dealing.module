@@ -95,7 +95,7 @@ function artmob_fair_dealing_init() {
          'ffaddnewcontributor' => theme('afd_add_new_contributor'),
          'artmob_empty_title_placeholder' => ARTMOB_EMPTY_TITLE_PLACEHOLDER,
          'savepath' => base_path() . "fair_dealing_save_report",
-         'contribpath' => base_path() . "get_contributors",
+         'contribpath' => base_path() . "fair_dealing/get_contributors",
          'addcontribpath' => base_path() . "artmob_contributor_add_contributor"
        );
 
@@ -116,7 +116,7 @@ function artmob_fair_dealing_init() {
 
 }
 
-function artmob_fair_dealing_get_media_type(&$node) {
+function artmob_fair_dealing_get_media_type($node) {
 
   $types = array (
     ARTMOB_FD_MEDIA_TYPE_DOCUMENT => 'Document',
@@ -974,11 +974,11 @@ function artmob_fair_dealing_build_info( $value, $field, &$info_sequence, &$info
   return $info;
 }
 
-function artmob_fair_dealing_tab(&$node) {
+function artmob_fair_dealing_tab($node) {
   return theme('artmob_fair_dealing_tab_basic_view', $node);
 }
 
-function artmob_fair_dealing_preprocess_artmob_fair_dealing_tab_basic_view(&$node) {  //D6+
+	function artmob_fair_dealing_preprocess_artmob_fair_dealing_tab_basic_view($node) {  //D6+
 
   $vars = array();
 
@@ -990,7 +990,7 @@ function artmob_fair_dealing_preprocess_artmob_fair_dealing_tab_basic_view(&$nod
 
 }
 
-function theme_artmob_fair_dealing_tab_basic_view(&$node) {
+function theme_artmob_fair_dealing_tab_basic_view($node) {
   /* pre processing */
 
   $vars = artmob_fair_dealing_preprocess_artmob_fair_dealing_tab_basic_view($node);
@@ -1480,7 +1480,7 @@ function artmob_fair_dealing_node_type($op, $info) {
 /**
  * Implementation of hook_nodeapi().
  *
-function artmob_fair_dealing_nodeapi(&$node, $op, $teaser=NULL,$page=NULL) {
+function artmob_fair_dealing_nodeapi($node, $op, $teaser=NULL,$page=NULL) {
   switch ($op) {
     case 'update':
       $update = TRUE;

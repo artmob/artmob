@@ -711,7 +711,7 @@ function artmob_exhibit_build_exhibit(&$exhibit_node) {
 }
 
 
-function artmob_exhibit_nodeapi(&$node, $op, $a3, $a4) {
+function artmob_exhibit_nodeapi($node, $op, $a3, $a4) {
   switch ($op) {
     case 'submit':
       break;
@@ -796,7 +796,7 @@ function artmob_exhibit_build_note_admin_table( $item_nid = 0 ) {
   }
 }
 
-function artmob_exhibit_display_exhibit_browser(&$node) {
+function artmob_exhibit_display_exhibit_browser($node) {
   // display exhibit browser info;
   $is_exhibit_node = $node->type == 'Exhibit' ? TRUE : FALSE;
   $taxonomy_types = _artmob_exhibit_taxonomy_get_types_in_vocabulary_as_array(EXHIBIT_VOCABULARY);
@@ -1193,7 +1193,7 @@ function artmob_exhibit_load($node) {
 /**
  * Implementation of hook_submit().
  */
-function artmob_exhibit_submit(&$node) {
+function artmob_exhibit_submit($node) {
   global $user;
   // Set default values for non-administrators.
   if (!user_access('administer nodes')) {
@@ -1204,7 +1204,7 @@ function artmob_exhibit_submit(&$node) {
 
 
 // Implementation of hook_form().
-function artmob_exhibit_form(&$node) {
+function artmob_exhibit_form($node) {
 
   $type = node_get_types('type', $node);
 
@@ -1866,7 +1866,7 @@ function theme_artmob_exhibit_featured_exhibit_block($nodes, $exhibit_node) {
   return $content;
 }
 
-	function theme_artmob_exhibit_exhibit_browser_block(&$node, &$exhibit_node) {
+	function theme_artmob_exhibit_exhibit_browser_block($node, &$exhibit_node) {
   
   $is_exhibit_node =($node->type == 'Exhibit');
 

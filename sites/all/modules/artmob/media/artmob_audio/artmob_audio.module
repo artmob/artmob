@@ -149,7 +149,7 @@ function artmob_audio_admin_settings() {
 
 
 // Implementation of hook_form().
-function artmob_audio_form(&$node) {
+function artmob_audio_form($node) {
 
   $type = node_get_types('type', $node);
 
@@ -277,14 +277,14 @@ function artmob_audio_view($node, $teaser = FALSE, $page = FALSE) {
 }
 
 //----------------------------------------------
-function theme_artmob_audio_basic_view_page( &$node, $page ) {
+function theme_artmob_audio_basic_view_page( $node, $page ) {
   $content = '';
   $content .= $node->body;
   return $content;
 }
 
 //----------------------------------------------
-function theme_artmob_audio_basic_view_teaser( &$node, $page ) {
+function theme_artmob_audio_basic_view_teaser( $node, $page ) {
   $content = '';
   $content .= $node->teaser;
   return $content;

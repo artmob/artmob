@@ -96,7 +96,7 @@ function artmob_glossary_admin_settings() {
 }
 
 // Implementation of hook_form().
-function artmob_glossary_form(&$node) {
+function artmob_glossary_form($node) {
 
   $type = node_get_types('type', $node);
 
@@ -194,7 +194,7 @@ function artmob_glossary_load($node) {
 /**
  * Implementation of hook_submit().
  */
-function artmob_glossary_submit(&$node) {
+function artmob_glossary_submit($node) {
   global $user;
   // Set default values for non-administrators.
   if (!user_access('administer nodes')) {
@@ -333,7 +333,7 @@ function artmob_glossary_view($node, $teaser = FALSE, $page = FALSE) {
 }
 
 //----------------------------------------------
-function theme_artmob_glossary_basic_entry( &$node, $page ) {
+function theme_artmob_glossary_basic_entry( $node, $page ) {
 	drupal_set_title('Glossary: ' . $node->title);
 	$content = $node->body;
   //$content .= theme('artmob_glossary_digest_entry',$node->title,$node->body); 

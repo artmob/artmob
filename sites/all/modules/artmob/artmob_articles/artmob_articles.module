@@ -75,14 +75,14 @@ function artmob_articles_view($node, $teaser = FALSE, $page = FALSE) {
   return $node;
 }
 
-function theme_artmob_articles_basic_view( &$node, $page ) {
+function theme_artmob_articles_basic_view( $node, $page ) {
   $content = '';
   $content .= $node->Author ? '<div class="byline">By: '. $node->Author .'</div>' : '';
   $content .= $node->body;
   return $content;
 }
 
-function theme_artmob_articles_teaser_view( &$node, $page ) {
+function theme_artmob_articles_teaser_view( $node, $page ) {
   $content = '';
   $content .= $node->Author ? '<div class="byline"><p>By: '. $node->Author .'</p></div>' : '';
   $content .= $node->teaser;
@@ -197,7 +197,7 @@ function artmob_articles_load($node) {
 /**
  * Implementation of hook_submit().
  */
-function artmob_articles_submit(&$node) {
+function artmob_articles_submit($node) {
   global $user;
   // Set default values for non-administrators.
   if (!user_access('administer nodes')) {
@@ -207,7 +207,7 @@ function artmob_articles_submit(&$node) {
 }
 
 // Implementation of hook_form().
-function artmob_articles_form(&$node) {
+function artmob_articles_form($node) {
 
   $type = node_get_types('type', $node);
 
@@ -314,7 +314,7 @@ function artmob_articles_form_alter($form_id, &$form) {
 /**
  * Implementation of hook_nodeapi().
 */
-function artmob_articles_nodeapi(&$node, $op, $teaser, $page) {
+function artmob_articles_nodeapi($node, $op, $teaser, $page) {
   switch ($op) {
     case 'prepare':
       break;

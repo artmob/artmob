@@ -476,7 +476,7 @@ function theme_artmob_respond_admin_ticket_view($contentarray, $header, $attribu
   return $content;
 }
 
-function artmob_respond_discuss_tab( &$node ) {
+function artmob_respond_discuss_tab( $node ) {
   return theme('artmob_respond_discuss_tab', $node);
 }
 
@@ -809,7 +809,7 @@ function artmob_respond_get_previous_requests( $node ) {
 /**
  * Implementation of hook_submit().
  */
-function artmob_respond_submit(&$node) {
+function artmob_respond_submit($node) {
   global $user;
   // Set default values for non-administrators.
   if (!user_access('administer nodes')) {
@@ -820,7 +820,7 @@ function artmob_respond_submit(&$node) {
 
 
 // Implementation of hook_form().
-function artmob_respond_form(&$node) {
+function artmob_respond_form($node) {
 }
 
 /**
@@ -853,7 +853,7 @@ function artmob_respond_form_alter($form_id, &$form) {
  * Implementation of hook_nodeapi().
  *
  */
-function artmob_respond_nodeapi(&$node, $op, $teaser, $page) {
+function artmob_respond_nodeapi($node, $op, $teaser, $page) {
   switch ($op) {
     case 'submit':
       break;
@@ -915,7 +915,7 @@ function artmob_respond_nodeapi(&$node, $op, $teaser, $page) {
   }
 }
 
-function artmob_respond_artmob_enabled(&$node) {
+function artmob_respond_artmob_enabled($node) {
 
   if ( module_exists ('artmob_citation') ) {
     $has_citation = artmob_citation_has_citation( $node );

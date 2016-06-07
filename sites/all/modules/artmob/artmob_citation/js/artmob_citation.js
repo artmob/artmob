@@ -97,7 +97,7 @@ function artmob_get_contributors() {
   var contributors;
     jQ14.ajax({
       async: false, // forces the script to stop until ajax is complete. important when performing auto-selections
-      url: '/fair_dealing/get_contributors',
+      url: Drupal.settings.afd.contribpath,
       dataType: 'json',
       success: function(data) {
         contributors = data;

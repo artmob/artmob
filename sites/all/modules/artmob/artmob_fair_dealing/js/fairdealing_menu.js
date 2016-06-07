@@ -469,7 +469,6 @@ function menuChangeCollection(menuobj,workid,branch) {
 				jQ14(this)
 					.unbind('change')
 					.bind('change',function() {
-						console.log(jQ14(this).val());
 						if (jQ14(this).val() == "NULL")
 							return;
 							//store_report(true,false);	
@@ -530,9 +529,7 @@ function  menuBuildCollection(branch,locationid,action) {
 	thismenu.attr('id',menuid);
 	
   //if (branch != undefined){
-  
-  console.log(branch);
-  
+    
   if (branch.tree != undefined) {
     thismenu
     	.append(branch.buildMenu())
@@ -1211,7 +1208,7 @@ function menuUpdateContributors(id,fromcache) {  //id is the selector for the <s
   	  // get contributors from server
 	  jQ14.ajax({
 		  async: false, // forces the script to stop until ajax is complete. important when performing auto-selections
-		  url: '/fair_dealing/get_contributors',
+		  url: Drupal.settings.afd.contribpath,
 		  dataType: 'json',
 		  success: function(data) {
 			  var html = '';

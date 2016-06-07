@@ -220,7 +220,7 @@ function artmob_usage_request_ticket_load($node) {
 /**
  * Implementation of hook_submit().
  */
-function artmob_usage_request_ticket_submit(&$node) {
+function artmob_usage_request_ticket_submit($node) {
   global $user;
   // Set default values for non-administrators.
   if (!user_access('administer nodes')) {
@@ -231,7 +231,7 @@ function artmob_usage_request_ticket_submit(&$node) {
 
 
 // Implementation of hook_form().
-function artmob_usage_request_ticket_form(&$node) {
+function artmob_usage_request_ticket_form($node) {
 
   $form['usage_request_ticket'] = array(
     '#type'          => 'fieldset',
@@ -378,7 +378,7 @@ function artmob_usage_request_ticket_form_alter($form_id, &$form) {
  * Implementation of hook_nodeapi().
  *
  */
-function artmob_usage_request_ticket_nodeapi(&$node, $op, $teaser, $page) {
+function artmob_usage_request_ticket_nodeapi($node, $op, $teaser, $page) {
   switch ($op) {
     case 'submit':
       break;

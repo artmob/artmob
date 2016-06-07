@@ -105,7 +105,7 @@ function artmob_discuss_handle($nid) {
 /**
  * Implementation of hook_nodeapi().
  */
-function artmob_discuss_nodeapi(&$node, $op) {
+function artmob_discuss_nodeapi($node, $op) {
   switch ($op) {
     case 'load':
       if (artmob_discuss_activated($node->type) && arg(0) == 'node' && !arg(2)) {
@@ -184,7 +184,7 @@ function artmob_discuss_activated($node_type, $value = NULL) {
 /**
  * Value of 'comment' of node.
  */
-function _artmob_discuss_node_comment_value(&$node) {
+function _artmob_discuss_node_comment_value($node) {
   return isset($node->comment_original_value) ? $node->comment_original_value : $node->comment;
 }
 

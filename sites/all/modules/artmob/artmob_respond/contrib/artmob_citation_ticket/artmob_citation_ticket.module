@@ -158,7 +158,7 @@ function artmob_citation_ticket_load($node) {
 
 
 //* Implementation of hook_submit().
-function artmob_citation_ticket_submit(&$node) {
+function artmob_citation_ticket_submit($node) {
   global $user;
   // Set default values for non-administrators.
   if (!user_access('administer nodes')) {
@@ -169,7 +169,7 @@ function artmob_citation_ticket_submit(&$node) {
 
 
 // Implementation of hook_form().
-function artmob_citation_ticket_form(&$node) {
+function artmob_citation_ticket_form($node) {
 
   $form['citation_ticket'] = array(
     '#type'          => 'fieldset',
@@ -307,7 +307,7 @@ function artmob_citation_ticket_form_alter($form_id, &$form) {
 
 
 //* Implementation of hook_nodeapi().
-function artmob_citation_ticket_nodeapi(&$node, $op, $teaser, $page) {
+function artmob_citation_ticket_nodeapi($node, $op, $teaser, $page) {
   switch ($op) {
     case 'submit':
       break;

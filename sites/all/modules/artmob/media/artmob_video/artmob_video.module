@@ -97,7 +97,7 @@ function artmob_video_admin_settings() {
 }
 
 // Implementation of hook_form().
-function artmob_video_form(&$node) {
+function artmob_video_form($node) {
 
   $type = node_get_types('type', $node);
 
@@ -203,7 +203,7 @@ function artmob_video_user($op, &$edit, &$currentuser) {
   };
 }
 
-function artmob_video_view(&$node, $teaser = FALSE, $page = FALSE) {
+function artmob_video_view($node, $teaser = FALSE, $page = FALSE) {
   if ($teaser) {
      $node->teaser = check_markup($node->teaser, $node->format, FALSE);
     $node->content['artmob_video']['#value'] = theme( 'artmob_video_teaser', $node, $page );

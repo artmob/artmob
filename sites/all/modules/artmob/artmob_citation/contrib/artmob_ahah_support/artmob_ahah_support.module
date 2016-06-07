@@ -56,7 +56,7 @@ function artmob_ahah_support_init() {
 /**
  * hook_nodeapi
  */
-function artmob_ahah_support_nodeapi( &$node, $op ) {
+function artmob_ahah_support_nodeapi( $node, $op ) {
   if (CITATION_MOD_EXISTS) {
     switch ($op) {
       // info flow db -> node -> form -> node -> db

@@ -122,7 +122,7 @@ function artmob_digitized_works_view($node, $teaser = FALSE, $page = FALSE) {
   return $node;
 }
 
-function theme_artmob_digitized_works_basic_view( &$node, $page ) {
+function theme_artmob_digitized_works_basic_view( $node, $page ) {
   $content = '';
   $content .= "<div class='digitized-document dd-full'>";
   $content .= $node->body;
@@ -130,7 +130,7 @@ function theme_artmob_digitized_works_basic_view( &$node, $page ) {
   return $content;
 }
 
-function theme_artmob_digitized_works_teaser_view( &$node, $page ) {
+function theme_artmob_digitized_works_teaser_view( $node, $page ) {
   $content = '';
   $content .= "<div class='digitized-document dd-teaser'>";
   $content .= $node->teaser;
@@ -246,7 +246,7 @@ function artmob_digitized_works_load($node) {
 /**
  * Implementation of hook_submit().
  */
-function artmob_digitized_works_submit(&$node) {
+function artmob_digitized_works_submit($node) {
   global $user;
   // Set default values for non-administrators.
   if (!user_access('administer nodes')) {
@@ -257,7 +257,7 @@ function artmob_digitized_works_submit(&$node) {
 
 
 // Implementation of hook_form().
-function artmob_digitized_works_form(&$node) {
+function artmob_digitized_works_form($node) {
 
   $type = node_get_types('type', $node);
 

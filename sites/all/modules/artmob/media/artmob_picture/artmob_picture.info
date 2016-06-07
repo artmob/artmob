@@ -1,6 +1,6 @@
 ; $Id: artmob_picture.info,v 3.1 2011/04/26 20:55:33 dries Exp $
 name = Artmob Images
-description = Module shell for CCK's Image Field
+description = Module shell for CCK's Image Field.
 package = Artmob Media
 dependencies = content filefield imagefield lightbox2 imageapi
 version = 3.1

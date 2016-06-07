@@ -159,7 +159,7 @@ function theme_artmob_reporting_work_distribution() {
  * Implementation of hook_nodeapi().
  *
 */
-function artmob_reporting_nodeapi(&$node, $op, $teaser=NULL, $page=NULL) {
+function artmob_reporting_nodeapi($node, $op, $teaser=NULL, $page=NULL) {
   switch ($op) {
     case 'update':
       $update = TRUE;

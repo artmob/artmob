@@ -517,7 +517,7 @@ function artmob_main_view_submit($form_id, &$form){
  * Implementation of hook_nodeapi().
  *
 */
-function artmob_main_nodeapi(&$node, $op, $teaser=NULL,$page=NULL) {
+function artmob_main_nodeapi($node, $op, $teaser=NULL,$page=NULL) {
   switch ($op) {
     case 'update':
       $update = TRUE;
@@ -1311,7 +1311,7 @@ function artmob_main_views_default_views() {
   return $views;
 }
 
-function artmob_main_clear_cache( &$node, $page ){
+function artmob_main_clear_cache( $node, $page ){
   drupal_clear_css_cache();
 
   // clear core tables

@@ -369,7 +369,7 @@ function artmob_license_delete_licenses() { //This id can be either the citation
   exit();
 }
 
-function artmob_license_license_tab( &$node ) {
+function artmob_license_license_tab( $node ) {
   //!!!Will need to change to artmob_license_license_tab in theming
   //return theme('artmob_copyright_copyright_tab',$node);
   //OLD -
@@ -503,7 +503,7 @@ EOT;
  return $content;
 }
 
-function theme_artmob_license_node_license_tab(&$node) {
+function theme_artmob_license_node_license_tab($node) {
   $licenses = artmob_license_get_license_array_for_node( $node->nid );
   $content = '';
   $content .= "<div class='copyright-module license-module'>\n";  /* copyright-module reference for backwards compatibility */
@@ -528,7 +528,7 @@ function theme_artmob_license_node_license_tab(&$node) {
   return $content;
 }
 
-function theme_artmob_license_license_tab( &$node ) {
+function theme_artmob_license_license_tab( $node ) {
   global $user;
   $nid = arg(1);
 
@@ -839,13 +839,13 @@ function artmob_license_view($node, $teaser = FALSE, $page = FALSE) {
 
 }
 
-function theme_artmob_license_teaser( &$node, $page ) {
+function theme_artmob_license_teaser( $node, $page ) {
   $content = '';
   $content .= theme('artmob_license_display_license_info', $node);
   return $content;
 }
 
-function theme_artmob_license_page( &$node, $page ) {
+function theme_artmob_license_page( $node, $page ) {
   $content = '';
   $content .= theme('artmob_license_display_license_info', $node);
   return $content;
@@ -952,7 +952,7 @@ function artmob_license_load($node) {
 /**
  * Implementation of hook_submit().
  */
-function artmob_license_submit(&$node) {
+function artmob_license_submit($node) {
   global $user;
   // Set default values for non-administrators.
   if (!user_access('administer nodes')) {
@@ -962,7 +962,7 @@ function artmob_license_submit(&$node) {
 }
 
 // Implementation of hook_form().
-function artmob_license_form(&$node, $form_values) {
+function artmob_license_form($node, $form_values) {
 
   $type = node_get_types('type', $node);
 
@@ -1143,7 +1143,7 @@ function artmob_license_form_alter($form_id, &$form) {
  * Implementation of hook_nodeapi().
  *
  */
-function artmob_license_nodeapi(&$node, $op, $teaser, $page) {
+function artmob_license_nodeapi($node, $op, $teaser, $page) {
   switch ($op) {
     case 'submit':
       break;
